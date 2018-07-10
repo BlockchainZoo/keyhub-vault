@@ -870,14 +870,15 @@ var NRS = (function (NRS, $, undefined) {
     };
 
     NRS.getSelectedText = function () {
-		var t = "";
-		if (window.getSelection) {
-			t = window.getSelection().toString();
-		} else if (document.getSelection) {
-			t = document.getSelection().toString();
-		} else if (document.selection) {
-			t = document.selection.createRange().text;
-		}
+        var t = "";
+        // UNUSED:
+		// if (window.getSelection) {
+		// 	t = window.getSelection().toString();
+		// } else if (document.getSelection) {
+		// 	t = document.getSelection().toString();
+		// } else if (document.selection) {
+		// 	t = document.selection.createRange().text;
+		// }
 		return t;
 	};
 
@@ -1048,36 +1049,37 @@ var NRS = (function (NRS, $, undefined) {
 		});
 	});
 
-    $.fn.tree = function () {
-        return this.each(function () {
-			var btn = $(this).children("a").first();
-			var menu = $(this).children(".treeview-menu").first();
-			var isActive = $(this).hasClass('active');
+    // UNUSED:
+    // $.fn.tree = function () {
+    //     return this.each(function () {
+	// 		var btn = $(this).children("a").first();
+	// 		var menu = $(this).children(".treeview-menu").first();
+	// 		var isActive = $(this).hasClass('active');
 
-			//initialize already active menus
-			if (isActive) {
-				menu.show();
-				btn.children(".fa-angle-right").first().removeClass("fa-angle-right").addClass("fa-angle-down");
-			}
-			//Slide open or close the menu on link click
-            btn.click(function (e) {
-				e.preventDefault();
-				if (isActive) {
-					//Slide up to close menu
-					menu.slideUp();
-					isActive = false;
-					btn.children(".fa-angle-down").first().removeClass("fa-angle-down").addClass("fa-angle-right");
-					btn.parent("li").removeClass("active");
-				} else {
-					//Slide down to open menu
-					menu.slideDown();
-					isActive = true;
-					btn.children(".fa-angle-right").first().removeClass("fa-angle-right").addClass("fa-angle-down");
-					btn.parent("li").addClass("active");
-				}
-			});
-		});
-	};
+	// 		//initialize already active menus
+	// 		if (isActive) {
+	// 			menu.show();
+	// 			btn.children(".fa-angle-right").first().removeClass("fa-angle-right").addClass("fa-angle-down");
+	// 		}
+	// 		//Slide open or close the menu on link click
+    //         btn.click(function (e) {
+	// 			e.preventDefault();
+	// 			if (isActive) {
+	// 				//Slide up to close menu
+	// 				menu.slideUp();
+	// 				isActive = false;
+	// 				btn.children(".fa-angle-down").first().removeClass("fa-angle-down").addClass("fa-angle-right");
+	// 				btn.parent("li").removeClass("active");
+	// 			} else {
+	// 				//Slide down to open menu
+	// 				menu.slideDown();
+	// 				isActive = true;
+	// 				btn.children(".fa-angle-right").first().removeClass("fa-angle-right").addClass("fa-angle-down");
+	// 				btn.parent("li").addClass("active");
+	// 			}
+	// 		});
+	// 	});
+	// };
 
     NRS.translateServerError = function (response) {
         var match;
