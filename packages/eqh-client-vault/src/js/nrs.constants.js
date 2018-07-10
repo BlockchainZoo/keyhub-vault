@@ -131,11 +131,7 @@ var NRS = (function (NRS, $) {
             jQuery.ajaxSetup({async: true});
             processConstants(NRS.constants.SERVER);
         } else {
-            if (isNode) {
-                client.sendRequest("getConstants", {}, processConstants, false);
-            } else {
-                NRS.sendRequest("getConstants", {}, processConstants, false);
-            }
+            NRS.sendRequest("getConstants", {}, processConstants, false);
         }
     };
 
