@@ -1091,9 +1091,9 @@ var NRS = (function(NRS, $, undefined) {
 	NRS.getRequestPath = function (noProxy) {
 		var url = NRS.getRemoteNodeUrl();
 		if (!NRS.state.apiProxy || noProxy) {
-			return url + "/nxt";
+			return url + "/eqh";
 		} else {
-			return url + "/nxt-proxy";
+			return url + "/eqh-proxy";
 		}
 	};
 
