@@ -7,7 +7,7 @@
   "module": "src/index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "webpack --config webpack.config.js"
+    "build": "browserify -r jsdom -s jsdom -o dist/jsdom.js && webpack --config webpack.config.js"
   },
   "repository": {
     "type": "git",
@@ -20,19 +20,24 @@
   },
   "homepage": "https://github.com/BlockchainZoo/eqh-client#readme",
   "dependencies": {
+    "abortcontroller-polyfill": "^1.1.9",
     "async": "^2.6.1",
+    "cheerio": "^1.0.0-rc.2",
     "crypto-js": "^3.1.9-1",
-    "jsbn": "^1.1.0",
-    "libsodium-wrappers": "^0.7.3",
-    "nxt-blockchain": "^1.0.5",
-    "pako": "^1.0.6",
     "jquery": "^3.3.1",
-    "jsdom": "^11.11.0"
+    "jsbn": "^1.1.0",
+    "jsdom": "^11.11.0",
+    "libsodium-wrappers": "^0.7.3",
+    "node-fetch": "^2.1.2",
+    "pako": "^1.0.6",
+    "qs": "^6.5.2",
+    "whatwg-fetch": "^2.0.4"
   },
   "devDependencies": {
     "@babel/core": "^7.0.0-beta.52",
     "@babel/plugin-proposal-object-rest-spread": "^7.0.0-beta.52",
     "@babel/preset-env": "^7.0.0-beta.52",
-    "babel-loader": "^8.0.0-beta.4"
+    "babel-loader": "^8.0.0-beta.4",
+    "browserify": "^16.2.2"
   }
 }

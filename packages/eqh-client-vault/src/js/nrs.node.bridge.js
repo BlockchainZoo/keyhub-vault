@@ -54,14 +54,15 @@ exports.load = (callback) => {
     global.BigInteger = jsbn.BigInteger
 
     // Support for Webworkers
-    if (typeof self !== 'undefined') { // eslint-disable-line no-restricted-globals, no-undef
+    if (typeof self !== 'undefined') { // eslint-disable-line no-restricted-globals
       global.window = self // eslint-disable-line no-restricted-globals, no-undef
       global.window.console = console
-      global.crypto = self.crypto // eslint-disable-line no-restricted-globals, no-undef
-    } else {
-      global.window = window
+    } else if (typeof window !== 'undefined') {
+      global.window = window // eslint-disable-line no-undef
       global.window.console = console
-      global.crypto = require('crypto')
+      if (!global.window.crypto && !global.window.msCrypto) {
+        global.crypto = require('crypto')
+      }
     }
 
     // Mock other objects on which the client depends
@@ -73,7 +74,7 @@ exports.load = (callback) => {
     global.NxtAddress = require('./util/nxtaddress')
     global.curve25519 = require('./crypto/curve25519')
     global.curve25519_ = require('./crypto/curve25519_') // eslint-disable-line no-underscore-dangle
-    require('./util/extensions')
+    require('./util/extensions') // Add extensions to String.prototype and Number.prototype
     global.converters = require('./util/converters')
 
     // Now start loading the client itself
@@ -96,8 +97,7 @@ exports.load = (callback) => {
 
     // Now load the constants locally since we cannot trust the remote node to
     // return the correct constants.
-    const constants = require('./data/constants')
-    global.client.processConstants(constants)
+    global.client.processConstants(require('./data/constants'))
     callback(global.client)
   } catch (err) {
     console.log(err.message || err)

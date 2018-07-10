@@ -2,10 +2,18 @@ const path = require('path')
 
 module.exports = {
   mode: 'development',
-  entry: './src/index.js',
+  entry: {
+    'whatwg-fetch': 'whatwg-fetch',
+    'abortcontroller-polyfill': 'abortcontroller-polyfill/dist/polyfill-patch-fetch',
+    main: './src/index.js',
+  },
   output: {
+    filename: '[name].bundle.js',
     path: path.resolve(__dirname, 'dist'),
-    filename: 'bundle.js',
+  },
+  externals: {
+    jsdom: 'jsdom',
+    jquery: 'jQuery',
   },
   module: {
     rules: [
@@ -25,13 +33,13 @@ module.exports = {
     ],
   },
   node: {
-    Buffer: true,
-    setImmediate: true,
-    process: false,
     global: true,
-    net: 'mock',
-    tls: 'mock',
-    fs: 'empty',
-    child_process: 'empty',
+    // Buffer: true,
+    // setImmediate: true,
+    // process: false,
+    // net: 'mock',
+    // tls: 'mock',
+    // fs: 'empty',
+    // child_process: 'empty',
   },
 }
