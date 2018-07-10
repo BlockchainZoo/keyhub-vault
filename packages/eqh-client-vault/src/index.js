@@ -1,4 +1,4 @@
-const loader = require('./js/nrs.webworker.bridge.js')
+const loader = require('./js/nrs.node.bridge')
 
 const config = require('./config.json')
 
@@ -9,8 +9,12 @@ loader.init({
   adminPassword: config.adminPassword,
 })
 
-const ready = new Promise((resolve) => {
-  loader.load(resolve)
+const ready = new Promise((resolve, reject) => {
+  try {
+    loader.load(resolve)
+  } catch (err) {
+    reject(err)
+  }
 })
 
 ready.then(() => {
