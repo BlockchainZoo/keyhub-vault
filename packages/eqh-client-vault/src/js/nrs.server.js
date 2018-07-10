@@ -367,7 +367,7 @@ var NRS = (function (NRS, $, undefined) {
         }
         var url;
         if (options.remoteNode) {
-            url = options.remoteNode.getUrl() + "/nxt";
+            url = options.remoteNode.getUrl() + "/eqh";
         } else {
             url = NRS.getRequestPath(options.noProxy);
         }
