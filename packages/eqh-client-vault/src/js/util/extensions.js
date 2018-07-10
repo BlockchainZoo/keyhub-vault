@@ -71,11 +71,12 @@ if (typeof Object.keys !== "function") {
 	})();
 }
 
-$.fn.hasAttr = function(name) {
-	var attr = this.attr(name);
+// UNUSED:
+// $.fn.hasAttr = function(name) {
+// 	var attr = this.attr(name);
 
-	return attr !== undefined && attr !== false;
-};
+// 	return attr !== undefined && attr !== false;
+// };
 
 //https://github.com/bryanwoods/autolink-js/blob/master/autolink.js
 String.prototype['autoLink'] = function () {
