@@ -108,7 +108,7 @@ var NRS = (function (NRS, $) {
         NRS.addToConsoleBody(url + " (" + type + ") " + new Date().toString(), "url");
 
         if (data) {
-            if (typeof data == "string") {
+            if (typeof data === "string") {
                 var d = NRS.queryStringToObject(data);
                 NRS.addToConsoleBody(JSON.stringify(d, null, "\t"), "post");
             } else {

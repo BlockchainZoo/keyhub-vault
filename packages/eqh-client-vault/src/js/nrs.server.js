@@ -30,7 +30,7 @@ var NRS = (function (NRS, $, undefined) {
         if (!options) {
             options = {};
         }
-        if (requestType == undefined) {
+        if (requestType === undefined) {
             NRS.logConsole("Undefined request type");
             return;
         }
@@ -43,18 +43,18 @@ var NRS = (function (NRS, $, undefined) {
             });
             return;
         }
-        if (data == undefined) {
+        if (data === undefined) {
             NRS.logConsole("Undefined data for " + requestType);
             return;
         }
-        if (callback == undefined) {
+        if (callback === undefined) {
             NRS.logConsole("Undefined callback function for " + requestType);
             return;
         }
 
         $.each(data, function (key, val) {
             if (key != "secretPhrase") {
-                if (typeof val == "string") {
+                if (typeof val === "string") {
                     data[key] = $.trim(val);
                 }
             }
@@ -179,7 +179,7 @@ var NRS = (function (NRS, $, undefined) {
 
         //gets account id from passphrase client side, used only for login.
         var accountId;
-        if (requestType == "getAccountId") {
+        if (requestType === "getAccountId") {
             accountId = NRS.getAccountId(data.secretPhrase);
             NRS.sendRequest("getAccount", { account: accountId }, function(response) {
                 callback(response);
@@ -207,7 +207,7 @@ var NRS = (function (NRS, $, undefined) {
         if (secretPhrase && NRS.isMobileApp()) {
             return true;
         }
-        return (NRS.isPassphraseAtRisk() || doNotSign) && type == "POST" && !NRS.isSubmitPassphrase(requestType);
+        return (NRS.isPassphraseAtRisk() || doNotSign) && type === "POST" && !NRS.isSubmitPassphrase(requestType);
     }
 
     NRS.requestId = 0;
@@ -222,7 +222,7 @@ var NRS = (function (NRS, $, undefined) {
         var currentSubPage = null;
 
         //means it is a page request, not a global request.. Page requests can be aborted.
-        if (requestType.slice(-1) == "+") {
+        if (requestType.slice(-1) === "+") {
             requestType = requestType.slice(0, -1);
             currentPage = NRS.currentPage;
         } else {
@@ -240,8 +240,8 @@ var NRS = (function (NRS, $, undefined) {
         }
 
         var httpMethod = (NRS.isRequirePost(requestType) || "secretPhrase" in data || "doNotSign" in data || "adminPassword" in data ? "POST" : "GET");
-        if (httpMethod == "GET") {
-            if (typeof data == "string") {
+        if (httpMethod === "GET") {
+            if (typeof data === "string") {
                 data += "&random=" + Math.random();
             } else {
                 data.random = Math.random();
@@ -249,7 +249,7 @@ var NRS = (function (NRS, $, undefined) {
         }
 
         if ((NRS.isRequirePost(requestType) || "secretPhrase" in data) &&
-            NRS.isRequireBlockchain(requestType) && NRS.accountInfo.errorCode && NRS.accountInfo.errorCode == 5) {
+            NRS.isRequireBlockchain(requestType) && NRS.accountInfo.errorCode && NRS.accountInfo.errorCode === 5) {
             callback({
                 "errorCode": 2,
                 "errorDescription": $.t("error_new_account")
@@ -301,7 +301,7 @@ var NRS = (function (NRS, $, undefined) {
             var ecBlock = NRS.getECBlock(NRS.isTestNet);
             data.ecBlockId = ecBlock.id;
             data.ecBlockHeight = ecBlock.height;
-        } else if (httpMethod == "POST" && NRS.rememberPassword) {
+        } else if (httpMethod === "POST" && NRS.rememberPassword) {
             data.secretPhrase = _password;
         }
 
@@ -329,7 +329,7 @@ var NRS = (function (NRS, $, undefined) {
             } else {
                 file = $(config.selector)[0].files[0];
             }
-            if (!file && requestType == "uploadTaggedData") {
+            if (!file && requestType === "uploadTaggedData") {
                 callback({
                     "errorCode": 3,
                     "errorDescription": $.t("error_no_file_chosen")
@@ -385,13 +385,13 @@ var NRS = (function (NRS, $, undefined) {
             async: (options.isAsync === undefined ? true : options.isAsync),
             currentPage: currentPage,
             currentSubPage: currentSubPage,
-            shouldRetry: (httpMethod == "GET" ? 2 : undefined),
+            shouldRetry: (httpMethod === "GET" ? 2 : undefined),
             traditional: true,
             data: (formData != null ? formData : data),
             contentType: contentType,
             processData: processData
         }).done(function (response) {
-            if (typeof data == "string") {
+            if (typeof data === "string") {
                 data = { "querystring": data };
                 if (extra) {
                     data["_extra"] = extra;
@@ -437,7 +437,7 @@ var NRS = (function (NRS, $, undefined) {
                     }
                     callback(response, data);
                 } else {
-                    if (response.broadcasted == false && !data.calculateFee && !NRS.isScheduleRequest(requestType)) {
+                    if (response.broadcasted === false && !data.calculateFee && !NRS.isScheduleRequest(requestType)) {
                         async.waterfall([
                             function (callback) {
                                 addMissingData(data);
@@ -490,8 +490,8 @@ var NRS = (function (NRS, $, undefined) {
                 NRS.addToConsole(this.url, this.type, this.data, error, true);
             }
 
-            if ((error == "error" || textStatus == "error") && (xhr.status == 404 || xhr.status == 0)) {
-                if (httpMethod == "POST") {
+            if ((error === "error" || textStatus === "error") && (xhr.status === 404 || xhr.status === 0)) {
+                if (httpMethod === "POST") {
                     NRS.connectionError();
                 }
             }
@@ -502,7 +502,7 @@ var NRS = (function (NRS, $, undefined) {
                 } else {
                     NRS.resetRemoteNode(true);
                 }
-                if (error == "timeout") {
+                if (error === "timeout") {
                     error = $.t("error_request_timeout");
                 }
                 callback({
@@ -530,7 +530,7 @@ var NRS = (function (NRS, $, undefined) {
             }
         }
         var payload = transactionBytes.substr(0, 192) + signature + transactionBytes.substr(320);
-        if (data.broadcast == "false" && !isSchedule) {
+        if (data.broadcast === "false" && !isSchedule) {
             response.transactionBytes = payload;
             response.transactionJSON.signature = signature;
             NRS.showRawTransactionModal(response);
@@ -556,7 +556,7 @@ var NRS = (function (NRS, $, undefined) {
 
         var refHash = byteArray.slice(64, 96);
         transaction.referencedTransactionFullHash = converters.byteArrayToHexString(refHash);
-        if (transaction.referencedTransactionFullHash == "0000000000000000000000000000000000000000000000000000000000000000") {
+        if (transaction.referencedTransactionFullHash === "0000000000000000000000000000000000000000000000000000000000000000") {
             transaction.referencedTransactionFullHash = "";
         }
         transaction.flags = 0;
@@ -584,7 +584,7 @@ var NRS = (function (NRS, $, undefined) {
         }
 
         if (transaction.recipient !== data.recipient) {
-            if ((data.recipient == NRS.constants.GENESIS || data.recipient == "") && transaction.recipient == "0") {
+            if ((data.recipient === NRS.constants.GENESIS || data.recipient === "") && transaction.recipient === "0") {
                 //ok
             } else {
                 return false;
@@ -605,7 +605,7 @@ var NRS = (function (NRS, $, undefined) {
         var pos;
         if (transaction.version > 0) {
             //has empty attachment, so no attachmentVersion byte...
-            if (requestType == "sendMoney" || requestType == "sendMessage") {
+            if (requestType === "sendMoney" || requestType === "sendMessage") {
                 pos = 176;
             } else {
                 pos = 177;
@@ -866,9 +866,9 @@ var NRS = (function (NRS, $, undefined) {
             case "placeBidOrder":
                 if (transaction.type !== 2) {
                     return false;
-                } else if (requestType == "placeAskOrder" && transaction.subtype !== 2) {
+                } else if (requestType === "placeAskOrder" && transaction.subtype !== 2) {
                     return false;
-                } else if (requestType == "placeBidOrder" && transaction.subtype !== 3) {
+                } else if (requestType === "placeBidOrder" && transaction.subtype !== 3) {
                     return false;
                 }
                 transaction.asset = String(converters.byteArrayToBigInteger(byteArray, pos));
@@ -885,9 +885,9 @@ var NRS = (function (NRS, $, undefined) {
             case "cancelBidOrder":
                 if (transaction.type !== 2) {
                     return false;
-                } else if (requestType == "cancelAskOrder" && transaction.subtype !== 4) {
+                } else if (requestType === "cancelAskOrder" && transaction.subtype !== 4) {
                     return false;
-                } else if (requestType == "cancelBidOrder" && transaction.subtype !== 5) {
+                } else if (requestType === "cancelBidOrder" && transaction.subtype !== 5) {
                     return false;
                 }
                 transaction.order = String(converters.byteArrayToBigInteger(byteArray, pos));
@@ -1319,7 +1319,7 @@ var NRS = (function (NRS, $, undefined) {
         var attachmentVersion;
         //non-encrypted message
         if ((transaction.flags & position) != 0 ||
-            ((requestType == "sendMessage" && data.message && !(data.messageIsPrunable === "true")))) {
+            ((requestType === "sendMessage" && data.message && !(data.messageIsPrunable === "true")))) {
             attachmentVersion = byteArray[pos];
             if (attachmentVersion < 0 || attachmentVersion > 2) {
                 return false;
@@ -1438,7 +1438,7 @@ var NRS = (function (NRS, $, undefined) {
             }
             pos += 4;
             pos = validateCommonPhasingData(byteArray, pos, data, "phasing");
-            if (pos == -1) {
+            if (pos === -1) {
                 return false;
             }
             var linkedFullHashesLength = byteArray[pos];
@@ -1475,7 +1475,7 @@ var NRS = (function (NRS, $, undefined) {
             pos += 32;
             sha256 = CryptoJS.algo.SHA256.create();
             isText = [];
-            if (data.messageIsText == "true") {
+            if (data.messageIsText === "true") {
                 isText.push(1);
             } else {
                 isText.push(0);
@@ -1503,7 +1503,7 @@ var NRS = (function (NRS, $, undefined) {
             pos++;
             serverHash = converters.byteArrayToHexString(byteArray.slice(pos, pos + 32));
             sha256 = CryptoJS.algo.SHA256.create();
-            if (data.messageToEncryptIsText == "true") {
+            if (data.messageToEncryptIsText === "true") {
                 sha256.update(converters.byteArrayToWordArrayEx([1]));
             } else {
                 sha256.update(converters.byteArrayToWordArrayEx([0]));
@@ -1581,7 +1581,7 @@ var NRS = (function (NRS, $, undefined) {
                 NRS.addToConsole(this.url, this.type, this.data, error, true);
             }
             NRS.resetRemoteNode(true);
-            if (error == "timeout") {
+            if (error === "timeout") {
                 error = $.t("error_request_timeout");
             }
             callback({
@@ -1612,7 +1612,7 @@ var NRS = (function (NRS, $, undefined) {
     };
 
     function addAddressData(data) {
-        if (typeof data == "object" && ("recipient" in data)) {
+        if (typeof data === "object" && ("recipient" in data)) {
             var address = new NxtAddress();
             if (/^NXT\-/i.test(data.recipient)) {
                 data.recipientRS = data.recipient;

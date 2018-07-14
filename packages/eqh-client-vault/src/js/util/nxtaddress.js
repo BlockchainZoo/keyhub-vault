@@ -41,7 +41,7 @@ function NxtAddress() {
 	}
 
 	function gmult(a, b) {
-		if (a == 0 || b == 0) return 0;
+		if (a === 0 || b === 0) return 0;
 
 		var idx = (glog[a] + glog[b]) % 31;
 
@@ -68,7 +68,7 @@ function NxtAddress() {
 				sum ^= gmult(gexp[(j * i) % 31], lambda[j]);
 			}
 
-			if (sum == 0) {
+			if (sum === 0) {
 				var pos = 31 - i;
 				if (pos > 12 && pos < 27) return [];
 
@@ -155,7 +155,7 @@ function NxtAddress() {
 			{
 				var denom = gmult(lambda[1], 1) ^ gmult(lambda[3], gexp[(root * 2) % 31]);
 
-				if (denom == 0) return false;
+				if (denom === 0) return false;
 
 				if (pos > 12) pos -= 14;
 
@@ -204,7 +204,7 @@ function NxtAddress() {
 		if (len > 2) return;
 
 		for (var i = 0; i < len; i++) {
-			if (this.guess[i] == s) return;
+			if (this.guess[i] === s) return;
 		}
 
 		this.guess[len] = s;
@@ -227,7 +227,7 @@ function NxtAddress() {
 			syndrome[i] = t;
 		}
 
-		return (sum == 0);
+		return (sum === 0);
 	} //__________________________
 
 	function from_acc(acc) {
@@ -236,7 +236,7 @@ function NxtAddress() {
 			pos = 0,
 			len = acc.length;
 
-		if (len == 20 && acc.charAt(0) != '1') return false;
+		if (len === 20 && acc.charAt(0) != '1') return false;
 
 		for (var i = 0; i < len; i++) {
 			inp[i] = acc.charCodeAt(i) - '0'.charCodeAt(0);
@@ -279,7 +279,7 @@ function NxtAddress() {
 		for (var i = 0; i < 17; i++) {
 			out += alphabet[codeword[cwmap[i]]];
 
-			if ((i & 3) == 3 && i < 13) out += '-';
+			if ((i & 3) === 3 && i < 13) out += '-';
 		}
 
 		return out;
@@ -329,7 +329,7 @@ function NxtAddress() {
 
 		adr = adr.replace(/(^\s+)|(\s+$)/g, '').toUpperCase();
 
-		if (adr.indexOf('NXT-') == 0) adr = adr.substr(4);
+		if (adr.indexOf('NXT-') === 0) adr = adr.substr(4);
 
 		if (adr.match(/^\d{1,20}$/g)) // account id
 		{
@@ -348,7 +348,7 @@ function NxtAddress() {
 			}
 		}
 
-		if (len == 16) // guess deletion
+		if (len === 16) // guess deletion
 		{
 			for (var i = 16; i >= 0; i--) {
 				for (var j = 0; j < 32; j++) {
@@ -367,7 +367,7 @@ function NxtAddress() {
 			}
 		}
 
-		if (len == 18) // guess insertion
+		if (len === 18) // guess insertion
 		{
 			for (var i = 0; i < 18; i++) {
 				set_codeword(clean, 18, i);
@@ -376,7 +376,7 @@ function NxtAddress() {
 			}
 		}
 
-		if (len == 17) {
+		if (len === 17) {
 			set_codeword(clean);
 
 			if (this.ok()) return true;
@@ -416,7 +416,7 @@ function NxtAddress() {
 			} else i++;
 		}
 
-		if (list.length == 0) return s;
+		if (list.length === 0) return s;
 
 		for (var i = 0, j = 0; i < s.length; i++) {
 			if (i >= list[j].e) {

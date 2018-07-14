@@ -25,19 +25,19 @@ var NRS = (function (NRS) {
     var isMobileDevice = window["cordova"] !== undefined;
     var isLocalHost = false;
     var remoteNode = null;
-    var isLoadedOverHttps = ("https:" == window.location.protocol);
+    var isLoadedOverHttps = ("https:" === window.location.protocol);
 
     NRS.isPrivateIP = function (ip) {
         if (!/^\d+\.\d+\.\d+\.\d+$/.test(ip)) {
             return false;
         }
         var parts = ip.split('.');
-        return parts[0] === '10' || parts[0] == '127' || parts[0] === '172' && (parseInt(parts[1], 10) >= 16 && parseInt(parts[1], 10) <= 31) || parts[0] === '192' && parts[1] === '168';
+        return parts[0] === '10' || parts[0] === '127' || parts[0] === '172' && (parseInt(parts[1], 10) >= 16 && parseInt(parts[1], 10) <= 31) || parts[0] === '192' && parts[1] === '168';
     };
 
     if (window.location && window.location.hostname) {
         var hostName = window.location.hostname.toLowerCase();
-        isLocalHost = hostName == "localhost" || hostName == "127.0.0.1" || NRS.isPrivateIP(hostName);
+        isLocalHost = hostName === "localhost" || hostName === "127.0.0.1" || NRS.isPrivateIP(hostName);
     }
 
     NRS.isIndexedDBSupported = function() {
@@ -56,7 +56,7 @@ var NRS = (function (NRS) {
         if (NRS.isMobileApp()) {
             return false;
         }
-        return isDesktopApplication && navigator.userAgent.indexOf("Linux") == -1;
+        return isDesktopApplication && navigator.userAgent.indexOf("Linux") === -1;
     };
 
     NRS.isMobileApp = function () {
@@ -171,7 +171,7 @@ var NRS = (function (NRS) {
     };
 
     NRS.isCameraPermissionRequired = function () {
-        return device && device.platform == "Android" && device.version >= "6.0.0";
+        return device && device.platform === "Android" && device.version >= "6.0.0";
     };
 
     NRS.getShapeShiftUrl = function() {

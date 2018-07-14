@@ -235,25 +235,25 @@ var NRS = (function(NRS, $, undefined) {
 						if (!response.hasOwnProperty(key)) {
 							continue;
 						}
-						if (key == "isTestnet") {
+						if (key === "isTestnet") {
 							isTestnet = response[key];
 						}
-						if (key == "isOffline") {
+						if (key === "isOffline") {
 							isOffline = response[key];
 						}
-						if (key == "customLoginWarning") {
+						if (key === "customLoginWarning") {
                             customLoginWarning = response[key];
 						}
-						if (key == "peerPort") {
+						if (key === "peerPort") {
 							peerPort = response[key];
 						}
-						if (key == "needsAdminPassword") {
+						if (key === "needsAdminPassword") {
 							NRS.needsAdminPassword = response[key];
 						}
-						if (key == "upnpExternalAddress") {
+						if (key === "upnpExternalAddress") {
 							NRS.upnpExternalAddress = response[key];
 						}
-						if (key == "version") {
+						if (key === "version") {
 							NRS.appVersion = response[key];
 						}
 					}
@@ -305,8 +305,8 @@ var NRS = (function(NRS, $, undefined) {
 				}
 
 				if (!(navigator.userAgent.indexOf('Safari') != -1 &&
-					navigator.userAgent.indexOf('Chrome') == -1) &&
-					navigator.userAgent.indexOf('JavaFX') == -1) {
+					navigator.userAgent.indexOf('Chrome') === -1) &&
+					navigator.userAgent.indexOf('JavaFX') === -1) {
 					// Don't use account based DB in Safari due to a buggy indexedDB implementation (2015-02-24)
 					NRS.createLegacyDatabase();
 				}
@@ -352,7 +352,7 @@ var NRS = (function(NRS, $, undefined) {
 				$(window).on("resize", function () {
 					_fix();
 
-					if (NRS.currentPage == "asset_exchange") {
+					if (NRS.currentPage === "asset_exchange") {
 						NRS.positionAssetSidebar();
 					}
 				});
@@ -410,7 +410,7 @@ var NRS = (function(NRS, $, undefined) {
 		if (!NRS.isPollGetState()) {
 			return;
 		}
-		if (seconds == stateIntervalSeconds && stateInterval) {
+		if (seconds === stateIntervalSeconds && stateInterval) {
 			return;
 		}
 		if (stateInterval) {
@@ -569,13 +569,13 @@ var NRS = (function(NRS, $, undefined) {
 
 		e.preventDefault();
 
-		if ($(this).data("toggle") == "modal") {
+		if ($(this).data("toggle") === "modal") {
 			return;
 		}
 
 		var page = $(this).data("page");
 
-		if (page == NRS.currentPage) {
+		if (page === NRS.currentPage) {
 			if (data && data.callback) {
 				data.callback();
 			}
@@ -591,7 +591,7 @@ var NRS = (function(NRS, $, undefined) {
 		$(".content-header h1").find(".loading_dots").remove();
 
         var $newActiveA;
-        if ($(this).attr("id") && $(this).attr("id") == "logo") {
+        if ($(this).attr("id") && $(this).attr("id") === "logo") {
             $newActiveA = $("#dashboard_link").find("a");
 		} else {
 			$newActiveA = $(this);
@@ -668,7 +668,7 @@ var NRS = (function(NRS, $, undefined) {
 			}
 		}
 
-		if ($link.length == 1) {
+		if ($link.length === 1) {
 			$link.trigger("click", [{
 				"callback": callback,
 				"subpage": subpage
@@ -844,15 +844,15 @@ var NRS = (function(NRS, $, undefined) {
 						continue;
 					}
 					var key = paramKeyValue[0].escapeHTML();
-					if (key == "account" || key == "modal") {
+					if (key === "account" || key === "modal") {
 						continue;
 					}
 					var value = paramKeyValue[1].escapeHTML();
                     var input = modal.find("input[name=" + key + "]");
                     if (input[0]) {
-						if (input.attr("type") == "text") {
+						if (input.attr("type") === "text") {
 							input.val(value);
-						} else if (input.attr("type") == "checkbox") {
+						} else if (input.attr("type") === "checkbox") {
 							var isChecked = false;
 							if (value != "true" && value != "false") {
 								isValidParams = false;
@@ -860,7 +860,7 @@ var NRS = (function(NRS, $, undefined) {
 									"type": "danger",
 									"offset": 50
 								});
-							} else if (value == "true") {
+							} else if (value === "true") {
 								isChecked = true;
 							}
 							if (isValidParams) {
@@ -955,7 +955,7 @@ var NRS = (function(NRS, $, undefined) {
 			},
 			contents: "TEXT"
 		};
-		if (versionLegacyDB == NRS.constants.DB_VERSION) {
+		if (versionLegacyDB === NRS.constants.DB_VERSION) {
 			try {
 				NRS.legacyDatabase = new WebDB("NRS_USER_DB", schema, versionLegacyDB, 4, function(error) {
 					if (!error) {
@@ -1325,7 +1325,7 @@ var NRS = (function(NRS, $, undefined) {
 
     NRS.updateDashboardMessage = function() {
         if (NRS.accountInfo.errorCode) {
-            if (NRS.accountInfo.errorCode == 5) {
+            if (NRS.accountInfo.errorCode === 5) {
                 if (NRS.downloadingBlockchain && !(NRS.state && NRS.state.apiProxy) && !NRS.state.isLightClient) {
                     if (NRS.newlyCreatedAccount) {
                         $("#dashboard_message").addClass("alert-success").removeClass("alert-danger").html($.t("status_new_account", {
@@ -1341,7 +1341,7 @@ var NRS = (function(NRS, $, undefined) {
                     $("#dashboard_message").addClass("alert-danger").removeClass("alert-success").html($.t("status_blockchain_rescanning")).show();
                 } else {
                     var message;
-                    if (NRS.publicKey == "") {
+                    if (NRS.publicKey === "") {
                         message = $.t("status_new_account_no_pk_v3", {
                             "account_id": NRS.escapeRespStr(NRS.accountRS)
                         });
@@ -1364,7 +1364,7 @@ var NRS = (function(NRS, $, undefined) {
                 }
             } else {
                 var errorMessage;
-                if (NRS.accountInfo.errorCode == 19) {
+                if (NRS.accountInfo.errorCode === 19) {
                     errorMessage = $.t("no_open_api_peers");
                 } else {
                     errorMessage = NRS.accountInfo.errorDescription ? NRS.escapeRespStr(NRS.accountInfo.errorDescription) : $.t("error_unknown");
@@ -1450,7 +1450,7 @@ var NRS = (function(NRS, $, undefined) {
 				var blocksLeftTooltip = "From block " + lessorInfo.currentHeightFrom + " to block " + lessorInfo.currentHeightTo;
 				var nextLessee = "Not set";
 				var nextTooltip = "Next lessee not set";
-				if (lessorInfo.nextLesseeRS == NRS.accountRS) {
+				if (lessorInfo.nextLesseeRS === NRS.accountRS) {
 					nextLessee = "You";
 					nextTooltip = "From block " + lessorInfo.nextHeightFrom + " to block " + lessorInfo.nextHeightTo;
 				} else if (lessorInfo.nextHeightFrom < NRS.constants.MAX_INT_JAVA) {
@@ -1573,7 +1573,7 @@ var NRS = (function(NRS, $, undefined) {
 		}
 
 		var nr = Object.keys(diff).length;
-		if (nr == 0) {
+		if (nr === 0) {
         } else if (nr <= 3) {
 			for (k in diff) {
                 if (!diff.hasOwnProperty(k)) {
@@ -1596,7 +1596,7 @@ var NRS = (function(NRS, $, undefined) {
 						quantity = NRS.formatQuantity(asset.difference, asset.decimals);
 
 						if (quantity != "0") {
-							if (parseInt(quantity) == 1) {
+							if (parseInt(quantity) === 1) {
 								$.growl($.t("you_received_assets", {
 									"name": NRS.escapeRespStr(asset.name)
 								}), {
@@ -1616,7 +1616,7 @@ var NRS = (function(NRS, $, undefined) {
 						asset.difference = asset.difference.substring(1);
 						quantity = NRS.formatQuantity(asset.difference, asset.decimals);
 						if (quantity != "0") {
-							if (parseInt(quantity) == 1) {
+							if (parseInt(quantity) === 1) {
 								$.growl($.t("you_sold_assets", {
 									"name": NRS.escapeRespStr(asset.name)
 								}), {
