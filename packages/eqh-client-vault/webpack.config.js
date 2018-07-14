@@ -1,7 +1,10 @@
 const path = require('path')
+// eslint-disable-next-line import/no-extraneous-dependencies
+const webpack = require('webpack')
 
 module.exports = {
   mode: 'development',
+  watch: false,
   entry: {
     'whatwg-fetch': 'whatwg-fetch',
     'abortcontroller-polyfill': 'abortcontroller-polyfill/dist/polyfill-patch-fetch',
@@ -12,9 +15,22 @@ module.exports = {
     path: path.resolve(__dirname, 'dist'),
   },
   externals: {
-    jsdom: 'jsdom',
     jquery: 'jQuery',
+    jsdom: 'jsdom',
+    'node-fetch': {
+      commonjs: 'node-fetch',
+      amd: 'node-fetch',
+      root: 'fetch',
+    },
   },
+  plugins: [
+    new webpack.DefinePlugin({
+      'process.env': {
+        NODE_ENV: JSON.stringify('production'),
+        APP_ENV: JSON.stringify('browser'),
+      },
+    }),
+  ],
   module: {
     rules: [
       {

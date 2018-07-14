@@ -1,4 +1,4 @@
-const loader = require('./js/nrs.node.bridge')
+const loader = require('./js/nrs.cheerio.bridge')
 // import loader from './js/nrs.cheerio.bridge'
 
 const loadNRS = (config) => {
@@ -18,17 +18,21 @@ const loadNRS = (config) => {
   })
 }
 
-const config = require('./config.json')
+const config = require('./conf/secrets.json')
 
 loadNRS(config).then((NRS) => {
+  // heri16@github.com: Will use cryptographic signature verification on claims of known blocks
+  NRS.constants.LAST_KNOWN_BLOCK = { id: '15547113949993887183', height: '712' } // eslint-disable-line no-param-reassign
+  NRS.constants.LAST_KNOWN_TESTNET_BLOCK = { id: '15547113949993887183', height: '712' } // eslint-disable-line no-param-reassign
+
   console.log('module configured and ready') // eslint-disable-line no-console
 
-  const property = '$$RootAdmin'
+  const property = '$$Trader'
 
   const recipient = NRS.getAccountIdFromPublicKey(config.recipientPublicKey)
   const recipientRS = NRS.convertNumericToRSAccountFormat(recipient)
-  console.log(recipient)
-  console.log(recipientRS)
+  console.info('recipientId:', recipient)
+  console.info('recipientRS:', recipientRS)
 
   const data = {
     recipient,

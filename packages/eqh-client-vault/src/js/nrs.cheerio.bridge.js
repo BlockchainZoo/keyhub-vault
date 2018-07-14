@@ -4,10 +4,11 @@
 // const jquery = require('jquery')
 const cheerio = require('cheerio')
 const qs = require('qs')
-const { STATUS_CODES } = require('http')
 
-// const fetch = require('node-fetch')
-// require('abortcontroller-polyfill/dist/polyfill-patch-fetch')
+if (process.env.APP_ENV !== 'browser') {
+  global.fetch = require('node-fetch')
+  require('abortcontroller-polyfill/dist/polyfill-patch-fetch')
+}
 
 // See: https://api.jquery.com/jQuery.ajax/
 const jqAjax = (settings) => {
@@ -20,36 +21,37 @@ const jqAjax = (settings) => {
     timeout,
     // async,
     traditional,
-    data,
+    data: dataObj,
     contentType,
-    processData,
+    processData = true,
     xhrFields: { withCredentials } = {},
   } = settings
 
-  let dataString
-  if (!processData) dataString = qs.stringify(data, { arrayFormat: traditional ? 'repeat' : 'brackets' })
+  let doneCallback
+  let failCallback
+
+  const data = (typeof dataObj !== 'string' && processData)
+    ? qs.stringify(dataObj, { arrayFormat: traditional ? 'repeat' : 'brackets' })
+    : dataObj
 
   // eslint-disable-next-line no-undef
   const controller = new AbortController()
   if (timeout) setTimeout(() => controller.abort(), timeout)
 
-  let doneCallback
-  let failCallback
-
   // eslint-disable-next-line no-undef
-  const thenable = fetch(method === 'GET' && dataString ? `${url}?${dataString}` : url, {
+  const thenable = fetch(method === 'GET' && processData ? `${url}?${dataString}` : url, {
     method,
     headers: {
       'Content-Type': contentType || 'application/x-www-form-urlencoded; charset=UTF-8',
     },
-    body: dataString,
+    body: data,
     signal: controller.signal,
     mode: crossDomain ? 'cors' : undefined,
     credentials: withCredentials ? 'include' : undefined,
   }).catch((err) => {
     failCallback({}, null, err)
   }).then((res) => {
-    const textStatus = STATUS_CODES[res.status]
+    const textStatus = res.statusText
 
     if (res.status >= 400) {
       const err = new Error(textStatus)
@@ -101,7 +103,7 @@ const jqMocks = {
   extend: (obj, data) => Object.assign(obj, data),
   get fn() { return Object.getPrototypeOf(this) },
   growl: (msg) => { console.log(`growl: ${msg}`) },
-  t: (text, params) => (params ? `${text} - ${params}` : text),
+  t: (text, params) => (params ? `${text} - ${JSON.stringify(params)}` : text),
   support: {},
   i18n: null,
   each: jqEach,
@@ -186,11 +188,11 @@ const load = (callback) => {
       if (!global.window.crypto && !global.window.msCrypto) {
         global.crypto = require('crypto')
       }
-    } else {
-      // const { JSDOM } = require('jsdom')
-      // const { window } = new JSDOM()
-      // global.window = window
-      // global.window.console = console
+    } else if (process.env.APP_ENV !== 'browser') {
+      const { JSDOM } = require('jsdom')
+      const { window } = new JSDOM()
+      global.window = window
+      global.window.console = console
     }
 
     // Mock other objects on which the client depends
@@ -225,7 +227,7 @@ const load = (callback) => {
 
     // Now load the constants locally since we cannot trust the remote node to
     // return the correct constants.
-    global.client.processConstants(require('./data/constants'))
+    global.client.processConstants(require('../conf/constants'))
     callback(global.client)
   } catch (err) {
     console.log(err.message || err)
@@ -234,4 +236,5 @@ const load = (callback) => {
   }
 }
 
-export { init, load, setCurrentAccount }
+module.exports = { init, load, setCurrentAccount }
+// export { init, load, setCurrentAccount }

@@ -4,10 +4,9 @@
   "description": "Secure enclave to store private keys and sign messages/transactions.",
   "private": false,
   "main": "dist/index.js",
-  "module": "src/index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "browserify -r jsdom -s jsdom -o dist/jsdom.js && webpack --config webpack.config.js"
+    "build": "[ -e dist/jsdom.js ] || browserify -r jsdom -s jsdom -o dist/jsdom.js && webpack --config webpack.config.js"
   },
   "repository": {
     "type": "git",
@@ -29,6 +28,7 @@
     "jsdom": "^11.11.0",
     "libsodium-wrappers": "^0.7.3",
     "node-fetch": "^2.1.2",
+    "openpgp": "^3.0.12",
     "pako": "^1.0.6",
     "qs": "^6.5.2",
     "whatwg-fetch": "^2.0.4"
