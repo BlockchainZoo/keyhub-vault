@@ -226,7 +226,8 @@ var NRS = (function (NRS) {
     };
 
     NRS.isPassphraseAtRisk = function() {
-        return !isLocalHost || NRS.state && NRS.state.apiProxy || NRS.isMobileApp();
+        return true // heri16@gmail.com: Passphrase is always at risk!
+        // return !isLocalHost || NRS.state && NRS.state.apiProxy || NRS.isMobileApp();
     };
 
     NRS.isWindowPrintSupported = function() {
