@@ -72,7 +72,7 @@ var NRS = (function (NRS, $) {
         'NOT_FORGING': 'not_forging',
         'UNKNOWN': 'unknown',
         'LAST_KNOWN_BLOCK': { id: "14750301419256427185", height: "1865000" },
-        'LAST_KNOWN_TESTNET_BLOCK': { id: "15547113949993887183", height: "712" },
+        'LAST_KNOWN_TESTNET_BLOCK': { id: "9750947151916374106", height: "1825000" },
         'IGNIS_CURRENCY_CODE': "JLRDA",
         'SCHEDULE_PREFIX': "schedule"
     };
@@ -128,7 +128,7 @@ var NRS = (function (NRS, $) {
         if (NRS.isMobileApp()) {
             // UNUSED:
             // jQuery.ajaxSetup({ async: false });
-            // $.getScript("js/data/constants.js" );
+            // $.getScript("conf/constants.js" );
             // jQuery.ajaxSetup({async: true});
             processConstants(NRS.constants.SERVER);
         } else {

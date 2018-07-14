@@ -97,7 +97,7 @@ exports.load = (callback) => {
 
     // Now load the constants locally since we cannot trust the remote node to
     // return the correct constants.
-    global.client.processConstants(require('./data/constants'))
+    global.client.processConstants(require('../conf/constants'))
     callback(global.client)
   } catch (err) {
     console.log(err.message || err)

@@ -3,7 +3,7 @@ const loader = require('./loader')
 const { config } = loader
 
 loader.load((NRS) => {
-  const property = '$$RootAdmin'
+  const property = '$$Admin'
 
   const data = {
     recipient: NRS.getAccountIdFromPublicKey(config.recipientPublicKey),
