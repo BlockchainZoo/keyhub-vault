@@ -179,15 +179,12 @@ const load = (callback) => {
     global.BigInteger = jsbn.BigInteger
 
     // Support for Webworkers
-    if (typeof self !== 'undefined') { // eslint-disable-line no-restricted-globals
-      global.window = self // eslint-disable-line no-restricted-globals, no-undef
-      global.window.console = console
-    } else if (typeof window !== 'undefined') {
-      global.window = window // eslint-disable-line no-undef
-      global.window.console = console
+    if (typeof global.window !== 'undefined') {
       if (!global.window.crypto && !global.window.msCrypto) {
         global.crypto = require('crypto')
       }
+    } else if (typeof self !== 'undefined') { // eslint-disable-line no-restricted-globals
+      global.window = self // eslint-disable-line no-restricted-globals, no-undef
     } else if (process.env.APP_ENV !== 'browser') {
       const { JSDOM } = require('jsdom')
       const { window } = new JSDOM()
@@ -196,9 +193,10 @@ const load = (callback) => {
     }
 
     // Mock other objects on which the client depends
-    global.document = {}
+    if (typeof global.document === 'undefined') global.document = {}
+    if (typeof global.navigator === 'undefined') global.navigator = { userAgent: '' }
     global.isNode = true // for code which has to execute differently by node compared to browser
-    global.navigator = { userAgent: '' }
+
 
     // Now load some NXT specific libraries into the global scope
     global.NxtAddress = require('./util/nxtaddress')
