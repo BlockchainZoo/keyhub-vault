@@ -1,8 +1,7 @@
-/* eslint-disable no-undef,quote-props,quotes,comma-dangle */
+/* eslint-disable quote-props,quotes,comma-dangle */
 
-if (typeof NRS === 'undefined') {
-  NRS = { constants: {} }
-}
+// eslint-disable-next-line no-use-before-define
+const NRS = (typeof NRS === 'undefined') ? { constants: {} } : NRS
 
 NRS.constants.SERVER = {
   "transactionSubTypes": {
@@ -3157,6 +3156,7 @@ NRS.constants.SERVER = {
   }
 }
 
+// eslint-disable-next-line no-undef
 if (isNode) {
   module.exports = NRS.constants.SERVER
 }

@@ -29,62 +29,62 @@
 // by Daniel J. Bernstein
 
 
-curve25519_zero = function() {
+var curve25519_zero = function() {
   return [0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0];
 }
 
-curve25519_one = function() {
+var curve25519_one = function() {
   return [1,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0];
 }
 
-curve25519_two = function() {
+var curve25519_two = function() {
   return [2,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0];
 }
 
-curve25519_nine = function() {
+var curve25519_nine = function() {
   return [9,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0];
 }
 
-curve25519_486671 = function() {
+var curve25519_486671 = function() {
   return [27919,7,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0];
 }
 
-curve25519_39420360 = function() {
+var curve25519_39420360 = function() {
   return [33224,601,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0];
 }
 
-curve25519_r2y = function() {
+var curve25519_r2y = function() {
   return [0x1670,0x4000,0xf219,0xd369,0x2248,0x4845,0x679a,0x884d,0x5d19,0x16bf,0xda74,0xe57d,0x5e53,0x3705,0x3526,0x17c0];
 }
 
-curve25519_2y = function() {
+var curve25519_2y = function() {
   return [0x583b,0x0262,0x74bb,0xac2c,0x3c9b,0x2507,0x6503,0xdb85,0x5d66,0x116e,0x45a7,0x3fc2,0xf296,0x8ebe,0xccbc,0x3ea3];
 }
 
-curve25519_clamp = function(curve) {
+var curve25519_clamp = function(curve) {
   curve[0] &= 0xFFF8;
   curve[15] &= 0x7FFF;
   curve[15] |= 0x4000;
   return curve;
 }
 
-curve25519_getbit = function(curve, c) {
+var curve25519_getbit = function(curve, c) {
   return ~~(curve[~~(c / 16)] / Math.pow(2, c % 16)) % 2;
 }
 
-curve25519_prime = [0xffff-18, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0x7fff];
+var curve25519_prime = [0xffff-18, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0x7fff];
 
 /* group order (a prime near 2^252+2^124) */
-curve25519_order = [
+var curve25519_order = [
 	    237, 211, 245, 92, 26, 99, 18, 88, 214, 156, 247, 162, 222, 249, 222, 20,
 	    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 16];
 
-curve25519_order_times_8 = [
+var curve25519_order_times_8 = [
 	    104, 159, 174, 231, 210, 24, 147, 192, 178, 230, 188, 23, 245, 206, 247, 166,
 	    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 128];
 
 
-curve25519_convertToByteArray = function(a) {
+var curve25519_convertToByteArray = function(a) {
 	var b = new Int8Array(32);
 	var i;
 	for (i=0; i<16; i++)
@@ -96,7 +96,7 @@ curve25519_convertToByteArray = function(a) {
 	return b;
 }
 
-curve25519_convertToShortArray = function(a) {
+var curve25519_convertToShortArray = function(a) {
 	var b = new Array(16);
 	var i, val1, val2;
 	for (i=0; i<16; i++)
@@ -117,7 +117,7 @@ curve25519_convertToShortArray = function(a) {
 
 }
 
-curve25519_fillShortArray = function(src, dest) {
+var curve25519_fillShortArray = function(src, dest) {
 	var i;
 	for (i=0; i<16; i++)
 	{
@@ -125,7 +125,7 @@ curve25519_fillShortArray = function(src, dest) {
 	}
 }
 
-curve25519_fillByteArray = function(src, dest) {
+var curve25519_fillByteArray = function(src, dest) {
 	var i;
 	for (i=0; i<32; i++)
 	{
@@ -133,17 +133,17 @@ curve25519_fillByteArray = function(src, dest) {
 	}
 }
 
-curve25519_log16 = function(text, a) {
+var curve25519_log16 = function(text, a) {
 	var b = shortArray_to_hex_string(a);
 	addText(text + b);
 }
 
-curve25519_log32 = function(text, a) {
+var curve25519_log32 = function(text, a) {
 	var b = byteArray_to_hex_string(a);
 	addText(text + b);
 }
 
-curve25519_cpy32 = function(a) {
+var curve25519_cpy32 = function(a) {
 	var b = new Int8Array(32);
 	for (i = 0; i < 32; i++)
 	{
@@ -152,7 +152,7 @@ curve25519_cpy32 = function(a) {
 	return b;
 }
 
-curve25519_mula_small = function(p, q, m, x, n, z) {
+var curve25519_mula_small = function(p, q, m, x, n, z) {
 	var v=0;
 	for (j=0; j<n; ++j)
 	{
@@ -163,7 +163,7 @@ curve25519_mula_small = function(p, q, m, x, n, z) {
 	return v;
 }
 
-curve25519_mula32 = function(p, x, y, t, z) {
+var curve25519_mula32 = function(p, x, y, t, z) {
 	var n = 31;
 	var w = 0;
 	for (i=0; i < t; i++)
@@ -177,7 +177,7 @@ curve25519_mula32 = function(p, x, y, t, z) {
 	return w >> 8;
 }
 
-curve25519_divmod = function(q, r, n, d, t) {
+var curve25519_divmod = function(q, r, n, d, t) {
 	var rn = 0, z=0;
 	var dt = ((d[t-1] & 0xFF) << 8);
 	if (t>1)
@@ -201,13 +201,13 @@ curve25519_divmod = function(q, r, n, d, t) {
 	r[t-1] = (rn & 0xFF);
 }
 
-curve25519_numsize = function(x, n)  {
-	while (n--!=0 && x[n]==0)
+var curve25519_numsize = function(x, n)  {
+	while (n--!=0 && x[n]===0)
 		;
 	return n+1;
 }
 
-curve25519_egcd32 = function(x, y, a, b) {
+var curve25519_egcd32 = function(x, y, a, b) {
 	var an = 0, bn = 32, qn=0, i=0;
 	for (i = 0; i < 32; i++)
 	{
@@ -215,7 +215,7 @@ curve25519_egcd32 = function(x, y, a, b) {
 	}
 	x[0] = 1;
 	an = curve25519_numsize(a, 32);
-	if (an==0)
+	if (an===0)
 	{
 		return y;	// division by zero
 	}
@@ -225,7 +225,7 @@ curve25519_egcd32 = function(x, y, a, b) {
 		qn = bn - an + 1;
 		curve25519_divmod(temp, b, bn, a, an);
 		bn = curve25519_numsize(b, bn);
-		if (bn==0)
+		if (bn===0)
 		{
 			return x;
 		}
@@ -234,7 +234,7 @@ curve25519_egcd32 = function(x, y, a, b) {
 		qn = an - bn + 1;
 		curve25519_divmod(temp, a, an, b, bn);
 		an = curve25519_numsize(a, an);
-		if (an==0)
+		if (an===0)
 		{
 			return y;
 		}
@@ -242,7 +242,7 @@ curve25519_egcd32 = function(x, y, a, b) {
 	}
 }
 
-curve25519_compare = function (a ,b) {
+var curve25519_compare = function (a ,b) {
   var c;
   for (c = 15; c >= 0; c--) {
     var x = a[c];
@@ -257,7 +257,7 @@ curve25519_compare = function (a ,b) {
   return 0;
 }
 
-curve25519_cpy16 = function(a) {
+var curve25519_cpy16 = function(a) {
 	var r = new Array(16);
 	var i;
 	for (i=0; i<16;i++)
@@ -270,11 +270,11 @@ curve25519_cpy16 = function(a) {
 /***
  * BloodyRookie: odd numbers are negativ
  */
-curve25519_isNegative = function(x) {
+var curve25519_isNegative = function(x) {
 	return (x[0] & 1);
 }
 
-curve25519_isOverflow = function(x) {
+var curve25519_isOverflow = function(x) {
 	if (x[15] >= 0x8000) return 1;
 	if (x[0] >= 0x10000)
 	{
@@ -294,7 +294,7 @@ curve25519_isOverflow = function(x) {
 	}
 }
 
-curve25519_sqr8h = function (r, a7, a6, a5, a4, a3, a2, a1, a0) {
+var curve25519_sqr8h = function (r, a7, a6, a5, a4, a3, a2, a1, a0) {
   var v=0;
   r[0] = (v = a0*a0) & 0xffff;
   r[1] = (v = ~~(v / 0x10000) + 2*a0*a1) & 0xffff;
@@ -314,7 +314,7 @@ curve25519_sqr8h = function (r, a7, a6, a5, a4, a3, a2, a1, a0) {
   r[15] = ~~(v / 0x10000);
 }
 
-curve25519_sqrmodp = function(r, a) {
+var curve25519_sqrmodp = function(r, a) {
   var x = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
   var y = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
   var z = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
@@ -341,7 +341,7 @@ curve25519_sqrmodp = function(r, a) {
   curve25519_reduce(r);
 }
 
-curve25519_mul8h = function(r, a7, a6, a5, a4, a3, a2, a1, a0, b7, b6, b5, b4, b3, b2, b1, b0) {
+var curve25519_mul8h = function(r, a7, a6, a5, a4, a3, a2, a1, a0, b7, b6, b5, b4, b3, b2, b1, b0) {
   var v=0;
   r[0] = (v = a0*b0) & 0xffff;
   r[1] = (v = ~~(v / 0x10000) + a0*b1 + a1*b0) & 0xffff;
@@ -361,7 +361,7 @@ curve25519_mul8h = function(r, a7, a6, a5, a4, a3, a2, a1, a0, b7, b6, b5, b4, b
   r[15] = ~~(v / 0x10000);
 }
 
-curve25519_mulmodp = function(r, a, b) {
+var curve25519_mulmodp = function(r, a, b) {
   var x = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
   var y = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
   var z = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
@@ -389,7 +389,7 @@ curve25519_mulmodp = function(r, a, b) {
   curve25519_reduce(r);
 }
 
-curve25519_mulasmall = function(r, a, m) {
+var curve25519_mulasmall = function(r, a, m) {
   var v=0;
   r[0] = (v = a[0] * m) & 0xffff;
   r[1] = (v = ~~(v / 0x10000) + a[1]*m) & 0xffff;
@@ -410,7 +410,7 @@ curve25519_mulasmall = function(r, a, m) {
   curve25519_reduce(r);
 }
 
-curve25519_addmodp = function(r, a, b) {
+var curve25519_addmodp = function(r, a, b) {
   var v=0;
   r[0] = (v = (~~(a[15] / 0x8000) + ~~(b[15] / 0x8000)) * 19 + a[0] + b[0]) & 0xffff;
   r[1] = (v = ~~(v / 0x10000) + a[1] + b[1]) & 0xffff;
@@ -430,7 +430,7 @@ curve25519_addmodp = function(r, a, b) {
   r[15] = ~~(v / 0x10000) + a[15] % 0x8000 + b[15] % 0x8000;
 }
 
-curve25519_submodp = function(r, a, b) {
+var curve25519_submodp = function(r, a, b) {
   var v=0;
   r[0] = (v = 0x80000 + (~~(a[15] / 0x8000) - ~~(b[15] / 0x8000) - 1) * 19 + a[0] - b[0]) & 0xffff;
   r[1] = (v = ~~(v / 0x10000) + 0x7fff8 + a[1] - b[1]) & 0xffff;
@@ -453,21 +453,21 @@ curve25519_submodp = function(r, a, b) {
  * BloodyRookie: a^-1 is found via Fermats little theorem:
  * a^p congruent a mod p and therefore a^(p-2) congruent a^-1 mod p
  */
-curve25519_invmodp = function (r, a, sqrtassist) {
+var curve25519_invmodp = function (r, a, sqrtassist) {
   var r1 = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
   var r2 = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
   var r3 = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
   var r4 = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
   var r5 = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
   var i=0;
-  curve25519_sqrmodp(r2, a);					//  2 == 2 * 1
-  curve25519_sqrmodp(r3, r2);					//  4 == 2 * 2
-  curve25519_sqrmodp(r1, r3);					//  8 == 2 * 4
-  curve25519_mulmodp(r3, r1, a);				//  9 == 8 + 1
-  curve25519_mulmodp(r1, r3, r2);				// 11 == 9 + 2
-  curve25519_sqrmodp(r2, r1);					// 22 == 2 * 11
-  curve25519_mulmodp(r4, r2, r3);				// 31 == 22 + 9
- 												//	== 2^5   - 2^0
+  curve25519_sqrmodp(r2, a);					//  2 === 2 * 1
+  curve25519_sqrmodp(r3, r2);					//  4 === 2 * 2
+  curve25519_sqrmodp(r1, r3);					//  8 === 2 * 4
+  curve25519_mulmodp(r3, r1, a);				//  9 === 8 + 1
+  curve25519_mulmodp(r1, r3, r2);				// 11 === 9 + 2
+  curve25519_sqrmodp(r2, r1);					// 22 === 2 * 11
+  curve25519_mulmodp(r4, r2, r3);				// 31 === 22 + 9
+ 												//	=== 2^5   - 2^0
   curve25519_sqrmodp(r2, r4);					// 2^6   - 2^1
   curve25519_sqrmodp(r3, r2);					// 2^7   - 2^2
   curve25519_sqrmodp(r2, r3);					// 2^8   - 2^3
@@ -514,7 +514,7 @@ curve25519_invmodp = function (r, a, sqrtassist) {
   curve25519_mulmodp(r3, r4, r2);				// 2^250 - 2^0
   curve25519_sqrmodp(r2, r3);					// 2^251 - 2^1
   curve25519_sqrmodp(r3, r2);					// 2^252 - 2^2
-  if (sqrtassist == 1) {
+  if (sqrtassist === 1) {
 	curve25519_mulmodp(r, a, r3);				// 2^252 - 3
   } else {
 	curve25519_sqrmodp(r2, r3);					// 2^253 - 2^3
@@ -530,7 +530,7 @@ curve25519_invmodp = function (r, a, sqrtassist) {
  * because of Eulers criterium we see that when we set v=(2x)^((p-5)/8) then
  * i:=2xv^2 is a square root of -1 and thus r=+xv(i-1) and r=-xv(i-1) are the square roots of x.
  */
-curve25519_sqrtmodp = function(r, x) {
+var curve25519_sqrtmodp = function(r, x) {
   var r1 = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
   var r2 = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
   var r3 = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
@@ -544,7 +544,7 @@ curve25519_sqrtmodp = function(r, x) {
   curve25519_mulmodp(r, x, r1);								//  r = xv(i-1)
 }
 
-curve25519_reduce = function (a) {
+var curve25519_reduce = function (a) {
   curve25519_reduce2(a);
 
   /**
@@ -563,7 +563,7 @@ curve25519_reduce = function (a) {
   }
   a[0] = a[0] - 0xFFED;
 }
-curve25519_reduce2 = function (a) {
+var curve25519_reduce2 = function (a) {
   var v = a[15];
   if (v < 0x8000) return;
   a[15] = v % 0x8000;
@@ -604,7 +604,7 @@ curve25519_reduce2 = function (a) {
 /**
  * Montgomery curve with A=486662 and B=1
  */
-curve25519_x_to_y2 = function(r, x) {
+var curve25519_x_to_y2 = function(r, x) {
   var r1 = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
   var r2 = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
   curve25519_sqrmodp(r1, x);									// r1 = x^2
@@ -614,7 +614,7 @@ curve25519_x_to_y2 = function(r, x) {
   curve25519_mulmodp(r, r1, x);									//  r = x^3 + Ax^2 + x
 }
 
-curve25519_prep = function(r, s, a, b) {
+var curve25519_prep = function(r, s, a, b) {
   curve25519_addmodp(r, a, b);
   curve25519_submodp(s, a, b);
 }
@@ -628,7 +628,7 @@ curve25519_prep = function(r, s, a, b) {
  *   = 4*x*z * (x^2 + 486662*x*z + z^2)
  *   = 4*x*z * ((x-z)^2 + ((486662+2)/4)(4*x*z))
  */
-curve25519_dbl = function(r, s, t1, t2) {
+var curve25519_dbl = function(r, s, t1, t2) {
   var r1 = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
   var r2 = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
   var r3 = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
@@ -701,7 +701,7 @@ function curve25519_(f, c, s) {
   while (n >= 0)
   {
     fi = curve25519_getbit(f, n);
-    if (fi == 0)
+    if (fi === 0)
     {
        curve25519_prep(t1, t2, a[0], a[1]);
        curve25519_prep(t3, t4, q[0], q[1]);
@@ -783,7 +783,7 @@ function curve25519_(f, c, s) {
   return q[0];
 }
 
-curve25519_keygen = function(s, curve) {
+var curve25519_keygen = function(s, curve) {
 	curve25519_clamp(curve);
 	return curve25519_(curve, curve25519_nine(), s);
 }
@@ -795,7 +795,7 @@ curve25519_keygen = function(s, curve) {
  *   s  [in]  private key for signing
  * returns true on success, false on failure (use different x or h)
  */
-curve25519_sign = function(v, h, x, s) {
+var curve25519_sign = function(v, h, x, s) {
 	tmp1=new Int8Array(65);
 	tmp2=new Int8Array(33);
 	for (i = 0; i < 32; i++)
@@ -815,7 +815,7 @@ curve25519_sign = function(v, h, x, s) {
 	return w != 0;
 }
 
-curve25519_verify = function(Y, v, h, P) {
+var curve25519_verify = function(Y, v, h, P) {
 	d=new Int8Array(32);
 	yx=new Array(new Array(16), new Array(16), new Array(16));
 	yz=new Array(new Array(16), new Array(16), new Array(16));
