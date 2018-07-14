@@ -53,7 +53,7 @@ var NRS = (function (NRS, $, undefined) {
         }
 
         $.each(data, function (key, val) {
-            if (key != "secretPhrase") {
+            if (key !== "secretPhrase") {
                 if (typeof val === "string") {
                     data[key] = $.trim(val);
                 }
@@ -130,7 +130,7 @@ var NRS = (function (NRS, $, undefined) {
         }
 
         //Fill phasing parameters when mandatory approval is enabled
-        if (requestType != "approveTransaction"
+        if (requestType !== "approveTransaction"
             && NRS.accountInfo.accountControls && $.inArray('PHASING_ONLY', NRS.accountInfo.accountControls) > -1
                 && NRS.accountInfo.phasingOnly
                 && NRS.accountInfo.phasingOnly.votingModel >= 0) {
@@ -189,7 +189,7 @@ var NRS = (function (NRS, $, undefined) {
         //check to see if secretPhrase supplied matches logged in account, if not - show error.
         if ("secretPhrase" in data) {
             accountId = NRS.getAccountId(NRS.rememberPassword ? _password : data.secretPhrase);
-            if (accountId != NRS.account && !data.calculateFee) {
+            if (accountId !== NRS.account && !data.calculateFee) {
                 callback({
                     "errorCode": 1,
                     "errorDescription": $.t("error_passphrase_incorrect")
@@ -387,7 +387,7 @@ var NRS = (function (NRS, $, undefined) {
             currentSubPage: currentSubPage,
             shouldRetry: (httpMethod === "GET" ? 2 : undefined),
             traditional: true,
-            data: (formData != null ? formData : data),
+            data: (formData !== null ? formData : data),
             contentType: contentType,
             processData: processData
         }).done(function (response) {
@@ -496,7 +496,7 @@ var NRS = (function (NRS, $, undefined) {
                 }
             }
 
-            if (error != "abort") {
+            if (error !== "abort") {
                 if (options.remoteNode) {
                     options.remoteNode.blacklist();
                 } else {
@@ -566,16 +566,16 @@ var NRS = (function (NRS, $, undefined) {
             transaction.ecBlockId = String(converters.byteArrayToBigInteger(byteArray, 168));
             if (isVerifyECBlock) {
                 var ecBlock = NRS.getECBlock(NRS.isTestNet);
-                if (transaction.ecBlockHeight != ecBlock.height) {
+                if (transaction.ecBlockHeight !== ecBlock.height) {
                     return false;
                 }
-                if (transaction.ecBlockId != ecBlock.id) {
+                if (transaction.ecBlockId !== ecBlock.id) {
                     return false;
                 }
             }
         }
 
-        if (transaction.publicKey != NRS.accountInfo.publicKey && transaction.publicKey != data.publicKey) {
+        if (transaction.publicKey !== NRS.accountInfo.publicKey && transaction.publicKey !== data.publicKey) {
             return false;
         }
 
@@ -721,13 +721,13 @@ var NRS = (function (NRS, $, undefined) {
                 }
                 break;
             case "hubAnnouncement":
-                if (transaction.type !== 1 || transaction.subtype != 4) {
+                if (transaction.type !== 1 || transaction.subtype !== 4) {
                     return false;
                 }
                 return false;
                 break;
             case "setAccountInfo":
-                if (transaction.type !== 1 || transaction.subtype != 5) {
+                if (transaction.type !== 1 || transaction.subtype !== 5) {
                     return false;
                 }
                 length = parseInt(byteArray[pos], 10);
@@ -925,7 +925,7 @@ var NRS = (function (NRS, $, undefined) {
                 }
                 break;
             case "dgsListing":
-                if (transaction.type !== 3 && transaction.subtype != 0) {
+                if (transaction.type !== 3 && transaction.subtype !== 0) {
                     return false;
                 }
                 length = converters.byteArrayToSignedShort(byteArray, pos);
@@ -1018,7 +1018,7 @@ var NRS = (function (NRS, $, undefined) {
                 transaction.discountNQT = String(converters.byteArrayToBigInteger(byteArray, pos));
                 pos += 8;
                 var goodsIsText = (transaction.goodsIsText ? "true" : "false");
-                if (goodsIsText != data.goodsIsText) {
+                if (goodsIsText !== data.goodsIsText) {
                     return false;
                 }
                 if (transaction.purchase !== data.purchase || transaction.goodsData !== data.goodsData || transaction.goodsNonce !== data.goodsNonce || transaction.discountNQT !== data.discountNQT) {
@@ -1061,7 +1061,7 @@ var NRS = (function (NRS, $, undefined) {
                 if (transaction.type !== 4 && transaction.subtype !== 1) {
                     return false;
                 }
-                return validateCommonPhasingData(byteArray, pos, data, "control") != -1;
+                return validateCommonPhasingData(byteArray, pos, data, "control") !== -1;
                 break;
             case "issueCurrency":
                 if (transaction.type !== 5 && transaction.subtype !== 0) {
@@ -1102,7 +1102,7 @@ var NRS = (function (NRS, $, undefined) {
                 transaction.decimals = String(byteArray[pos]);
                 pos++;
                 if (transaction.name !== data.name || transaction.code !== data.code || transaction.description !== data.description ||
-                    transaction.type != data.type || transaction.initialSupply !== data.initialSupply || transaction.reserveSupply !== data.reserveSupply ||
+                    transaction.type !== data.type || transaction.initialSupply !== data.initialSupply || transaction.reserveSupply !== data.reserveSupply ||
                     transaction.maxSupply !== data.maxSupply || transaction.issuanceHeight !== data.issuanceHeight ||
                     transaction.ruleset !== data.ruleset || transaction.algorithm !== data.algorithm || transaction.decimals !== data.decimals) {
                     return false;
@@ -1318,7 +1318,7 @@ var NRS = (function (NRS, $, undefined) {
         var position = 1;
         var attachmentVersion;
         //non-encrypted message
-        if ((transaction.flags & position) != 0 ||
+        if ((transaction.flags & position) !== 0 ||
             ((requestType === "sendMessage" && data.message && !(data.messageIsPrunable === "true")))) {
             attachmentVersion = byteArray[pos];
             if (attachmentVersion < 0 || attachmentVersion > 2) {
@@ -1339,7 +1339,7 @@ var NRS = (function (NRS, $, undefined) {
             }
             pos += messageLength;
             var messageIsText = (transaction.messageIsText ? "true" : "false");
-            if (messageIsText != data.messageIsText) {
+            if (messageIsText !== data.messageIsText) {
                 return false;
             }
             if (transaction.message !== data.message) {
@@ -1352,7 +1352,7 @@ var NRS = (function (NRS, $, undefined) {
         position <<= 1;
 
         //encrypted note
-        if ((transaction.flags & position) != 0) {
+        if ((transaction.flags & position) !== 0) {
             attachmentVersion = byteArray[pos];
             if (attachmentVersion < 0 || attachmentVersion > 2) {
                 return false;
@@ -1369,7 +1369,7 @@ var NRS = (function (NRS, $, undefined) {
             transaction.encryptedMessageNonce = converters.byteArrayToHexString(byteArray.slice(pos, pos + 32));
             pos += 32;
             var messageToEncryptIsText = (transaction.messageToEncryptIsText ? "true" : "false");
-            if (messageToEncryptIsText != data.messageToEncryptIsText) {
+            if (messageToEncryptIsText !== data.messageToEncryptIsText) {
                 return false;
             }
             if (transaction.encryptedMessageData !== data.encryptedMessageData || transaction.encryptedMessageNonce !== data.encryptedMessageNonce) {
@@ -1381,14 +1381,14 @@ var NRS = (function (NRS, $, undefined) {
 
         position <<= 1;
 
-        if ((transaction.flags & position) != 0) {
+        if ((transaction.flags & position) !== 0) {
             attachmentVersion = byteArray[pos];
             if (attachmentVersion < 0 || attachmentVersion > 2) {
                 return false;
             }
             pos++;
             var recipientPublicKey = converters.byteArrayToHexString(byteArray.slice(pos, pos + 32));
-            if (recipientPublicKey != data.recipientPublicKey) {
+            if (recipientPublicKey !== data.recipientPublicKey) {
                 return false;
             }
             pos += 32;
@@ -1398,7 +1398,7 @@ var NRS = (function (NRS, $, undefined) {
 
         position <<= 1;
 
-        if ((transaction.flags & position) != 0) {
+        if ((transaction.flags & position) !== 0) {
             attachmentVersion = byteArray[pos];
             if (attachmentVersion < 0 || attachmentVersion > 2) {
                 return false;
@@ -1415,7 +1415,7 @@ var NRS = (function (NRS, $, undefined) {
             transaction.encryptToSelfMessageNonce = converters.byteArrayToHexString(byteArray.slice(pos, pos + 32));
             pos += 32;
             var messageToEncryptToSelfIsText = (transaction.messageToEncryptToSelfIsText ? "true" : "false");
-            if (messageToEncryptToSelfIsText != data.messageToEncryptToSelfIsText) {
+            if (messageToEncryptToSelfIsText !== data.messageToEncryptToSelfIsText) {
                 return false;
             }
             if (transaction.encryptToSelfMessageData !== data.encryptToSelfMessageData || transaction.encryptToSelfMessageNonce !== data.encryptToSelfMessageNonce) {
@@ -1427,7 +1427,7 @@ var NRS = (function (NRS, $, undefined) {
 
         position <<= 1;
 
-        if ((transaction.flags & position) != 0) {
+        if ((transaction.flags & position) !== 0) {
             attachmentVersion = byteArray[pos];
             if (attachmentVersion < 0 || attachmentVersion > 2) {
                 return false;
@@ -1465,7 +1465,7 @@ var NRS = (function (NRS, $, undefined) {
 
         position <<= 1;
 
-        if ((transaction.flags & position) != 0) {
+        if ((transaction.flags & position) !== 0) {
             attachmentVersion = byteArray[pos];
             if (attachmentVersion < 0 || attachmentVersion > 2) {
                 return false;
@@ -1495,7 +1495,7 @@ var NRS = (function (NRS, $, undefined) {
         }
         position <<= 1;
 
-        if ((transaction.flags & position) != 0) {
+        if ((transaction.flags & position) !== 0) {
             attachmentVersion = byteArray[pos];
             if (attachmentVersion < 0 || attachmentVersion > 2) {
                 return false;
@@ -1638,7 +1638,7 @@ var NRS = (function (NRS, $, undefined) {
     }
 
     function validateCommonPhasingData(byteArray, pos, data, prefix) {
-        if (byteArray[pos] != (parseInt(data[prefix + "VotingModel"]) & 0xFF)) {
+        if (byteArray[pos] !== (parseInt(data[prefix + "VotingModel"]) & 0xFF)) {
             return -1;
         }
         pos++;

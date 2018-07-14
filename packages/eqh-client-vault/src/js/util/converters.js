@@ -126,7 +126,7 @@ var converters = function() {
 			while (i < (len - (len % 4))) {
 				words[offset++] = (byteArray[i++] << 24) | (byteArray[i++] << 16) | (byteArray[i++] << 8) | (byteArray[i++]);
 			}
-			if (len % 4 != 0) {
+			if (len % 4 !== 0) {
 				word = byteArray[i++] << 24;
 				if (len % 4 > 1) {
 					word = word | byteArray[i++] << 16;
@@ -223,7 +223,7 @@ var converters = function() {
 		intToBytes_: function(x, numBytes, unsignedMax, opt_bigEndian) {
 			var signedMax = Math.floor(unsignedMax / 2);
 			var negativeMax = (signedMax + 1) * -1;
-			if (x != Math.floor(x) || x < negativeMax || x > unsignedMax) {
+			if (x !== Math.floor(x) || x < negativeMax || x > unsignedMax) {
 				throw new Error(
 					x + ' is not a ' + (numBytes * 8) + ' bit integer');
 			}

@@ -202,7 +202,7 @@ var curve25519_divmod = function(q, r, n, d, t) {
 }
 
 var curve25519_numsize = function(x, n)  {
-	while (n--!=0 && x[n]===0)
+	while (n--!==0 && x[n]===0)
 		;
 	return n+1;
 }
@@ -550,8 +550,8 @@ var curve25519_reduce = function (a) {
   /**
    * BloodyRookie: special case for p <= a < 2^255
    */
-  if ((a[15] != 0x7FFF || a[14] != 0xFFFF || a[13] != 0xFFFF || a[12] != 0xFFFF || a[11] != 0xFFFF || a[10] != 0xFFFF || a[9] != 0xFFFF ||  a[8] != 0xFFFF ||
-	   a[7] != 0xFFFF  || a[6] != 0xFFFF  || a[5] != 0xFFFF  || a[4] != 0xFFFF  || a[3] != 0xFFFF  || a[2] != 0xFFFF || a[1] != 0xFFFF || a[0] < 0xFFED))
+  if ((a[15] !== 0x7FFF || a[14] !== 0xFFFF || a[13] !== 0xFFFF || a[12] !== 0xFFFF || a[11] !== 0xFFFF || a[10] !== 0xFFFF || a[9] !== 0xFFFF ||  a[8] !== 0xFFFF ||
+	   a[7] !== 0xFFFF  || a[6] !== 0xFFFF  || a[5] !== 0xFFFF  || a[4] !== 0xFFFF  || a[3] !== 0xFFFF  || a[2] !== 0xFFFF || a[1] !== 0xFFFF || a[0] < 0xFFED))
   {
 	  return;
   }
@@ -725,7 +725,7 @@ function curve25519_(f, c, s) {
   // q[0]=x-coordinate of k*G=:Px
   // q[1]=z-coordinate of k*G=:Pz
   // a = q + G = P + G
-  if (s != null)
+  if (s !== null)
   {
 	  /*************************************************************************
 	   * BloodyRookie: Recovery of the y-coordinate of point P:                *
@@ -753,7 +753,7 @@ function curve25519_(f, c, s) {
 	  curve25519_mulmodp(t1, t4, curve25519_r2y())				// t1 = ((Qx + Px + Gx + A) * (Px - Gx)^2 - Py^2 - Gy^2)/(2Gy) = -Py
 	  fb = curve25519_convertToByteArray(f);
 	  j = curve25519_isNegative(t1);
-	  if (j != 0)
+	  if (j !== 0)
 	  {
 		  /***
 		   * Py is positiv, so just copy
@@ -772,7 +772,7 @@ function curve25519_(f, c, s) {
 	  temp1 = curve25519_cpy32(curve25519_order);
 	  temp1 = curve25519_egcd32(temp2, temp3, sb, temp1);
 	  sb = curve25519_cpy32(temp1);
-	  if ((sb[31] & 0x80)!=0)
+	  if ((sb[31] & 0x80)!==0)
 	  {
 		  curve25519_mula_small(sb, sb, 0, curve25519_order, 32, 1);
 	  }
@@ -812,7 +812,7 @@ var curve25519_sign = function(v, h, x, s) {
 		v[k] = tmp1[k];
 		w |= v[k];
 	}
-	return w != 0;
+	return w !== 0;
 }
 
 var curve25519_verify = function(Y, v, h, P) {
@@ -886,13 +886,13 @@ var curve25519_verify = function(Y, v, h, P) {
 	vi = 0;
 	hi = 0;
 
-	for (i = 32; i-- != 0; i=i)
+	for (i = 32; i-- !== 0; i=i)
 	{
 		vi = (vi << 8) | (v[i] & 0xFF);
 		hi = (hi << 8) | (h[i] & 0xFF);
 		di = (di << 8) | (d[i] & 0xFF);
 
-		for (j = 8; j-- !=0 ; j=j)
+		for (j = 8; j-- !==0 ; j=j)
 		{
 			k = ((vi ^ vi >> 1) >> j & 1) + ((hi ^ hi >> 1) >> j & 1);
 			curve25519_prep(t1[0], t2[0], yx[0], yz[0]);

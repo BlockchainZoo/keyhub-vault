@@ -92,7 +92,7 @@ function NxtAddress() {
 		for (var r = 0; r < 4; r++) {
 			var discr = calc_discrepancy(lambda, r + 1); // Compute discrepancy at the r-th step in poly-form
 
-			if (discr != 0) {
+			if (discr !== 0) {
 				deg_lambda = 0;
 
 				for (var i = 0; i < 5; i++) {
@@ -123,7 +123,7 @@ function NxtAddress() {
 
 		if (errors < 1 || errors > 2) return false;
 
-		if (deg_lambda != errors) return false; // deg(lambda) unequal to number of roots => uncorrectable error
+		if (deg_lambda !== errors) return false; // deg(lambda) unequal to number of roots => uncorrectable error
 
 		// Compute err+eras evaluator poly omega(x) = s(x)*lambda(x) (modulo x**(4)). Also find deg(omega).
 
@@ -193,7 +193,7 @@ function NxtAddress() {
 		if (typeof skip === 'undefined') skip = -1;
 
 		for (var i = 0, j = 0; i < len; i++) {
-			if (i != skip) codeword[cwmap[j++]] = cw[i];
+			if (i !== skip) codeword[cwmap[j++]] = cw[i];
 		}
 	} //__________________________
 
@@ -236,7 +236,7 @@ function NxtAddress() {
 			pos = 0,
 			len = acc.length;
 
-		if (len === 20 && acc.charAt(0) != '1') return false;
+		if (len === 20 && acc.charAt(0) !== '1') return false;
 
 		for (var i = 0; i < len; i++) {
 			inp[i] = acc.charCodeAt(i) - '0'.charCodeAt(0);
@@ -402,7 +402,7 @@ function NxtAddress() {
 			for (var j = 1; j < s.length; j++) {
 				var pos = org.indexOf(s.substr(i, j));
 
-				if (pos != -1) {
+				if (pos !== -1) {
 					if (Math.abs(pos - i) < 3) m = j;
 				} else break;
 			}

@@ -66,7 +66,7 @@ var NRS = (function (NRS, $, undefined) {
 	};
 
     NRS.calculateOrderPricePerWholeQNT = function (price, decimals, returnAsObject) {
-		if (typeof price != "object") {
+		if (typeof price !== "object") {
 			price = new BigInteger(String(price));
 		}
 
@@ -91,10 +91,10 @@ var NRS = (function (NRS, $, undefined) {
 	};
 
     function calculateOrderTotalImpl(quantityQNT, priceNQT) {
-        if (typeof quantityQNT != "object") {
+        if (typeof quantityQNT !== "object") {
             quantityQNT = new BigInteger(String(quantityQNT));
         }
-        if (typeof priceNQT != "object") {
+        if (typeof priceNQT !== "object") {
             priceNQT = new BigInteger(String(priceNQT));
         }
         return quantityQNT.multiply(priceNQT);
@@ -112,7 +112,7 @@ var NRS = (function (NRS, $, undefined) {
 		if (String(b) === "0") {
             return "0";
         }
-        if (rounding_mode != undefined) { // Rounding mode from Big.js
+        if (rounding_mode !== undefined) { // Rounding mode from Big.js
 			Big.RM = rounding_mode;
 		}
 		a = new Big(String(a));
@@ -127,7 +127,7 @@ var NRS = (function (NRS, $, undefined) {
         var negative = "";
         var mantissa = "";
 
-		if (typeof amount != "object") {
+		if (typeof amount !== "object") {
 			amount = new BigInteger(String(amount));
 		}
 
@@ -139,7 +139,7 @@ var NRS = (function (NRS, $, undefined) {
         var fractionalPart = amount.mod(new BigInteger("100000000")).toString();
         amount = amount.divide(new BigInteger("100000000"));
 
-        if (fractionalPart && fractionalPart != "0") {
+        if (fractionalPart && fractionalPart !== "0") {
             mantissa = ".";
 
             for (var i = fractionalPart.length; i < 8; i++) {
@@ -312,7 +312,7 @@ var NRS = (function (NRS, $, undefined) {
     NRS.format = function (params, no_escaping, zeroPad) {
         var amount;
         var mantissa;
-		if (typeof params != "object") {
+		if (typeof params !== "object") {
             amount = String(params);
             if (amount.indexOf(".") !== -1) {
                 mantissa = amount.substr(amount.indexOf("."));
@@ -342,7 +342,7 @@ var NRS = (function (NRS, $, undefined) {
                 formattedMantissa += zeros.substr(0, zeroPad - mantissaLen + 1);
             } else {
                 formattedMantissa += zeros.substr(0, zeroPad);
-                if (zeroPad != 0) {
+                if (zeroPad !== 0) {
                     formattedMantissa = locale.decimal + formattedMantissa;
                 }
             }
@@ -403,7 +403,7 @@ var NRS = (function (NRS, $, undefined) {
         }
         if (NRS.settings) {
             var offset = 0;
-            if (mantissa != "" && mantissa.substring(0, 1) === ".") {
+            if (mantissa !== "" && mantissa.substring(0, 1) === ".") {
                 offset ++;
             }
             var maxLength = parseInt(NRS.settings.max_nxt_decimals) + offset;
@@ -442,7 +442,7 @@ var NRS = (function (NRS, $, undefined) {
                 val = callback(rows[i]);
             }
             var tokens = val.split(locale.decimal);
-            if (tokens.length != 2) {
+            if (tokens.length !== 2) {
                 continue;
             }
             decimals = Math.max(decimals, tokens[1].length);
@@ -597,7 +597,7 @@ var NRS = (function (NRS, $, undefined) {
                 continue;
 		}
 			if (multiValuedFields.indexOf(serialized[s]["name"]) > -1) {
-				if (serialized[s]['value'] != "") {
+				if (serialized[s]['value'] !== "") {
 					if (serialized[s]['name'] in data) {
 						var index = data[serialized[s]['name']].length;
 						data[serialized[s]['name']][index] = serialized[s]['value'];
@@ -631,9 +631,9 @@ var NRS = (function (NRS, $, undefined) {
 
     NRS.getAccountLink = function (object, accountKey, accountRef, title, showAccountRS, clazz) {
         var accountRS;
-        if (typeof object[accountKey + "RS"] != "undefined") {
+        if (typeof object[accountKey + "RS"] !== "undefined") {
             accountRS = object[accountKey + "RS"];
-        } else if (typeof object[accountKey] != "undefined") {
+        } else if (typeof object[accountKey] !== "undefined") {
             accountRS = NRS.convertNumericToRSAccountFormat(object[accountKey]);
         } else {
             return '/';
@@ -650,7 +650,7 @@ var NRS = (function (NRS, $, undefined) {
             clazz = "";
         } else {
             if (clazz.length > 0) {
-                if (String(clazz).indexOf(" ") != 0) {
+                if (String(clazz).indexOf(" ") !== 0) {
                     clazz = " " + clazz;
                 }
             }
@@ -1150,33 +1150,33 @@ var NRS = (function (NRS, $, undefined) {
 						return $.t("error_public_key_already_announced");
 						break;
 					default:
-						if (response.errorDescription.indexOf("Alias already owned by another account") != -1) {
+						if (response.errorDescription.indexOf("Alias already owned by another account") !== -1) {
 							return $.t("error_alias_owned_by_other_account");
-						} else if (response.errorDescription.indexOf("Invalid alias sell price") != -1) {
+						} else if (response.errorDescription.indexOf("Invalid alias sell price") !== -1) {
 							return $.t("error_invalid_alias_sell_price");
-						} else if (response.errorDescription.indexOf("Alias hasn't been registered yet") != -1) {
+						} else if (response.errorDescription.indexOf("Alias hasn't been registered yet") !== -1) {
 							return $.t("error_alias_not_yet_registered");
-						} else if (response.errorDescription.indexOf("Alias doesn't belong to sender") != -1) {
+						} else if (response.errorDescription.indexOf("Alias doesn't belong to sender") !== -1) {
 							return $.t("error_alias_not_from_sender");
-						} else if (response.errorDescription.indexOf("Alias is owned by account other than recipient") != -1) {
+						} else if (response.errorDescription.indexOf("Alias is owned by account other than recipient") !== -1) {
 							return $.t("error_alias_not_from_recipient");
-						} else if (response.errorDescription.indexOf("Alias is not for sale") != -1) {
+						} else if (response.errorDescription.indexOf("Alias is not for sale") !== -1) {
 							return $.t("error_alias_not_for_sale");
-						} else if (response.errorDescription.indexOf("Invalid alias name") != -1) {
+						} else if (response.errorDescription.indexOf("Invalid alias name") !== -1) {
 							return $.t("error_invalid_alias_name");
-						} else if (response.errorDescription.indexOf("Invalid URI length") != -1) {
+						} else if (response.errorDescription.indexOf("Invalid URI length") !== -1) {
 							return $.t("error_invalid_alias_uri_length");
-						} else if (response.errorDescription.indexOf("Invalid ask order") != -1) {
+						} else if (response.errorDescription.indexOf("Invalid ask order") !== -1) {
 							return $.t("error_invalid_ask_order");
-						} else if (response.errorDescription.indexOf("Invalid bid order") != -1) {
+						} else if (response.errorDescription.indexOf("Invalid bid order") !== -1) {
 							return $.t("error_invalid_bid_order");
-						} else if (response.errorDescription.indexOf("Goods price or quantity changed") != -1) {
+						} else if (response.errorDescription.indexOf("Goods price or quantity changed") !== -1) {
 							return $.t("error_dgs_price_quantity_changed");
-						} else if (response.errorDescription.indexOf("Invalid digital goods price change") != -1) {
+						} else if (response.errorDescription.indexOf("Invalid digital goods price change") !== -1) {
 							return $.t("error_invalid_dgs_price_change");
-						} else if (response.errorDescription.indexOf("Invalid digital goods refund") != -1) {
+						} else if (response.errorDescription.indexOf("Invalid digital goods refund") !== -1) {
 							return $.t("error_invalid_dgs_refund");
-						} else if (response.errorDescription.indexOf("Purchase does not exist yet, or already delivered") != -1) {
+						} else if (response.errorDescription.indexOf("Purchase does not exist yet, or already delivered") !== -1) {
 							return $.t("error_purchase_not_exist_or_delivered");
 						} else if (response.errorDescription.match(/Goods.*not yet listed or already delisted/)) {
 							return $.t("error_dgs_not_listed");
@@ -1184,7 +1184,7 @@ var NRS = (function (NRS, $, undefined) {
 							return $.t("error_dgs_delivery_deadline_expired");
 						} else if (response.errorDescription.match(/Invalid effective balance leasing:.*recipient account.*not found or no public key published/)) {
 							return $.t("error_invalid_balance_leasing_no_public_key");
-						} else if (response.errorDescription.indexOf("Invalid effective balance leasing") != -1) {
+						} else if (response.errorDescription.indexOf("Invalid effective balance leasing") !== -1) {
 							return $.t("error_invalid_balance_leasing");
 						} else if (response.errorDescription.match(/Wrong buyer for.*expected:.*/)) {
 							return $.t("error_wrong_buyer_for_alias");
@@ -1344,7 +1344,7 @@ var NRS = (function (NRS, $, undefined) {
         if (maxFractionLength) {
             //allow 1 single period character
             if (charCode === 110 || charCode === 190) {
-                if (val.indexOf(".") != -1) {
+                if (val.indexOf(".") !== -1) {
                     e.preventDefault();
                     return false;
                 } else {
@@ -1374,7 +1374,7 @@ var NRS = (function (NRS, $, undefined) {
         if (mantissa && mantissa[1].length > maxFractionLength) {
             var selectedText = NRS.getSelectedText();
 
-            if (selectedText != val) {
+            if (selectedText !== val) {
                 var errorMessage = $.t("error_decimals", {
                     "count": maxFractionLength
                 });
@@ -1607,7 +1607,7 @@ var NRS = (function (NRS, $, undefined) {
             if (v2parts.length === i) {
                 return 1;
             }
-            if (v1parts[i] != v2parts[i]) {
+            if (v1parts[i] !== v2parts[i]) {
                 if (v1parts[i] > v2parts[i]) {
                     return 1;
                 } else {
@@ -1616,7 +1616,7 @@ var NRS = (function (NRS, $, undefined) {
             }
         }
 
-        if (v1parts.length != v2parts.length) {
+        if (v1parts.length !== v2parts.length) {
             return -1;
         }
 

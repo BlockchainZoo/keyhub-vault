@@ -155,7 +155,7 @@ var NRS = (function (NRS, $) {
         for (var i = 0; i < qs.length; ++i) {
             var p = qs[i].split('=');
 
-            if (p.length != 2) {
+            if (p.length !== 2) {
                 continue;
             }
 

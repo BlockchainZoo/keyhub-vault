@@ -293,7 +293,7 @@ var NRS = (function (NRS, $) {
 		if (_decryptedTransactions && _decryptedTransactions[identifier]) {
 			var decryptedTransaction = _decryptedTransactions[identifier];
 			$.each(fields, function(key, title) {
-				if (typeof title != "string") {
+				if (typeof title !== "string") {
 					title = title.title;
 				}
 				if (key in decryptedTransaction) {
@@ -312,7 +312,7 @@ var NRS = (function (NRS, $) {
 				var data = {};
 				var encrypted = "";
 				var nonce = "";
-				var nonceField = (typeof title != "string" ? title.nonce : key + "Nonce");
+				var nonceField = (typeof title !== "string" ? title.nonce : key + "Nonce");
 
 				if (key === "encryptedMessage" || key === "encryptToSelfMessage") {
 					encrypted = transaction.attachment[key].data;
@@ -331,7 +331,7 @@ var NRS = (function (NRS, $) {
 				}
 
 				if (encrypted) {
-					if (typeof title != "string") {
+					if (typeof title !== "string") {
 						title = title.title;
 					}
 					try {
@@ -460,7 +460,7 @@ var NRS = (function (NRS, $) {
 		}
 
 		var accountId = NRS.getAccountId(password);
-		if (accountId != NRS.account && !useSharedKey) {
+		if (accountId !== NRS.account && !useSharedKey) {
 			$form.find(".callout").html($.t("error_incorrect_passphrase")).show();
 			return;
 		}
@@ -475,7 +475,7 @@ var NRS = (function (NRS, $) {
 			var data = {};
 			var encrypted = "";
 			var nonce = "";
-			var nonceField = (typeof title != "string" ? title.nonce : key + "Nonce");
+			var nonceField = (typeof title !== "string" ? title.nonce : key + "Nonce");
 			if (key === "encryptedMessage" || key === "encryptToSelfMessage") {
                 var otherAccount = _encryptedNote.account;
 			    if (key === "encryptToSelfMessage") {
@@ -497,7 +497,7 @@ var NRS = (function (NRS, $) {
 			}
 
 			if (encrypted) {
-				if (typeof title != "string") {
+				if (typeof title !== "string") {
 					title = title.title;
 				}
 				try {
@@ -561,7 +561,7 @@ var NRS = (function (NRS, $) {
 			useSharedKey = true;
 		} else {
 			var accountId = NRS.getAccountId(password);
-			if (accountId != NRS.account) {
+			if (accountId !== NRS.account) {
 				throw {
 					"message": $.t("error_incorrect_passphrase"),
 					"errorCode": 2
@@ -677,7 +677,7 @@ var NRS = (function (NRS, $) {
 	}
 
 	function aesDecrypt(ivCiphertext, options) {
-		if (ivCiphertext.length < 16 || ivCiphertext.length % 16 != 0) {
+		if (ivCiphertext.length < 16 || ivCiphertext.length % 16 !== 0) {
 			throw {
 				name: "invalid ciphertext"
 			};

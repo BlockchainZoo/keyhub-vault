@@ -304,7 +304,7 @@ var NRS = (function(NRS, $, undefined) {
 					return; // do not load client if local storage is disabled
 				}
 
-				if (!(navigator.userAgent.indexOf('Safari') != -1 &&
+				if (!(navigator.userAgent.indexOf('Safari') !== -1 &&
 					navigator.userAgent.indexOf('Chrome') === -1) &&
 					navigator.userAgent.indexOf('JavaFX') === -1) {
 					// Don't use account based DB in Safari due to a buggy indexedDB implementation (2015-02-24)
@@ -457,7 +457,7 @@ var NRS = (function(NRS, $, undefined) {
 				NRS.getInitialTransactions();
 				NRS.getAccountInfo();
 			}
-		} else if (previousLastBlock != lastBlock) {
+		} else if (previousLastBlock !== lastBlock) {
 			NRS.tempBlocks = [];
 			if (NRS.account) {
 				NRS.getAccountInfo();
@@ -485,7 +485,7 @@ var NRS = (function(NRS, $, undefined) {
 	};
 
     NRS.connectionError = function(errorDescription, errorCode) {
-        if (errorCode != 19) {
+        if (errorCode !== 19) {
             NRS.serverConnect = false;
         }
 
@@ -614,7 +614,7 @@ var NRS = (function(NRS, $, undefined) {
 			$(this).closest("li").addClass("active");
 		}
 
-		if (NRS.currentPage != "messages") {
+		if (NRS.currentPage !== "messages") {
 			$("#inline_message_password").val("");
 		}
 
@@ -840,7 +840,7 @@ var NRS = (function(NRS, $, undefined) {
 				var isValidParams = true;
 				for (var i = 0; i < urlParams.length; i++) {
 					var paramKeyValue = urlParams[i].split('=');
-					if (paramKeyValue.length != 2) {
+					if (paramKeyValue.length !== 2) {
 						continue;
 					}
 					var key = paramKeyValue[0].escapeHTML();
@@ -854,7 +854,7 @@ var NRS = (function(NRS, $, undefined) {
 							input.val(value);
 						} else if (input.attr("type") === "checkbox") {
 							var isChecked = false;
-							if (value != "true" && value != "false") {
+							if (value !== "true" && value !== "false") {
 								isValidParams = false;
 								$.growl($.t("value") + " " + value + " " + $.t("must_be_true_or_false") + " " + $.t("for") + " " + key, {
 									"type": "danger",
@@ -1112,7 +1112,7 @@ var NRS = (function(NRS, $, undefined) {
 				$("#account_balance, #account_balance_sidebar, #account_currencies_balance, #account_nr_currencies, #account_purchase_count, #account_pending_sale_count, #account_completed_sale_count, #account_message_count, #account_alias_count").html("0");
                 NRS.updateDashboardMessage();
 			} else {
-				if (NRS.accountRS && NRS.accountInfo.accountRS != NRS.accountRS) {
+				if (NRS.accountRS && NRS.accountInfo.accountRS !== NRS.accountRS) {
 					$.growl("Generated Reed Solomon address different from the one in the blockchain!", {
 						"type": "danger"
 					});
@@ -1138,8 +1138,8 @@ var NRS = (function(NRS, $, undefined) {
                                     NRS.accountInfo.assetBalances = [];
                                 }
                                 var current_balances = JSON.stringify(NRS.accountInfo.assetBalances);
-                                if (previous_balances != current_balances) {
-                                    if (previous_balances != "undefined" && typeof previous_balances != "undefined") {
+                                if (previous_balances !== current_balances) {
+                                    if (previous_balances !== "undefined" && typeof previous_balances !== "undefined") {
                                         previous_balances = JSON.parse(previous_balances);
                                     } else {
                                         previous_balances = [];
@@ -1168,7 +1168,7 @@ var NRS = (function(NRS, $, undefined) {
                         var assetBalances = response.assetBalances;
                         var assetBalancesMap = {};
                         for (i = 0; i < assetBalances.length; i++) {
-                            if (assetBalances[i].balanceQNT != "0") {
+                            if (assetBalances[i].balanceQNT !== "0") {
                                 assets.push(assetBalances[i].asset);
                                 assetBalancesMap[assetBalances[i].asset] = assetBalances[i].balanceQNT;
                             }
@@ -1203,7 +1203,7 @@ var NRS = (function(NRS, $, undefined) {
                         $("#account_nr_currencies").html(numberOfCurrencies);
                         var currencyBalancesMap = {};
                         for (i = 0; i < numberOfCurrencies; i++) {
-                            if (currencyBalances[i].units != "0") {
+                            if (currencyBalances[i].units !== "0") {
                                 currencies.push(currencyBalances[i].currency);
                                 currencyBalancesMap[currencyBalances[i].currency] = currencyBalances[i].units;
                             }
@@ -1248,7 +1248,7 @@ var NRS = (function(NRS, $, undefined) {
                     NRS.sendRequest("getAliasCount+", {
                         "account": NRS.account
                     }, function (response) {
-                        if (response.numberOfAliases != null) {
+                        if (response.numberOfAliases !== null) {
                             $("#account_alias_count").empty().append(response.numberOfAliases);
                         }
                     });
@@ -1256,7 +1256,7 @@ var NRS = (function(NRS, $, undefined) {
                     NRS.sendRequest("getDGSPurchaseCount+", {
                         "buyer": NRS.account
                     }, function (response) {
-                        if (response.numberOfPurchases != null) {
+                        if (response.numberOfPurchases !== null) {
                             $("#account_purchase_count").empty().append(response.numberOfPurchases);
                         }
                     });
@@ -1275,7 +1275,7 @@ var NRS = (function(NRS, $, undefined) {
                         "seller": NRS.account,
                         "completed": true
                     }, function (response) {
-                        if (response.numberOfPurchases != null) {
+                        if (response.numberOfPurchases !== null) {
                             $("#account_completed_sale_count").empty().append(response.numberOfPurchases);
                         }
                     });
@@ -1290,17 +1290,17 @@ var NRS = (function(NRS, $, undefined) {
                 var leasingChange = false;
 				if (NRS.lastBlockHeight) {
 					var isLeased = NRS.lastBlockHeight >= NRS.accountInfo.currentLeasingHeightFrom;
-					if (isLeased != NRS.IsLeased) {
+					if (isLeased !== NRS.IsLeased) {
 						leasingChange = true;
 						NRS.isLeased = isLeased;
 					}
 				}
 
 				if (leasingChange ||
-					(response.currentLeasingHeightFrom != previousAccountInfo.currentLeasingHeightFrom) ||
+					(response.currentLeasingHeightFrom !== previousAccountInfo.currentLeasingHeightFrom) ||
 					(response.lessors && !previousAccountInfo.lessors) ||
 					(!response.lessors && previousAccountInfo.lessors) ||
-					(response.lessors && previousAccountInfo.lessors && response.lessors.sort().toString() != previousAccountInfo.lessors.sort().toString())) {
+					(response.lessors && previousAccountInfo.lessors && response.lessors.sort().toString() !== previousAccountInfo.lessors.sort().toString())) {
 					NRS.updateAccountLeasingStatus();
 				}
 
@@ -1422,7 +1422,7 @@ var NRS = (function(NRS, $, undefined) {
 			accountLeasingStatus = $.t("balance_not_leased_out");
 			$("#lease_balance_message").html($.t("balance_leasing_help"));
 		}
-		if (nextLesseeStatus != "") {
+		if (nextLesseeStatus !== "") {
 			accountLeasingStatus += "<br>" + nextLesseeStatus;
 		}
 
@@ -1592,10 +1592,10 @@ var NRS = (function(NRS, $, undefined) {
 					asset.difference = input["_extra"].difference;
 					asset.asset = input["_extra"].asset;
                     var quantity;
-					if (asset.difference.charAt(0) != "-") {
+					if (asset.difference.charAt(0) !== "-") {
 						quantity = NRS.formatQuantity(asset.difference, asset.decimals);
 
-						if (quantity != "0") {
+						if (quantity !== "0") {
 							if (parseInt(quantity) === 1) {
 								$.growl($.t("you_received_assets", {
 									"name": NRS.escapeRespStr(asset.name)
@@ -1615,7 +1615,7 @@ var NRS = (function(NRS, $, undefined) {
 					} else {
 						asset.difference = asset.difference.substring(1);
 						quantity = NRS.formatQuantity(asset.difference, asset.decimals);
-						if (quantity != "0") {
+						if (quantity !== "0") {
 							if (parseInt(quantity) === 1) {
 								$.growl($.t("you_sold_assets", {
 									"name": NRS.escapeRespStr(asset.name)
@@ -1698,7 +1698,7 @@ var NRS = (function(NRS, $, undefined) {
 			var isForgingAllBlocks = true;
 			if (NRS.blocks && NRS.blocks.length >= 10) {
 				for (var i = 0; i < 10; i++) {
-					if (NRS.blocks[i].generator != NRS.account) {
+					if (NRS.blocks[i].generator !== NRS.account) {
 						isForgingAllBlocks = false;
 						break;
 					}
@@ -1819,7 +1819,7 @@ var NRS = (function(NRS, $, undefined) {
 	    try {
 	        uid = String(new Date());
 	        (storage = window.localStorage).setItem(uid, uid);
-	        fail = storage.getItem(uid) != uid;
+	        fail = storage.getItem(uid) !== uid;
 	        storage.removeItem(uid);
 	        fail && (storage = false);
 	    } catch (exception) {
