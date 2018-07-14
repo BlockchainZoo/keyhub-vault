@@ -129,7 +129,7 @@ var NRS = (function (NRS, $) {
 						};
 					}
 				}
-			} else if (typeof options.publicKey == "string") {
+			} else if (typeof options.publicKey === "string") {
 				options.publicKey = converters.hexStringToByteArray(options.publicKey);
 			}
 		}
@@ -267,7 +267,7 @@ var NRS = (function (NRS, $) {
 			} else {
 				var decoded = NRS.decryptNote(message.attachment.encryptedMessage.data, {
 					"nonce": message.attachment.encryptedMessage.nonce,
-					"account": (message.recipient == NRS.account ? message.sender : message.recipient),
+					"account": (message.recipient === NRS.account ? message.sender : message.recipient),
 					"isText": message.attachment.encryptedMessage.isText,
 					"isCompressed": message.attachment.encryptedMessage.isCompressed
 				});
@@ -314,13 +314,13 @@ var NRS = (function (NRS, $) {
 				var nonce = "";
 				var nonceField = (typeof title != "string" ? title.nonce : key + "Nonce");
 
-				if (key == "encryptedMessage" || key == "encryptToSelfMessage") {
+				if (key === "encryptedMessage" || key === "encryptToSelfMessage") {
 					encrypted = transaction.attachment[key].data;
 					nonce = transaction.attachment[key].nonce;
 				} else if (transaction.attachment && transaction.attachment[key]) {
 					encrypted = transaction.attachment[key];
 					nonce = transaction.attachment[nonceField];
-				} else if (transaction[key] && typeof transaction[key] == "object") {
+				} else if (transaction[key] && typeof transaction[key] === "object") {
 					encrypted = transaction[key].data;
 					nonce = transaction[key].nonce;
 				} else if (transaction[key]) {
@@ -352,7 +352,7 @@ var NRS = (function (NRS, $) {
 						}
                         data = NRS.decryptNote(encrypted, decryptOptions);
 					} catch (err) {
-						if (err.errorCode && err.errorCode == 1) {
+						if (err.errorCode && err.errorCode === 1) {
 							showDecryptionForm = true;
 							return false;
 						} else {
@@ -476,9 +476,9 @@ var NRS = (function (NRS, $) {
 			var encrypted = "";
 			var nonce = "";
 			var nonceField = (typeof title != "string" ? title.nonce : key + "Nonce");
-			if (key == "encryptedMessage" || key == "encryptToSelfMessage") {
+			if (key === "encryptedMessage" || key === "encryptToSelfMessage") {
                 var otherAccount = _encryptedNote.account;
-			    if (key == "encryptToSelfMessage") {
+			    if (key === "encryptToSelfMessage") {
 					otherAccount = accountId;
 				}
 				encrypted = _encryptedNote.transaction.attachment[key].data;
@@ -486,7 +486,7 @@ var NRS = (function (NRS, $) {
 			} else if (_encryptedNote.transaction.attachment && _encryptedNote.transaction.attachment[key]) {
 				encrypted = _encryptedNote.transaction.attachment[key];
 				nonce = _encryptedNote.transaction.attachment[nonceField];
-			} else if (_encryptedNote.transaction[key] && typeof _encryptedNote.transaction[key] == "object") {
+			} else if (_encryptedNote.transaction[key] && typeof _encryptedNote.transaction[key] === "object") {
 				encrypted = _encryptedNote.transaction[key].data;
 				nonce = _encryptedNote.transaction[key].nonce;
 			} else if (_encryptedNote.transaction[key]) {
@@ -575,7 +575,7 @@ var NRS = (function (NRS, $) {
 			var message = messages[i];
 			if (message.attachment.encryptedMessage && !_decryptedTransactions[message.transaction]) {
 				try {
-					var otherUser = (message.sender == NRS.account ? message.recipient : message.sender);
+					var otherUser = (message.sender === NRS.account ? message.recipient : message.sender);
 					var options = {};
 					if (useSharedKey) {
 						options.sharedKey = converters.hexStringToByteArray(sharedKey);

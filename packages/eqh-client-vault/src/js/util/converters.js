@@ -121,7 +121,7 @@ var converters = function() {
 				offset = 0,
 				word = 0,
 				len = byteArray.length;
-			var words = new Uint32Array(((len / 4) | 0) + (len % 4 == 0 ? 0 : 1));
+			var words = new Uint32Array(((len / 4) | 0) + (len % 4 === 0 ? 0 : 1));
 
 			while (i < (len - (len % 4))) {
 				words[offset++] = (byteArray[i++] << 24) | (byteArray[i++] << 16) | (byteArray[i++] << 8) | (byteArray[i++]);
@@ -148,7 +148,7 @@ var converters = function() {
 		},
 		wordArrayToByteArrayImpl: function(wordArray, isFirstByteHasSign) {
 			var len = wordArray.words.length;
-			if (len == 0) {
+			if (len === 0) {
 				return new Array(0);
 			}
 			var byteArray = new Array(wordArray.sigBytes);
@@ -163,7 +163,7 @@ var converters = function() {
 			}
 			word = wordArray.words[len - 1];
 			byteArray[offset++] = isFirstByteHasSign ? word >> 24 : (word >> 24) & 0xff;
-			if (wordArray.sigBytes % 4 == 0) {
+			if (wordArray.sigBytes % 4 === 0) {
 				byteArray[offset++] = (word >> 16) & 0xff;
 				byteArray[offset++] = (word >> 8) & 0xff;
 				byteArray[offset++] = word & 0xff;
@@ -177,7 +177,7 @@ var converters = function() {
 			return byteArray;
 		},
 		byteArrayToString: function(bytes, opt_startIndex, length) {
-			if (length == 0) {
+			if (length === 0) {
 				return "";
 			}
 
@@ -233,11 +233,11 @@ var converters = function() {
 			// and 2 is negative int.
 			var numberType = x >= 0 && x <= signedMax ? 0 :
 				x > signedMax && x <= unsignedMax ? 1 : 2;
-			if (numberType == 2) {
+			if (numberType === 2) {
 				x = (x * -1) - 1;
 			}
 			for (var i = 0; i < numBytes; i++) {
-				if (numberType == 2) {
+				if (numberType === 2) {
 					current = 255 - (x % 256);
 				} else {
 					current = x % 256;
@@ -249,7 +249,7 @@ var converters = function() {
 					bytes.push(current);
 				}
 
-				if (numberType == 1) {
+				if (numberType === 1) {
 					x = Math.floor(x / 256);
 				} else {
 					x = x >> 8;

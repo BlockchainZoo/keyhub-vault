@@ -379,7 +379,7 @@ var NRS = (function(NRS, $, undefined) {
             $.growl($.t("unsupported_transaction_type"));
             return;
         }
-        return transaction.type == NRS.subtype[type_str].type && transaction.subtype == NRS.subtype[type_str].subtype;
+        return transaction.type === NRS.subtype[type_str].type && transaction.subtype === NRS.subtype[type_str].subtype;
     };
 
     return NRS;
