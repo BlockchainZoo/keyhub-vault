@@ -54,15 +54,15 @@ exports.load = (callback) => {
     global.BigInteger = jsbn.BigInteger
 
     // Support for Webworkers
-    if (typeof self !== 'undefined') { // eslint-disable-line no-restricted-globals
-      global.window = self // eslint-disable-line no-restricted-globals, no-undef
-      global.window.console = console
-    } else if (typeof window !== 'undefined') {
-      global.window = window // eslint-disable-line no-undef
-      global.window.console = console
+    if (typeof global.window !== 'undefined') {
       if (!global.window.crypto && !global.window.msCrypto) {
         global.crypto = require('crypto')
       }
+    } else if (typeof self !== 'undefined') { // eslint-disable-line no-restricted-globals
+      global.window = self // eslint-disable-line no-restricted-globals, no-undef
+    } else {
+      global.window = window
+      global.window.console = console
     }
 
     // Mock other objects on which the client depends
