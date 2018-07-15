@@ -114,7 +114,7 @@ var NRS = (function (NRS, $) {
             NRS.constants.CURRENCY_TYPES = response.currencyTypes;
             NRS.constants.PROXY_NOT_FORWARDED_REQUESTS = response.proxyNotForwardedRequests;
             NRS.loadTransactionTypeConstants(response);
-            console.log("done loading server constants");
+            // console.log("done loading server constants");
             if (resolve) {
                 resolve();
             }
