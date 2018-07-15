@@ -107,6 +107,8 @@ var NRS = (function(NRS, $, undefined) {
 	var stateIntervalSeconds = 30;
 	var isScanning = false;
 
+	var navigator = navigator || window.navigator
+
 	NRS.loadMobileSettings = function () {
 		if (!window["localStorage"]) {
 			return;
@@ -584,7 +586,7 @@ var NRS = (function(NRS, $, undefined) {
 
 		$(".page").hide();
 
-		$(document.documentElement).scrollTop(0);
+		$(window.document.documentElement).scrollTop(0);
 
 		$("#" + page + "_page").show();
 
@@ -766,7 +768,7 @@ var NRS = (function(NRS, $, undefined) {
 		}
 	};
 
-	$(document).on("click", ".data-pagination a", function(e) {
+	$(window.document).on("click", ".data-pagination a", function(e) {
 		e.preventDefault();
 		NRS.goToPageNumber($(this).data("page"));
 	});
