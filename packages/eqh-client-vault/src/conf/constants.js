@@ -1,7 +1,7 @@
 /* eslint-disable quote-props,quotes,comma-dangle */
 
 // eslint-disable-next-line no-use-before-define
-const NRS = (typeof NRS === 'undefined') ? { constants: {} } : NRS
+const NRS = (typeof global.NRS === 'undefined') ? { constants: {} } : NRS
 
 NRS.constants.SERVER = {
   "transactionSubTypes": {
