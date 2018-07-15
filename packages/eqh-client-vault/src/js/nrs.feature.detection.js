@@ -20,6 +20,8 @@
  * @depends {nrs.js}
  */
 var NRS = (function (NRS) {
+    var navigator = navigator || window.navigator
+
     var isDesktopApplication = navigator.userAgent.indexOf("JavaFX") >= 0;
     var isPromiseSupported = (typeof Promise !== "undefined" && Promise.toString().indexOf("[native code]") !== -1);
     var isMobileDevice = window["cordova"] !== undefined;

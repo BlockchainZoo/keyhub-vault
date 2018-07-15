@@ -43,10 +43,12 @@ exports.load = (callback) => {
     // Load the necessary node modules and assign them to the global scope
     // the NXT client wasn't designed with modularity in mind therefore we need
     // to include every 3rd party library function in the global scope
-    global.jQuery = jquery(window)
-    global.jQuery.growl = (msg) => { console.log(`growl: ${msg}`) } // disable growl messages
-    global.jQuery.t = text => text // Disable the translation functionality
-    global.$ = global.jQuery // Needed by extensions.js
+    const jQuery = jquery(window)
+    jQuery.growl = (msg) => { console.log(`growl: ${msg}`) } // disable growl messages
+    jQuery.t = text => text // Disable the translation functionality
+    global.jQuery = jQuery
+
+    // global.$ = jQuery // No longer needed by extensions.js
     global.CryptoJS = require('crypto-js')
     global.async = require('async')
     global.pako = require('pako')
@@ -55,20 +57,26 @@ exports.load = (callback) => {
 
     // Support for Webworkers
     if (typeof global.window !== 'undefined') {
+      // Browser Renderer Process
       if (!global.window.crypto && !global.window.msCrypto) {
         global.crypto = require('crypto')
       }
     } else if (typeof self !== 'undefined') { // eslint-disable-line no-restricted-globals
+      // WebWorker
       global.window = self // eslint-disable-line no-restricted-globals, no-undef
+      if (!global.window.crypto && !global.window.msCrypto) {
+        global.crypto = require('crypto')
+      }
     } else {
+      // Nodejs
       global.window = window
       global.window.console = console
     }
 
     // Mock other objects on which the client depends
-    global.document = {}
+    if (typeof global.window.document === 'undefined') global.window.document = {}
+    if (typeof global.window.navigator === 'undefined') global.window.navigator = { userAgent: '' }
     global.isNode = true // for code which has to execute differently by node compared to browser
-    global.navigator = { userAgent: '' }
 
     // Now load some NXT specific libraries into the global scope
     global.NxtAddress = require('./util/nxtaddress')
