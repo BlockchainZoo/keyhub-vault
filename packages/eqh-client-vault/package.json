@@ -6,7 +6,7 @@
   "main": "dist/index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "[ -e dist/jsdom.js ] || browserify -r jsdom -s jsdom -o dist/jsdom.js && webpack --config webpack.config.js"
+    "build": "[ -e dist/openpgp.worker.bundle.js ] || browserify -p browserify-derequire -r openpgp/src/worker/worker -s openpgp -o dist/openpgp.worker.bundle.js && webpack --config webpack.config.js"
   },
   "repository": {
     "type": "git",
@@ -38,6 +38,8 @@
     "@babel/plugin-proposal-object-rest-spread": "^7.0.0-beta.52",
     "@babel/preset-env": "^7.0.0-beta.52",
     "babel-loader": "^8.0.0-beta.4",
-    "browserify": "^16.2.2"
+    "browserify": "^16.2.2",
+    "browserify-derequire": "^0.9.6",
+    "ssri": "^6.0.0"
   }
 }
