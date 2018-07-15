@@ -6,7 +6,7 @@ const hkp = new openpgp.HKP('https://pgp.mit.edu')
 
 openpgp.initWorker({ path: 'openpgp.worker.js' }) // set the relative web worker path
 
-const FILEPATH_TO_KEYPAIR = './new-pgp-key-pair'
+const FILEPATH_TO_KEYPAIR = './eqh-pgp'
 const FILEPATH_TO_SIGN = 'dist/index.bundle.js'
 
 const options = {
@@ -20,8 +20,8 @@ const options = {
 // Generate new keyPair
 openpgp.generateKey(options)
   .then((key) => {
-    console.log('keypair generated!') // eslint-disable-line no-console
     if (fs.existsSync(`${FILEPATH_TO_KEYPAIR}.key.asc`)) return null
+    console.log('keypair generated!') // eslint-disable-line no-console
     return hkp.upload(key.publicKeyArmored).then(() => key)
   })
   .then((key) => {
