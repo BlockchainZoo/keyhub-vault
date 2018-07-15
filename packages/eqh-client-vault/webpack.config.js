@@ -8,7 +8,7 @@ module.exports = {
   entry: {
     'whatwg-fetch': 'whatwg-fetch',
     'abortcontroller-polyfill': 'abortcontroller-polyfill/dist/polyfill-patch-fetch',
-    main: './src/index.js',
+    index: './src/index.js',
   },
   output: {
     filename: '[name].bundle.js',
