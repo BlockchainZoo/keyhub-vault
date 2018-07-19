@@ -55,7 +55,7 @@
         <div id="fetch-transaction-detail"></div>
 
         <div class="row justify-content-center col mt-5 mb-2">
-          <button class="btn btn-primary px-4" id="sign-tx" disable="disable"><i class="fas fa-sign-in-alt"></i> SIGN THIS</button>
+          <button class="btn btn-primary px-4" id="sign-tx" disabled><i class="fas fa-sign-in-alt"></i> SIGN THIS</button>
         </div>
 
         <div class="row justify-content-center col mt-5 mb-2">
@@ -88,13 +88,13 @@
       <div class="card-body">
           <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Mauris consectetur sollicitudin lacus sit amet lobortis. Duis consectetur lacinia sem. Sed vitae nulla pellentesque, porttitor mi vel, pulvinar turpis. </p>
           <div class="text-center">
-            <button class="btn btn-primary"><i class="fas fa-mobile-alt"></i> Back to app</button>
+            <button class="btn btn-primary" id="back-to-app"><i class="fas fa-mobile-alt"></i> Back to app</button>
           </div>
       </div>
     </div><!-- #thank-you-card -->
   </div>`;
 
-  document.getElementById('keyhub-root').innerHTML = tmpl;
+  document.getElementById('main').innerHTML = tmpl;
 
   const txDetail = document.getElementById('tx-detail');
   const txBroadcasting = document.getElementById('tx-broadcasting');
@@ -102,6 +102,8 @@
 
   const transactionDetail = document.getElementById('transaction-detail');
   const transactionSignBtn = document.getElementById('sign-tx');
+  const transactionCancelSignBtn = document.getElementById('cancel-sign-tx');
+  const backToAppBtn = document.getElementById('back-to-app');
 
   const signTransaction = function () {
     txDetail.style.display = 'none';
@@ -143,8 +145,11 @@
 
     transactionDetail.appendChild(domFragment);
     transactionSignBtn.disabled = false;
+    transactionCancelSignBtn.disabled = false;
   }
 
   window.addEventListener('message', receiveMessage, false);
-  document.getElementById('sign-tx').addEventListener('click', signTransaction)
+  transactionSignBtn.addEventListener('click', signTransaction);
+  transactionCancelSignBtn.addEventListener('click', () => self.close());
+  backToAppBtn.addEventListener('click', () => self.close());
 })();
