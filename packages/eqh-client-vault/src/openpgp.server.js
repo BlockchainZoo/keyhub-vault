@@ -29,7 +29,7 @@ openpgp.generateKey(options)
       console.log('publicKey uploaded!') // eslint-disable-line no-console
       fs.writeFileSync(`${FILEPATH_TO_KEYPAIR}.key.asc`, key.privateKeyArmored)
       fs.writeFileSync(`${FILEPATH_TO_KEYPAIR}.pub.asc`, key.publicKeyArmored)
-      fs.writeFileSync(`${FILEPATH_TO_KEYPAIR}.rev.asc`, key.revocationSignature)
+      fs.writeFileSync(`${FILEPATH_TO_KEYPAIR}.revoke.asc`, key.revocationCertificate)
     }
 
     return fs.readFileSync(`${FILEPATH_TO_KEYPAIR}.key.asc`, 'utf8')
