@@ -1,0 +1,12 @@
+@import './libs/variables';
+@import '../../node_modules/bootstrap/scss/bootstrap';
+@import './fontawesome/fontawesome';
+@import './fontawesome/regular';
+@import './fontawesome/solid';
+
+/** Custom CSS */
+
+@import './libs/animation';
+@import './libs/global'; 
+@import './libs/navbar';
+@import './libs/loading';
