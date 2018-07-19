@@ -1,40 +1,77 @@
-const loader = require('./js/nrs.cheerio.bridge')
+/* eslint-disable no-console */
+
+const { NrsBridge } = require('./js/nrs.cheerio.bridge')
 // import loader from './js/nrs.cheerio.bridge'
 
-const loadNRS = (config) => {
-  loader.init({
-    url: config.url,
-    secretPhrase: config.secretPhrase,
-    isTestNet: config.isTestNet,
-    adminPassword: config.adminPassword,
-  })
+const nxtConfig = require('./conf/nxt.json')
+const secrets = require('./conf/secrets.json')
 
-  return new Promise((resolve, reject) => {
-    try {
-      loader.load(resolve)
-    } catch (err) {
-      reject(err)
-    }
-  })
-}
+const bridge = new NrsBridge()
 
-const config = require('./conf/secrets.json')
-
-loadNRS(config).then((NRS) => {
-  // heri16@github.com: Will use cryptographic signature verification on claims of known blocks
-  NRS.constants.LAST_KNOWN_BLOCK = { id: '15547113949993887183', height: '712' } // eslint-disable-line no-param-reassign
-  NRS.constants.LAST_KNOWN_TESTNET_BLOCK = { id: '15547113949993887183', height: '712' } // eslint-disable-line no-param-reassign
-
+bridge.load((NRS) => {
   console.log('NRS-client ready') // eslint-disable-line no-console
 
-  // Generate new account
-  console.log('Generating an account...')
-  const publicKey = NRS.generatePublicKey(config.secretPhrase)
-  console.log('Your New Public Key:', publicKey)
-  const accountId = NRS.getAccountIdFromPublicKey(publicKey)
-  console.log('Your New Account Id:', accountId)
-  const accountRS = NRS.convertNumericToRSAccountFormat(accountId)
-  console.log('Your New Account Address:', accountRS)
+  bridge.configure(nxtConfig)
+
+  const methods = Object.assign(Object.create(null), {
+    configure: (config, callback) => {
+      bridge.configure(config)
+      callback(null, true)
+    },
+    generateKeyPair: (callback) => {
+      const { secretPhrase } = secrets
+      const publicKey = NRS.generatePublicKey(`eqh${secretPhrase}`)
+      const accountId = NRS.getAccountIdFromPublicKey(publicKey)
+      const accountRS = NRS.convertNumericToRSAccountFormat(accountId)
+
+      callback(null, {
+        secretPhrase,
+        publicKey,
+        accountId,
+        accountRS,
+      })
+    },
+    signTransaction: (txType, txData, callback) => {
+      const { secretPhrase } = secrets
+      const data = {
+        ...txData,
+        secretPhrase: `eqh${secretPhrase}`,
+        ...NRS.getMandatoryParams(),
+      }
+      NRS.sendRequest(txType, data, (response) => {
+        callback(null, response)
+      })
+    },
+  })
+
+  if (typeof self !== 'undefined') { // eslint-disable-line no-restricted-globals
+    self.onmessage = (event) => { // eslint-disable-line no-undef, no-restricted-globals
+      const { data: [name, ...params] } = event
+      if (name in methods) {
+        try {
+          methods[name](...params, (err, res) => {
+            if (err) {
+              // eslint-disable-next-line no-undef, no-restricted-globals
+              self.postMessage({ error: err.message || err })
+            } else {
+              // eslint-disable-next-line no-undef, no-restricted-globals
+              self.postMessage(res)
+            }
+          })
+        } catch (err) {
+          // eslint-disable-next-line no-undef, no-restricted-globals
+          self.postMessage({ error: err.message || err })
+        }
+      }
+    }
+  }
+
+  // Generate New KeyPair
+  console.log('Generating a new account...')
+  methods.generateKeyPair((err, res) => {
+    if (err) throw err
+    console.log(res)
+  })
 
   // Send Transaction
   console.log('Sending a transaction...')
@@ -49,16 +86,15 @@ loadNRS(config).then((NRS) => {
   console.info('recipientId:', recipientId)
   console.info('recipientRS:', recipientRS)
 
-  const data = {
+  const txData = {
     recipient: recipientId,
     recipientPublicKey,
     property,
     value: '1',
-    secretPhrase: config.secretPhrase,
-    ...NRS.getMandatoryParams(),
   }
 
-  NRS.sendRequest('setAccountProperty', data, (response) => {
-    NRS.logConsole(JSON.stringify(response, null, 2))
+  methods.signTransaction('setAccountProperty', txData, (err, response) => {
+    if (err) throw err
+    console.log(JSON.stringify(response, null, 2))
   })
 })

@@ -5,14 +5,14 @@ const jquery = require('jquery')
 
 const options = {
   url: 'http://localhost:6876', // URL of NXT remote node
-  secretPhrase: '', // Secret phrase of the current account
+  accountRS: '', // Secret phrase of the current account
   isTestNet: false, // Select testnet or mainnet
   adminPassword: '', // Node admin password
 }
 
-function setCurrentAccount(secretPhrase, client = global.client) {
+const setCurrentAccount = (accountRS, client = global.client) => {
   // eslint-disable-next-line no-param-reassign
-  client.account = client.getAccountId(secretPhrase)
+  client.account = client.convertRSToNumericAccountFormat(accountRS)
   // eslint-disable-next-line no-param-reassign
   client.accountRS = client.convertNumericToRSAccountFormat(client.account)
   // eslint-disable-next-line no-param-reassign
@@ -26,10 +26,7 @@ exports.init = (params) => {
   if (!params) {
     return this
   }
-  options.url = params.url
-  options.secretPhrase = params.secretPhrase
-  options.isTestNet = params.isTestNet
-  options.adminPassword = params.adminPassword
+  Object.assign(options, params)
   return this
 }
 
@@ -91,17 +88,18 @@ exports.load = (callback) => {
     // The idea here is to gradually compose the NRS object by adding functions from each
     // JavaScript file into the existing global.client scope
     global.client = {}
-    global.client.isTestNet = options.isTestNet
     Object.assign(global.client, require('./nrs.encryption'))
     Object.assign(global.client, require('./nrs.feature.detection'))
     Object.assign(global.client, require('./nrs.transactions.types'))
     Object.assign(global.client, require('./nrs.constants'))
     Object.assign(global.client, require('./nrs.console'))
     Object.assign(global.client, require('./nrs.util'))
-    global.client.getModuleConfig = () => options
     Object.assign(global.client, require('./nrs'))
     Object.assign(global.client, require('./nrs.server'))
-    setCurrentAccount(options.secretPhrase, global.client)
+
+    global.client.isTestNet = options.isTestNet
+    global.client.getModuleConfig = () => options
+    setCurrentAccount(options.accountRS, global.client)
 
     // Now load the constants locally since we cannot trust the remote node to
     // return the correct constants.
