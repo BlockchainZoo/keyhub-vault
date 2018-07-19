@@ -27,17 +27,31 @@ loadNRS(config).then((NRS) => {
 
   console.log('NRS-client ready') // eslint-disable-line no-console
 
+  // Generate new account
+  console.log('Generating an account...')
+  const publicKey = NRS.generatePublicKey(config.secretPhrase)
+  console.log('Your New Public Key:', publicKey)
+  const accountId = NRS.getAccountIdFromPublicKey(publicKey)
+  console.log('Your New Account Id:', accountId)
+  const accountRS = NRS.convertNumericToRSAccountFormat(accountId)
+  console.log('Your New Account Address:', accountRS)
+
+  // Send Transaction
+  console.log('Sending a transaction...')
   const property = '$$Trader'
-
-  const recipient = NRS.getAccountIdFromPublicKey(config.recipientPublicKey)
-  const recipientRS = NRS.convertNumericToRSAccountFormat(recipient)
-
+  const recipient = 'EQH-4226-5SWH-A9CM-8W7P6'
+  const recipientPublicKey = 'd6b0716dce96a33d224100c15437013d3e550f025119918e86859075ae730133'
+  const recipientId = recipientPublicKey
+    ? NRS.getAccountIdFromPublicKey(recipientPublicKey)
+    : NRS.convertRSToNumericAccountFormat(recipient)
+  const recipientRS = NRS.convertNumericToRSAccountFormat(recipientId)
   console.info('property:', property)
-  console.info('recipientId:', recipient)
+  console.info('recipientId:', recipientId)
   console.info('recipientRS:', recipientRS)
 
   const data = {
-    recipient,
+    recipient: recipientId,
+    recipientPublicKey,
     property,
     value: '1',
     secretPhrase: config.secretPhrase,
@@ -45,6 +59,6 @@ loadNRS(config).then((NRS) => {
   }
 
   NRS.sendRequest('setAccountProperty', data, (response) => {
-    NRS.logConsole(JSON.stringify(response))
+    NRS.logConsole(JSON.stringify(response, null, 2))
   })
 })
