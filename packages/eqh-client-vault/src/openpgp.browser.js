@@ -1,10 +1,10 @@
 /* eslint-disable no-undef */
 
-const openpgpURL = 'http://localhost:5000/dist/openpgp.worker.bundle.js'
+const openpgpURL = '../dist/openpgp.worker.bundle.js'
 const openpgpSRI = 'sha512-PgqZ9v+i8EL3pOm1E+jsEHXUmQ2g3mo9Y9nYJ9jC1zT22ZFYOiGARbMMkfQZyn1PIk4V4Bwrz/wj+p2f1u7f4Q=='
 
-const scriptURL = 'http://localhost:5000/dist/index.bundle.js'
-const scriptSignatureURL = 'http://localhost:5000/dist/index.bundle.js.sig.asc'
+const scriptURL = '../dist/index.bundle.js'
+const scriptSignatureURL = '../dist/index.bundle.js.sig.asc'
 
 const pubkey = `
 -----BEGIN PGP PUBLIC KEY BLOCK-----
@@ -63,8 +63,10 @@ fetch(openpgpURL, {
     })
   })
   .then((localUrl) => {
-    const myWorker = new Worker(localUrl)
-    // eslint-disable-next-line no-console
-    myWorker.onerror = error => console.warn(JSON.stringify(error))
+    if (window.Worker) {
+      const myWorker = new Worker(localUrl)
+      // eslint-disable-next-line no-console
+      myWorker.onerror = error => console.warn(JSON.stringify(error))
+    }
     return true
   })

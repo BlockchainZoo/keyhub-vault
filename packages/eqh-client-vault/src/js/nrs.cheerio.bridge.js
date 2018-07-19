@@ -130,116 +130,139 @@ const jqPrototypeMocks = {
   trigger: noop,
 }
 
-const options = {
+const defaultOptions = {
   url: 'http://localhost:6876', // URL of NXT remote node
-  secretPhrase: '', // Secret phrase of the current account
+  accountRS: '', // RS of the current account
   isTestNet: false, // Select testnet or mainnet
   adminPassword: '', // Node admin password
+  lastKnownBlock: { id: '15547113949993887183', height: '712' }, // last known EcBlock
 }
 
-const setCurrentAccount = (secretPhrase, client = global.client) => {
-  // eslint-disable-next-line no-param-reassign
-  client.account = client.getAccountId(secretPhrase)
-  // eslint-disable-next-line no-param-reassign
-  client.accountRS = client.convertNumericToRSAccountFormat(client.account)
-  // eslint-disable-next-line no-param-reassign
-  client.accountInfo = {} // Do not cache the public key
-  client.resetEncryptionState()
-}
-
-const init = (params) => {
-  if (!params) {
+class NrsBridge {
+  constructor(params) {
+    this.options = { ...defaultOptions }
+    if (params) Object.assign(this.options, params, { init: true })
     return this
   }
-  options.url = params.url
-  options.secretPhrase = params.secretPhrase
-  options.isTestNet = params.isTestNet
-  options.adminPassword = params.adminPassword
-  return this
-}
 
-const load = (callback) => {
-  try {
-    // jsdom is necessary to define the window object on which jquery relies
-    // const { window } = new JSDOM()
+  static setCurrentAccount(accountRS, client) {
+    // eslint-disable-next-line no-param-reassign
+    client.account = client.convertRSToNumericAccountFormat(accountRS)
+    // eslint-disable-next-line no-param-reassign
+    client.accountRS = client.convertNumericToRSAccountFormat(client.account)
+    // eslint-disable-next-line no-param-reassign
+    client.accountInfo = {} // Do not cache the public key
+    client.resetEncryptionState()
+  }
 
-    console.log('Initializing NRS-client...')
+  configure(params = this.options, client = this.client) {
+    // eslint-disable-next-line no-param-reassign
+    client.isTestNet = params.isTestNet || this.options.isTestNet
+    this.constructor.setCurrentAccount(params.accountRS || this.options.accountRS, client)
+    if (params.getter) {
+      client.getModuleConfig = params.getter // eslint-disable-line no-param-reassign
+    } else {
+      const opts = { ...this.options, ...params }
+      client.getModuleConfig = () => opts // eslint-disable-line no-param-reassign
+    }
+    const { constants } = client
+    if (client.isTestNet) {
+      // eslint-disable-next-line no-param-reassign
+      constants.LAST_KNOWN_TESTNET_BLOCK = params.lastKnownBlock || this.options.lastKnownBlock
+    } else {
+      // eslint-disable-next-line no-param-reassign
+      constants.LAST_KNOWN_BLOCK = params.lastKnownBlock || this.options.lastKnownBlock
+    }
+    return this
+  }
 
-    // Load the necessary node modules and assign them to the global scope
-    // the NXT client wasn't designed with modularity in mind therefore we need
-    // to include every 3rd party library function in the global scope
-    const jQuery = cheerio.load('<div></div>')
-    Object.assign(jQuery, jqMocks)
-    Object.assign(jQuery.prototype, jqPrototypeMocks)
-    global.jQuery = jQuery
+  load(callback) {
+    try {
+      // jsdom is necessary to define the window object on which jquery relies
+      // const { window } = new JSDOM()
 
-    // global.$ = global.jQuery // No longer needed by extensions.js
-    global.CryptoJS = require('crypto-js')
-    global.async = require('async')
-    global.pako = require('pako')
-    const jsbn = require('jsbn')
-    global.BigInteger = jsbn.BigInteger
+      console.log('Initializing NRS-client...')
 
-    // Support for Webworkers
-    if (typeof global.window !== 'undefined') {
-      // Browser Renderer Process
-      if (!global.window.crypto && !global.window.msCrypto) {
-        global.crypto = require('crypto')
+      // Load the necessary node modules and assign them to the global scope
+      // the NXT client wasn't designed with modularity in mind therefore we need
+      // to include every 3rd party library function in the global scope
+      const jQuery = cheerio.load('<div></div>')
+      Object.assign(jQuery, jqMocks)
+      Object.assign(jQuery.prototype, jqPrototypeMocks)
+      global.jQuery = jQuery
+
+      // global.$ = global.jQuery // No longer needed by extensions.js
+      global.CryptoJS = require('crypto-js')
+      global.async = require('async')
+      global.pako = require('pako')
+      const jsbn = require('jsbn')
+      global.BigInteger = jsbn.BigInteger
+
+      // Support for Webworkers
+      if (typeof global.window !== 'undefined') {
+        // Browser Renderer Process
+        if (!global.window.crypto && !global.window.msCrypto) {
+          global.crypto = require('crypto')
+        }
+      } else if (typeof self !== 'undefined') { // eslint-disable-line no-restricted-globals
+        // WebWorker
+        global.window = self // eslint-disable-line no-restricted-globals, no-undef
+        if (!global.window.crypto && !global.window.msCrypto) {
+          global.crypto = require('crypto')
+        }
+      } else if (process.env.APP_ENV !== 'browser') {
+        // Nodejs
+        const { JSDOM } = require('jsdom')
+        const { window } = new JSDOM()
+        global.window = window
+        global.window.console = console
       }
-    } else if (typeof self !== 'undefined') { // eslint-disable-line no-restricted-globals
-      // WebWorker
-      global.window = self // eslint-disable-line no-restricted-globals, no-undef
-      if (!global.window.crypto && !global.window.msCrypto) {
-        global.crypto = require('crypto')
-      }
-    } else if (process.env.APP_ENV !== 'browser') {
-      // Nodejs
-      const { JSDOM } = require('jsdom')
-      const { window } = new JSDOM()
-      global.window = window
-      global.window.console = console
+
+      // Mock other objects on which the client depends
+      if (typeof global.window.document === 'undefined') global.window.document = {}
+      if (typeof global.window.navigator === 'undefined') global.window.navigator = { userAgent: '' }
+      global.isNode = true // for code which has to execute differently by node compared to browser
+
+      // Now load some NXT specific libraries into the global scope
+      global.NxtAddress = require('./util/nxtaddress')
+      global.curve25519 = require('./crypto/curve25519')
+      global.curve25519_ = require('./crypto/curve25519_') // eslint-disable-line no-underscore-dangle
+      require('./util/extensions') // Add extensions to String.prototype and Number.prototype
+      global.converters = require('./util/converters')
+
+      // Now start loading the client itself
+      // The main challenge is that in node every JavaScript file is a module with it's own scope
+      // however the NXT client relies on a global browser scope which defines the NRS object
+      // The idea here is to gradually compose the NRS object by adding functions from each
+      // JavaScript file into the existing global.client scope
+      const client = {}
+      global.client = client
+      Object.assign(client, require('./nrs.encryption'))
+      Object.assign(client, require('./nrs.feature.detection'))
+      Object.assign(client, require('./nrs.transactions.types'))
+      Object.assign(client, require('./nrs.constants'))
+      Object.assign(client, require('./nrs.console'))
+      Object.assign(client, require('./nrs.util'))
+      Object.assign(client, require('./nrs'))
+      Object.assign(client, require('./nrs.server'))
+
+      if (this.options.init) this.config(this.options, client)
+
+      // Now load the constants locally since we cannot trust the remote node to
+      // return the correct constants.
+      client.processConstants(require('../conf/constants'))
+      this.client = client
+      callback(this.client)
+    } catch (err) {
+      console.log(err.message || err)
+      console.log(err.stack)
+      throw err
     }
 
-    // Mock other objects on which the client depends
-    if (typeof global.window.document === 'undefined') global.window.document = {}
-    if (typeof global.window.navigator === 'undefined') global.window.navigator = { userAgent: '' }
-    global.isNode = true // for code which has to execute differently by node compared to browser
-
-    // Now load some NXT specific libraries into the global scope
-    global.NxtAddress = require('./util/nxtaddress')
-    global.curve25519 = require('./crypto/curve25519')
-    global.curve25519_ = require('./crypto/curve25519_') // eslint-disable-line no-underscore-dangle
-    require('./util/extensions') // Add extensions to String.prototype and Number.prototype
-    global.converters = require('./util/converters')
-
-    // Now start loading the client itself
-    // The main challenge is that in node every JavaScript file is a module with it's own scope
-    // however the NXT client relies on a global browser scope which defines the NRS object
-    // The idea here is to gradually compose the NRS object by adding functions from each
-    // JavaScript file into the existing global.client scope
-    global.client = {}
-    global.client.isTestNet = options.isTestNet
-    Object.assign(global.client, require('./nrs.encryption'))
-    Object.assign(global.client, require('./nrs.feature.detection'))
-    Object.assign(global.client, require('./nrs.transactions.types'))
-    Object.assign(global.client, require('./nrs.constants'))
-    Object.assign(global.client, require('./nrs.console'))
-    Object.assign(global.client, require('./nrs.util'))
-    global.client.getModuleConfig = () => options
-    Object.assign(global.client, require('./nrs'))
-    Object.assign(global.client, require('./nrs.server'))
-    setCurrentAccount(options.secretPhrase, global.client)
-
-    // Now load the constants locally since we cannot trust the remote node to
-    // return the correct constants.
-    global.client.processConstants(require('../conf/constants'))
-    callback(global.client)
-  } catch (err) {
-    console.log(err.message || err)
-    console.log(err.stack)
-    throw err
+    return this
   }
 }
 
-module.exports = { init, load, setCurrentAccount }
-// export { init, load, setCurrentAccount }
+module.exports = {
+  NrsBridge,
+}
