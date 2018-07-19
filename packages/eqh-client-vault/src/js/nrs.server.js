@@ -533,7 +533,8 @@ var NRS = (function (NRS, $, undefined) {
         if (data.broadcast === "false" && !isSchedule) {
             response.transactionBytes = payload;
             response.transactionJSON.signature = signature;
-            NRS.showRawTransactionModal(response);
+            if (!isNode) NRS.showRawTransactionModal(response);
+            callback(response);
         } else {
             if (extra) {
                 data["_extra"] = extra;

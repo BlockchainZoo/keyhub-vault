@@ -35,6 +35,7 @@ bridge.load((NRS) => {
       const { secretPhrase } = secrets
       const data = {
         ...txData,
+        broadcast: 'false',
         secretPhrase: `eqh${secretPhrase}`,
         ...NRS.getMandatoryParams(),
       }
