@@ -1691,7 +1691,7 @@ var NRS = (function (NRS, $, undefined) {
     };
 
     NRS.convertNumericToRSAccountFormat = function(account) {
-        if (/^NXT\-/i.test(account)) {
+        if (/^EQH-/i.test(account)) {
             return String(account).escapeHTML();
         } else {
             var address = new NxtAddress();
@@ -1700,6 +1700,18 @@ var NRS = (function (NRS, $, undefined) {
                 return address.toString().escapeHTML();
             } else {
                 return "";
+            }
+        }
+    };
+
+    NRS.convertRSToNumericAccountFormat = function(account) {
+        if (/^EQH-/i.test(account)) {
+            var address = new NxtAddress();
+
+            if (address.set(account)) {
+                return address.account_id();
+            } else {
+                return -1;
             }
         }
     };
