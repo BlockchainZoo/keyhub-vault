@@ -76,10 +76,15 @@ export function loadVault(mainElement) { // eslint-disable-line
   // eslint-disable-next-line no-restricted-globals
   backToAppBtn.addEventListener('click', () => self.close())
 
-  const displayTransaction = (tx) => {
+  const displayTransaction = ({ type, data }) => {
     const domFragment = document.createDocumentFragment()
 
-    Object.keys(tx).forEach(function (key) {
+    transactionDetail.appendChild(domFragment)
+    const divType = document.createElement('div')
+    divType.appendChild(document.createTextNode(type))
+    domFragment.appendChild(divType)
+
+    Object.keys(data).forEach(function (key) {
       const div = document.createElement('div')
       div.classList.add('row', 'flex-nowrap', 'my-2')
 
@@ -93,7 +98,7 @@ export function loadVault(mainElement) { // eslint-disable-line
 
       const divVal = document.createElement('div')
       divVal.classList.add('col-6')
-      divVal.appendChild(document.createTextNode(tx[key]))
+      divVal.appendChild(document.createTextNode(data[key]))
 
       div.appendChild(divKey)
       div.appendChild(divColon)
@@ -105,48 +110,64 @@ export function loadVault(mainElement) { // eslint-disable-line
     return transactionDetail.appendChild(domFragment)
   }
 
-  const signTransaction = (tx) => {
-    console(tx)
-    worker.postMessage(['generateKeyPair'])
+  const signTransaction = (tx, callback) => {
+    console.log(tx)
+    worker.postMessage(['signTransaction', tx.type, tx.data])
 
     txDetail.style.display = 'none'
     txBroadcasting.style.display = 'flex'
+
+    worker.onerror = (error) => {
+      // clear event listeners
+      worker.onerror = null
+      worker.onmessage = null
+      // call the function in the parent window once signed data is available
+      callback(error).then(() => {
+        window.alert(`Could not sign transaction: ${error.message || error}`)
+      }).catch((err) => {
+        window.alert(`Could not return error to parent window: ${err.message || err}`)
+      })
+    }
+
+    worker.onmessage = ({ data }) => {
+      // clear event listeners
+      worker.onerror = null
+      worker.onmessage = null
+      // call the function in the parent window once signed data is available
+      callback(null, data).then(() => {
+        txBroadcasting.style.display = 'none'
+        thankYouCard.style.display = 'flex'
+      }).catch((error) => {
+        window.alert(`Could not return result to parent window: ${error.message || error}`)
+      })
+    }
 
     // setTimeout(function () {
     //   txBroadcasting.style.display = 'none'
     //   thankYouCard.style.display = 'flex'
     // }, 5000)
-
-    worker.onmessage = ({ data }) => {
-      worker.onmessage = null
-
-      console.log(data)
-
-      txBroadcasting.style.display = 'none'
-      thankYouCard.style.display = 'flex'
-    }
   }
 
   if (window.opener) {
     postRobot.send(window.opener, 'vaultReady', { id: 1337 })
       .then((event) => {
         console.log(event.source, event.origin)
-        const { data: { getTransaction } } = event
+        const { data: { action, params, callback } } = event
 
-        return getTransaction()
+        if (action === 'signTx' && params) {
+          if (displayTransaction(...params)) {
+            transactionSignBtn.addEventListener('click', () => signTransaction(tx, callback))
+            transactionSignBtn.disabled = false
+            transactionCancelSignBtn.disabled = false
+          }
+        } else if (action === 'generateKey' && params) {
+          // TODO
+        }
       })
       .catch((err) => {
         // Handle any errors that stopped our call from going through
         console.error(err)
       })
-      .then((tx) => {
-        if (displayTransaction(tx)) {
-          transactionSignBtn.addEventListener('click', event => signTransaction(tx, event))
-          transactionSignBtn.disabled = false
-          transactionCancelSignBtn.disabled = false
-        }
-      })
-      .catch(err => console.warn(err))
   } else {
     window.alert('Please reopen this window from the Main App.')
 
