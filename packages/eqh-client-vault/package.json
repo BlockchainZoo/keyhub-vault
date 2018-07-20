@@ -6,7 +6,7 @@
   "main": "dist/index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "[ -e dist/openpgp.worker.bundle.js ] || browserify -p browserify-derequire -r openpgp/src/worker/worker -s openpgp -o dist/openpgp.worker.bundle.js && webpack --config webpack.config.js"
+    "build": "[ -e dist/openpgp.worker.bundle.js ] || browserify -p browserify-derequire -r openpgp/src/worker/worker -s openpgp -o dist/openpgp.worker.bundle.js && npx webpack --config webpack.config.js && node src/openpgp.sign.js"
   },
   "repository": {
     "type": "git",
@@ -23,13 +23,15 @@
     "async": "^2.6.1",
     "cheerio": "^1.0.0-rc.2",
     "crypto-js": "^3.1.9-1",
+    "diceware-wordlist-en-eff": "^1.0.1",
     "jquery": "^3.3.1",
     "jsbn": "^1.1.0",
     "jsdom": "^11.11.0",
-    "libsodium-wrappers": "^0.7.3",
+    "lodash-es": "^4.17.10",
     "node-fetch": "^2.1.2",
     "openpgp": "^3.0.12",
     "pako": "^1.0.6",
+    "post-robot": "^8.0.28",
     "qs": "^6.5.2",
     "whatwg-fetch": "^2.0.4"
   },
@@ -40,6 +42,7 @@
     "babel-loader": "^8.0.0-beta.4",
     "browserify": "^16.2.2",
     "browserify-derequire": "^0.9.6",
-    "ssri": "^6.0.0"
+    "ssri": "^6.0.0",
+    "worker-loader": "^2.0.0"
   }
 }
