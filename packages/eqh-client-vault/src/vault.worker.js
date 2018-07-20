@@ -125,4 +125,19 @@ bridge.load((NRS) => {
   //   if (err) throw err
   //   console.log(JSON.stringify(response, null, 2))
   // })
+
+  // const decimals = 2
+  // const quantity = 2.5
+  // const price = 1.3
+
+  // const txData = {
+  //   asset: '6889644787748004524', // testnet Megasset
+  //   quantityQNT: NRS.convertToQNT(quantity, decimals),
+  //   priceNQT: NRS.calculatePricePerWholeQNT(NRS.convertToNQT(price), decimals),
+  // }
+
+  // methods.signTransaction('placeBidOrder', txData, (err, response) => {
+  //   if (err) throw err
+  //   console.log(JSON.stringify(response, null, 2))
+  // })
 })
