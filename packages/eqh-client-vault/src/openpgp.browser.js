@@ -87,4 +87,6 @@ loadOpenpgp.then(openpgp => (
       window.alert(error.message || error) // eslint-disable-line no-alert
       self.close() // eslint-disable-line no-restricted-globals
     })
-))
+)).catch((error) => {
+  window.alert(`Your connection is broken or insecure: ${error.message || error} . Please try again.`) // eslint-disable-line no-alert
+})

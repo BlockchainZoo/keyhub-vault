@@ -6,7 +6,7 @@
   "main": "dist/index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "[ -e dist/openpgp.worker.bundle.js ] || browserify -p browserify-derequire -r openpgp/src/worker/worker -s openpgp -o dist/openpgp.worker.bundle.js && npx webpack --config webpack.config.js && node src/openpgp.sign.js"
+    "build": "[ -e dist/openpgp.worker.bundle.js ] || browserify -p browserify-derequire -r openpgp/src/worker/worker -s openpgp -o dist/openpgp.worker.bundle.js && webpack --config webpack.config.js && node src/openpgp.sign.js"
   },
   "repository": {
     "type": "git",
@@ -29,7 +29,7 @@
     "jsdom": "^11.11.0",
     "lodash-es": "^4.17.10",
     "node-fetch": "^2.1.2",
-    "openpgp": "^3.0.12",
+    "openpgp": "github:heri16/openpgpjs#v3.1.0",
     "pako": "^1.0.6",
     "post-robot": "^8.0.28",
     "qs": "^6.5.2",
