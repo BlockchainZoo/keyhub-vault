@@ -1,101 +1,84 @@
-/* eslint-disable no-console */
+import { template } from 'lodash-es'
 
-const { NrsBridge } = require('./js/nrs.cheerio.bridge')
-// import loader from './js/nrs.cheerio.bridge'
+import { loadVault } from './vault'
 
-const nxtConfig = require('./conf/nxt.json')
-const secrets = require('./conf/secrets.json')
+const templateFn = template(`
+<div class="free-background">&nbsp;</div>
 
-const bridge = new NrsBridge()
+<header>
+    <nav class="navbar navbar-expand-lg navbar-dark">
 
-bridge.load((NRS) => {
-  console.log('NRS-client ready') // eslint-disable-line no-console
+      <a class="navbar-brand d-flex order-1" href="/">Keyhub</a>
 
-  bridge.configure(nxtConfig)
+      <!--
+      <div class="d-flex d-md-flex d-lg-hide order-lg-3 order-2">
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent"
+          aria-expanded="false" aria-label="Toggle navigation">
+          <span class="navbar-toggler-icon"></span>
+        </button>
+      </div>
 
-  const methods = Object.assign(Object.create(null), {
-    configure: (config, callback) => {
-      bridge.configure(config)
-      callback(null, true)
-    },
-    generateKeyPair: (callback) => {
-      const { secretPhrase } = secrets
-      const publicKey = NRS.generatePublicKey(`eqh${secretPhrase}`)
-      const accountId = NRS.getAccountIdFromPublicKey(publicKey)
-      const accountRS = NRS.convertNumericToRSAccountFormat(accountId)
+      <div class="collapse navbar-collapse order-lg-2 order-3 justify-content-between" id="navbarSupportedContent">
+        <div class="d-flex order-2">
+          <ul class="navbar-nav flex-sm-row">
+            <li class="nav-item text-md-center">
+              <a class="nav-link active" href="#">Sign in</a>
+            </li>
+            <li class="nav-item text-md-center">
+              <a class="btn btn-outline-light" href="#">Sign Up</a>
+            </li>
+          </ul>
+        </div>
 
-      callback(null, {
-        secretPhrase,
-        publicKey,
-        accountId,
-        accountRS,
-      })
-    },
-    signTransaction: (txType, txData, callback) => {
-      const { secretPhrase } = secrets
-      const data = {
-        ...txData,
-        broadcast: 'false',
-        secretPhrase: `eqh${secretPhrase}`,
-        ...NRS.getMandatoryParams(),
-      }
-      NRS.sendRequest(txType, data, (response) => {
-        callback(null, response)
-      })
-    },
-  })
 
-  if (typeof self !== 'undefined') { // eslint-disable-line no-restricted-globals
-    self.onmessage = (event) => { // eslint-disable-line no-undef, no-restricted-globals
-      const { data: [name, ...params] } = event
-      if (name in methods) {
-        try {
-          methods[name](...params, (err, res) => {
-            if (err) {
-              // eslint-disable-next-line no-undef, no-restricted-globals
-              self.postMessage({ error: err.message || err })
-            } else {
-              // eslint-disable-next-line no-undef, no-restricted-globals
-              self.postMessage(res)
-            }
-          })
-        } catch (err) {
-          // eslint-disable-next-line no-undef, no-restricted-globals
-          self.postMessage({ error: err.message || err })
-        }
-      }
-    }
-  }
+        <div class="d-flex order-1">
+          <ul class="navbar-nav">
+            <li class="nav-item active">
+              <a class="nav-link" href="#" id="navbar-home-link">Home
+                <span class="sr-only">(current)</span>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="#">Link</a>
+            </li>
+            <li class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true"
+                aria-expanded="false">
+                Dropdown
+              </a>
+              <div class="dropdown-menu" aria-labelledby="navbarDropdown">
+                <a class="dropdown-item" href="#">Action</a>
+                <a class="dropdown-item" href="#">Another action</a>
+                <div class="dropdown-divider"></div>
+                <a class="dropdown-item" href="#">Something else here</a>
+              </div>
+            </li>
+          </ul>
+        </div>
 
-  // Generate New KeyPair
-  console.log('Generating a new account...')
-  methods.generateKeyPair((err, res) => {
-    if (err) throw err
-    console.log(res)
-  })
+      </div>
+      -->
 
-  // Send Transaction
-  console.log('Sending a transaction...')
-  const property = '$$Trader'
-  const recipient = 'EQH-4226-5SWH-A9CM-8W7P6'
-  const recipientPublicKey = 'd6b0716dce96a33d224100c15437013d3e550f025119918e86859075ae730133'
-  const recipientId = recipientPublicKey
-    ? NRS.getAccountIdFromPublicKey(recipientPublicKey)
-    : NRS.convertRSToNumericAccountFormat(recipient)
-  const recipientRS = NRS.convertNumericToRSAccountFormat(recipientId)
-  console.info('property:', property)
-  console.info('recipientId:', recipientId)
-  console.info('recipientRS:', recipientRS)
+    </nav>
 
-  const txData = {
-    recipient: recipientId,
-    recipientPublicKey,
-    property,
-    value: '1',
-  }
+  </header>
 
-  methods.signTransaction('setAccountProperty', txData, (err, response) => {
-    if (err) throw err
-    console.log(JSON.stringify(response, null, 2))
-  })
-})
+  <div id="<%- mainDiv %>"></div>
+
+  <footer>
+    <div class="text-center">
+      &copy; Blockchainzoo 2018
+    </div>
+  </footer>
+`)
+
+const vars = {
+  mainDiv: 'main',
+}
+
+// eslint-disable-next-line no-undef
+document.getElementById('body').innerHTML = templateFn(vars)
+
+// eslint-disable-next-line no-undef
+const mainElement = document.getElementById(vars.mainDiv)
+loadVault(mainElement)
