@@ -17,6 +17,18 @@ bridge.load((NRS) => {
 
   bridge.configure(nxtConfig)
 
+  const fixTxNumberFormat = ({ assetId, decimals, quantity, price, amount, ...txData }) => {
+    /* eslint-disable no-param-reassign */
+    if (decimals) {
+      if (quantity) txData.quantityQNT = NRS.convertToQNT(quantity, decimals)
+      if (price) txData.priceNQT = NRS.calculatePricePerWholeQNT(NRS.convertToNQT(price), decimals)
+    }
+    if (amount) txData.amountNQT = NRS.convertToNQT(amount)
+    if (assetId) txData.asset = assetId
+
+    return txData
+  }
+
   const methods = Object.assign(Object.create(null), {
     configure: (config, callback) => {
       if (typeof config !== 'object') throw new Error('Invalid configuration')
@@ -47,11 +59,12 @@ bridge.load((NRS) => {
 
       const { secretPhrase } = secrets
       const data = {
-        ...txData,
+        ...fixTxNumberFormat(txData),
         broadcast: 'false',
         secretPhrase: `eqh${secretPhrase}`,
         ...NRS.getMandatoryParams(),
       }
+
       NRS.sendRequest(txType, data, (response) => {
         callback(null, response)
       })
