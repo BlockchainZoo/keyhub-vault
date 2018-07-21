@@ -1,0 +1,50 @@
+localhost:5500 {
+  root ./
+  tls self_signed
+
+  rewrite /css/ {
+    to /public/css/{file}
+  }
+
+  rewrite /js/ {
+    to /dist/{file}
+  }
+
+  rewrite /index.js {
+    to /public/{file}
+  }
+
+  rewrite / {
+    if {path} is /
+    to /public{path}
+  }
+
+  header /public/ {
+    # Store PGP public key permanently in the user browser
+    Cache-Control "public, max-age=31536000, immutable"
+    # Disallow loading of dangerous external scripts and resources
+    Content-Security-Policy "default-src 'none'; style-src 'self'; img-src 'self'; media-src 'self'; manifest-src 'self'; font-src 'self'; script-src blob: 'self'; connect-src 'self'"
+  }
+
+  header /dist/ {
+    # Disallow loading of dangerous external scripts and resources
+    Content-Security-Policy "default-src 'none'"
+  }
+
+  header /dist/openpgp.worker.bundle.js {
+    # Store PGP public key permanently in the user browser
+    Cache-Control "public, max-age=31536000, immutable"
+  }
+
+  header / {
+    # Enable HTTP Strict Transport Security (HSTS) to force clients to always
+    # connect via HTTPS (do not use if only testing)
+    Strict-Transport-Security "max-age=31536000;"
+    # Enable cross-site filter (XSS) and tell browser to block detected attacks
+    X-XSS-Protection "1; mode=block"
+    # Prevent some browsers from MIME-sniffing a response away from the declared Content-Type
+    X-Content-Type-Options "nosniff"
+    # Disallow the site to be rendered within a frame (clickjacking protection)
+    X-Frame-Options "DENY"
+  }
+}
