@@ -2,11 +2,11 @@
 
 'use strict'
 
-const openpgpURL = '../dist/openpgp.worker.bundle.js'
-const openpgpSRI = 'sha512-PgqZ9v+i8EL3pOm1E+jsEHXUmQ2g3mo9Y9nYJ9jC1zT22ZFYOiGARbMMkfQZyn1PIk4V4Bwrz/wj+p2f1u7f4Q=='
+const openpgpURL = './js/openpgp.worker.bundle.js'
+const openpgpSRI = 'sha512-z3XKhRza4Rjp0AFLiYK6c4laL5jTzB22LbM+QWTkr21j53MsiHS33GlzuzaVxnExWhGSZdYcAFGjaPaVbcAASA=='
 
-const scriptURL = '../dist/index.bundle.js'
-const scriptSignatureURL = '../dist/index.bundle.js.sig.asc'
+const scriptURL = './js/main.bundle.js'
+const scriptSignatureURL = './js/main.bundle.js.sig.asc'
 
 const pubkey = (`
 -----BEGIN PGP PUBLIC KEY BLOCK-----
@@ -33,8 +33,8 @@ const loadOpenpgp = new Promise((resolve, reject) => {
   openpgpScript.crossOrigin = 'anonymous'
   openpgpScript.async = true
   openpgpScript.onload = () => resolve((window && window.openpgp) || global.openpgp)
-  openpgpScript.onerror = reject
-  document.head.appendChild(openpgpScript)
+  openpgpScript.onerror = event => reject(event)
+  document.body.appendChild(openpgpScript)
 })
 
 loadOpenpgp.then(openpgp => (
@@ -68,16 +68,11 @@ loadOpenpgp.then(openpgp => (
         throw new Error('Security Breach! Javascript has been tampered with! Please contact Keyhub Support immediately.')
       })
     })
-    .then(localURL => new Promise((resolve, reject) => {
-      // if (window.Worker) {
-      //   const myWorker = new Worker(localURL)
-      //   // eslint-disable-next-line no-console
-      //   myWorker.onerror = error => console.warn(JSON.stringify(error))
-      // }
-
+    .then(localBlobURL => new Promise((resolve, reject) => {
       const payloadScript = document.createElement('script')
-      payloadScript.src = localURL
-      // payloadScript.crossOrigin = 'anonymous'
+      payloadScript.type = 'text/javascript'
+      payloadScript.src = localBlobURL
+      payloadScript.crossOrigin = 'anonymous'
       payloadScript.async = true
       payloadScript.onload = resolve
       payloadScript.onerror = reject
@@ -87,6 +82,6 @@ loadOpenpgp.then(openpgp => (
       window.alert(error.message || error) // eslint-disable-line no-alert
       self.close() // eslint-disable-line no-restricted-globals
     })
-)).catch((error) => {
-  window.alert(`Your connection is broken or insecure: ${error.message || error} . Please try again.`) // eslint-disable-line no-alert
+)).catch((event) => {
+  window.alert(`Cannot load: ${event.error || event.target.src}. Your connection might be broken or insecure. Please try again.`) // eslint-disable-line no-alert
 })

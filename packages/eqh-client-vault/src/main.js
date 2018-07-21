@@ -1,8 +1,12 @@
-import { template } from 'lodash-es'
+import { safeHtml } from 'common-tags'
 
 import { loadVault } from './vault'
 
-const templateFn = template(`
+const vars = {
+  mainDiv: 'main',
+}
+
+const htmlTemplate = (safeHtml`
 <div class="free-background">&nbsp;</div>
 
 <header>
@@ -63,7 +67,7 @@ const templateFn = template(`
 
   </header>
 
-  <div id="<%- mainDiv %>"></div>
+  <div id="${vars.mainDiv}"></div>
 
   <footer>
     <div class="text-center">
@@ -72,12 +76,21 @@ const templateFn = template(`
   </footer>
 `)
 
-const vars = {
-  mainDiv: 'main',
-}
+// eslint-disable-next-line no-undef
+document.title = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+  ? 'Keyhub Offline Vault'
+  : 'Keyhub Web Vault'
 
 // eslint-disable-next-line no-undef
-document.getElementById('body').innerHTML = templateFn(vars)
+const link = document.createElement('link')
+link.type = 'text/css'
+link.rel = 'stylesheet'
+link.href = './css/main.css'
+// eslint-disable-next-line no-undef
+document.head.appendChild(link)
+
+// eslint-disable-next-line no-undef
+document.getElementById('body').innerHTML = htmlTemplate
 
 // eslint-disable-next-line no-undef
 const mainElement = document.getElementById(vars.mainDiv)

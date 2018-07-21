@@ -1,189 +1,87 @@
+/* eslint-disable strict */
+
 'use strict'
 
-class ProgressReportFetcher {
-  constructor(onProgress = function() {}) {
-    this.onProgress = onProgress;
-  }
+const openpgpURL = './js/openpgp.worker.bundle.js'
+const openpgpSRI = 'sha512-z3XKhRza4Rjp0AFLiYK6c4laL5jTzB22LbM+QWTkr21j53MsiHS33GlzuzaVxnExWhGSZdYcAFGjaPaVbcAASA=='
 
-  // mimic native fetch() instantiation and return Promise
-  fetch(input, init = {}) {
-    const request = (input instanceof Request)? input : new Request(input)
-    this._cancelRequested = false;
+const scriptURL = './js/main.bundle.js'
+const scriptSignatureURL = './js/main.bundle.js.sig.asc'
 
-    return fetch(request, init).then(response => {
-      if (!response.body) {
-        throw Error('ReadableStream is not yet supported in this browser.  <a href="https://developer.mozilla.org/en-US/docs/Web/API/ReadableStream">More Info</a>')
+const pubkey = (`
+-----BEGIN PGP PUBLIC KEY BLOCK-----
+Version: OpenPGP.js v3.0.12
+Comment: https://openpgpjs.org
+
+xjMEW1GeVRYJKwYBBAHaRw8BAQdAQv33J/0En2GVY2ug5Chtt3Gy/l7x+YDS
+lHmagHN2iqHNEUVRSCA8ZXFoQGJjei5hcHA+wncEEBYKACkFAltRnlUGCwkH
+CAMCCRBkr/3Wn8VKaQQVCAoCAxYCAQIZAQIbAwIeAQAASV4BAIiKu2nBrUxn
+b9jGhNNTjup0wCcBCAGNqnAokEVk6Kl6AP4gSLRfYTxh7BH+nsqeVT3lwyyQ
+n520BbEaXGQ0FFJBCM44BFtRnlUSCisGAQQBl1UBBQEBB0Bwbx8jPQbTMayu
+W01ssxLS3VyiYiJW16m9c7ubg4p+HwMBCAfCYQQYFggAEwUCW1GeVQkQZK/9
+1p/FSmkCGwwAAH0cAQCQdWgExzXATzF/LCwqb54NLKPL2vrFQY0V/ryyi6mP
+fQEA/HmvD8QGC18EuOAmk3UXaWyZMnFT3Fs08dcjqKr3uAg=
+=NzpF
+-----END PGP PUBLIC KEY BLOCK-----`)
+
+const loadOpenpgp = new Promise((resolve, reject) => {
+  /* eslint-disable no-undef */
+  const openpgpScript = document.createElement('script')
+  openpgpScript.type = 'text/javascript'
+  openpgpScript.src = openpgpURL
+  openpgpScript.integrity = openpgpSRI
+  openpgpScript.crossOrigin = 'anonymous'
+  openpgpScript.async = true
+  openpgpScript.onload = () => resolve((window && window.openpgp) || global.openpgp)
+  openpgpScript.onerror = event => reject(event)
+  document.body.appendChild(openpgpScript)
+})
+
+loadOpenpgp.then(openpgp => (
+  fetch(openpgpURL, { integrity: openpgpSRI })
+    .then(res => res.ok && res.blob()).then(blob => URL.createObjectURL(blob)).then(url => (
+      openpgp.initWorker({ path: url })
+    ))
+    .then(() => Promise.all([
+      fetch(scriptURL).then(res1 => res1.ok && res1.arrayBuffer().then(b => [b, res1])),
+      fetch(scriptSignatureURL).then(res2 => res2.ok && res2.text().then(t => [t, res2])),
+    ]))
+    .then(([[msgBuffer, msgRes], [detachedSig]]) => {
+      const data = new Uint8Array(msgBuffer)
+
+      const params = {
+        message: openpgp.message.fromBinary(data), // input as Message object
+        signature: openpgp.signature.readArmored(detachedSig), // parse detached signature
+        publicKeys: openpgp.key.readArmored(pubkey.split(/[\n\r]/g).map(l => l.trim()).join('\n')).keys, // for verification
       }
 
-      // this occurs if cancel() was called before server responded (before fetch() Promise resolved)
-      if (this._cancelRequested) {
-        response.body.getReader().cancel();
-        return Promise.reject('cancel requested before server responded.');
-      }
+      return openpgp.verify(params).then((verified) => {
+        const validity = verified.signatures[0].valid // true
+        if (validity) {
+          // eslint-disable-next-line no-console
+          console.info(`Security Check Passed! Javascript at ${msgRes.url} signed by PGP key id ${verified.signatures[0].keyid.toHex()}`)
 
-      if (!response.ok) {
-        // HTTP error server response
-        throw Error(`Server responded ${response.status} ${response.statusText}`);
-      }
+          const blob = new Blob([data], { type: msgRes.headers.get('content-type') })
+          return URL.createObjectURL(blob)
+        }
 
-      // Server must send CORS header "Access-Control-Expose-Headers: content-length" to access
-      const contentLength = response.headers.get('content-length');
-
-      if (contentLength === null) {
-        // don't evaluate download progress if we can't compare against a total size
-        throw Error('Content-Length server response header missing.  <a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS#Access-Control-Expose-Headers">More Info</a>')
-      }
-
-      const total = parseInt(contentLength,10);
-      let loaded = 0;
-
-      this._reader=response.body.getReader()
-
-      const me = this;
-
-      return new Response(
-        new ReadableStream({
-          start(controller) {
-            if (me.cancelRequested) {
-              console.log('canceling read')
-              controller.close();
-              return;
-            }
-
-            read();
-            function read() {
-              me._reader.read().then(({done, value}) => {
-                if (done) {
-                  // ensure onProgress called when content-length=0
-                  if (total === 0) {
-                    me.onProgress.call(me, {loaded, total});
-                  }
-
-                  controller.close();
-                  return;
-                }
-
-                loaded += value.byteLength;
-                me.onProgress.call(me, {loaded, total});
-                controller.enqueue(value);
-                read();
-              }).catch(error => {
-                console.error(error);
-                controller.error(error)
-              });
-            }
-          }
-        })
-      )
-    });
-  }
-
-  cancel() {
-    console.log('download cancel requested.')
-    this._cancelRequested = true;
-    if (this._reader) {
-      console.log('cancelling current download');
-      return this._reader.cancel();
-    }
-    return Promise.resolve();
-  }
-}
-
-
-const imageLoader = (function() {
-  const loader = document.getElementById('loader');
-  const img = loader.querySelector('img');
-  const errorMsg = loader.querySelector('.error');
-  const loading = loader.querySelector('.progress-bar');
-  const progress = loader.querySelector('.progress');
-
-  let locked, started, progressFetcher, pct;
-
-  function downloadDone(url) {
-    console.log('downloadDone()')
-    img.src=url;
-    img.offsetWidth; // pre-animation enabler
-    loader.classList.remove('loading');
-    loader.classList.add('loading-complete');
-    // progressFetcher = null;
-  }
-
-  function startDownload() {
-    // Ensure "promise-safe" (aka "thread-safe" JavaScript).
-    // Caused by slow server response or consequetive calls to startDownload() before stopDownload() Promise resolves
-    if (locked) {
-      console.error('startDownload() failed. Previous download not yet initialized');
-      return;
-    }
-
-    locked = true;
-    stopDownload()
-    .then(function() {
-      locked = false;
-
-      progress.style.transform=`scaleX(0)`;
-      progress.offsetWidth; /* prevent animation when set to zero */
-      started = false;
-      pct = 0;
-
-      loader.classList.add('loading');
-      loader.classList.remove('loading-complete');
-
-
-      if (!progressFetcher) {
-        progressFetcher = new ProgressReportFetcher(updateDownloadProgress);
-      }
-
-      console.log('Starting download...');
-      progressFetcher.fetch('https://fetch-progress.anthum.com/30kbps/images/sunrise-baseline.jpg')
-      .then(response => response.blob())
-      .then(blob => URL.createObjectURL(blob))
-      .then(url => downloadDone(url))
-      .catch(error => showError(error))
-    });
-  }
-
-  function stopDownload() {
-    // stop previous download
-    if (progressFetcher) {
-      return progressFetcher.cancel()
-    } else {
-      // no previous download to cancel
-      return Promise.resolve();
-    }
-  }
-
-  function showError(error) {
-    console.error(error);
-    loader.classList.remove('loading');
-    loader.classList.remove('loading-complete');
-    loader.classList.remove('loading-error');
-    errorMsg.offsetWidth; // pre-animation enabler
-    errorMsg.innerHTML = 'ERROR: '+ error.message;
-    loader.classList.add('loading-error');
-  }
-
-  function updateDownloadProgress({loaded, total}) {
-    if (!started) {
-      loader.classList.add('loading');
-      started = true;
-    }
-
-    // handle divide-by-zero edge case when Content-Length=0
-    pct = total? loaded/total : 1;
-
-    progress.style.transform=`scaleX(${pct})`;
-    // console.log('downloaded', Math.round(pct*100)+'%')
-    if (loaded === total) {
-      console.log('download complete')
-    }
-  }
-
-  return {
-    startDownload,
-    stopDownload
-  }
-})()
-
-
-imageLoader.startDownload();
+        throw new Error('Security Breach! Javascript has been tampered with! Please contact Keyhub Support immediately.')
+      })
+    })
+    .then(localBlobURL => new Promise((resolve, reject) => {
+      const payloadScript = document.createElement('script')
+      payloadScript.type = 'text/javascript'
+      payloadScript.src = localBlobURL
+      payloadScript.crossOrigin = 'anonymous'
+      payloadScript.async = true
+      payloadScript.onload = resolve
+      payloadScript.onerror = reject
+      document.head.appendChild(payloadScript)
+    }))
+    .catch((error) => {
+      window.alert(error.message || error) // eslint-disable-line no-alert
+      self.close() // eslint-disable-line no-restricted-globals
+    })
+)).catch((event) => {
+  window.alert(`Cannot load: ${event.error || event.target.src}. Your connection might be broken or insecure. Please try again.`) // eslint-disable-line no-alert
+})
