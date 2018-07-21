@@ -7,7 +7,7 @@
   "scripts": {
     "start": "caddy",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "[ -e dist/openpgp.worker.bundle.js ] || browserify -p browserify-derequire -r openpgp/src/worker/worker -s openpgp -o dist/openpgp.worker.bundle.js && webpack --config webpack.config.js"
+    "prepare": "[ -e dist/openpgp.worker.bundle.js ] || browserify -p browserify-derequire -r openpgp/src/worker/worker -s openpgp -o dist/openpgp.worker.bundle.js && webpack --config webpack.config.js"
   },
   "repository": {
     "type": "git",
