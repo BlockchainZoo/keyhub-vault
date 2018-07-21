@@ -1,27 +1,24 @@
 const path = require('path')
+
+const { spawn } = require('child_process')
+
 // eslint-disable-next-line import/no-extraneous-dependencies
 const webpack = require('webpack')
+// eslint-disable-next-line import/no-extraneous-dependencies
+const babelPluginObjectRestSpread = require('@babel/plugin-proposal-object-rest-spread')
 
 module.exports = {
-  mode: 'development',
-  watch: false,
+  mode: 'production',
+  // devtool: 'nosources-source-map',
+  // watch: true,
   entry: {
     'whatwg-fetch': 'whatwg-fetch',
     'abortcontroller-polyfill': 'abortcontroller-polyfill/dist/polyfill-patch-fetch',
-    index: './src/index.js',
+    main: './src/main.js',
   },
   output: {
     filename: '[name].bundle.js',
     path: path.resolve(__dirname, 'dist'),
-  },
-  externals: {
-    jquery: 'jQuery',
-    jsdom: 'jsdom',
-    'node-fetch': {
-      commonjs: 'node-fetch',
-      amd: 'node-fetch',
-      root: 'fetch',
-    },
   },
   plugins: [
     new webpack.DefinePlugin({
@@ -30,6 +27,17 @@ module.exports = {
         APP_ENV: JSON.stringify('browser'),
       },
     }),
+    {
+      // Run a script after compilation
+      apply: compiler => (
+        compiler.hooks.afterEmit.tap('AfterEmitPlugin', (compilation) => {
+          process.stdout.write(`FullHash: ${compilation.fullHash}\n`)
+          const child = spawn('node', ['src/openpgp.sign.js'])
+          child.stdout.on('data', data => process.stdout.write(data))
+          child.stderr.on('data', data => process.stderr.write(data))
+        })
+      ),
+    },
   ],
   module: {
     rules: [
@@ -42,7 +50,9 @@ module.exports = {
           options: {
             presets: ['@babel/preset-env'],
             // eslint-disable-next-line global-require
-            plugins: [require('@babel/plugin-proposal-object-rest-spread')],
+            plugins: [
+              babelPluginObjectRestSpread,
+            ],
           },
         },
       },
@@ -55,14 +65,23 @@ module.exports = {
       },
     ],
   },
-  node: {
-    global: true,
-    // Buffer: true,
-    // setImmediate: true,
-    // process: false,
-    // net: 'mock',
-    // tls: 'mock',
-    // fs: 'empty',
-    // child_process: 'empty',
-  },
+  // externals: {
+  //   jquery: 'jQuery',
+  //   jsdom: 'jsdom',
+  //   'node-fetch': {
+  //     commonjs: 'node-fetch',
+  //     amd: 'node-fetch',
+  //     root: 'fetch',
+  //   },
+  // },
+  // node: {
+  //   global: true,
+  //   // Buffer: true,
+  //   // setImmediate: true,
+  //   // process: false,
+  //   // net: 'mock',
+  //   // tls: 'mock',
+  //   // fs: 'empty',
+  //   // child_process: 'empty',
+  // },
 }

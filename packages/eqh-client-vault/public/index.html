@@ -1,61 +1,23 @@
 <html>
-  <head>
-    <meta charset="utf8">
-    <title>Enhanced Fetch() Progress Indicator</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="icon" href="../favicon.ico" type="image/png" />
-    <link rel="stylesheet" type="text/css" href="app.css">
 
-    <meta name="description" content="Examples for showing progress indicators with Streams, Service Workers, and Fetch">
-    <meta name="twitter:card" content="summary" />
-    <meta name="twitter:site" content="@AnthumChris" />
-    <meta name="og:title" content="Progress Indicators using Streams, Service Workers, and Fetch" />
-    <meta name="twitter:title" content="Progress Indicators using Streams, Service Workers, and Fetch" />
-    <meta name="og:description" content="Examples for showing progress indicators with Streams, Service Workers, and Fetch" />
-    <meta name="twitter:description" content="Examples for showing progress indicators with Streams, Service Workers, and Fetch" />
-    <meta name="og:image" content="https://fetch-progress.anthum.com/images/logo-streams-300.png" />
-    <meta name="twitter:image" content="https://fetch-progress.anthum.com/images/logo-streams-300.png" />
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>Keyhub</title>
+  <!-- <link rel="stylesheet" href="./css/main.css"> -->
+</head>
 
-    <!-- <script async src="https://www.googletagmanager.com/gtag/js?id=UA-50610215-6"></script>
-    <script>
-      window.dataLayer = window.dataLayer || [];
-      function gtag(){dataLayer.push(arguments);}
-      gtag('js', new Date());
-      gtag('config', 'UA-50610215-6');
-    </script> -->
-  </head>
-  <body>
-    <main>
-      <div class="loader" id="loader">
-        <div id="image" class="image x40-21"><div class="progress-bar" id="progress-bar"><div class="progress" id="progress"></div></div><img id="img" src=""></div>
-        <div class="btn btn-restart"><a href="javascript:void(0)" onclick="imageLoader.startDownload()">Restart</a></div>
-        <div class="btn btn-stop"><a href="javascript:void(0)" onclick="imageLoader.stopDownload()">Stop</a></div>
-        <div id="error" class="error"></div>
-      </div>
-      <p>
-        This example uses a <code>ReadableStream</code> to update a progress bar while a remote image is downloaded with a declarative <code>fetch()</code> request.
-        Users probably prefer seeing images load progressively with inline <code>&lt;img&gt;</code> tags, and
-        progress bars may be better suited for larger, non-image <code>fetch()</code> requests.
-      </p>
-      <p>
-        The <a href="../sw-basic/">Service Worker example</a> shows progress indicators while inline images load
-        natively with <code>&lt;img&gt;</code> tags.
-      </p>
-    </main>
-    <footer>
-      <a href="../">More Examples</a>
-      <a href="https://github.com/AnthumChris/fetch-progress-indicators">View on GitHub</a>
-    </footer>
+<body>
+  <div id="body">
+    <h2>Loading Vault...</h2>
+    <br/>You should only see this page once for the first-time only.
+    <br/>If you frequently see this, your browser is not secure. Please contact Keyhub Support for remediation.
+  </div>
 
-    <script>
-      // Ensure unsupported browsers don't load invalid JS (e.g. ES6, Promises), compile successfully, and show errors
-      if (!(window.fetch && window.ReadableStream)) {
-        document.getElementsByTagName('main')[0].innerHTML = '<div style="margin-top: 2rem; color: #fff;">Fetch or ReadableStream API is not supported in this browser.<br><br>This demo cannot function without them.</div>'
-      } else {
-        var script = document.createElement('script');
-        script.src = 'index.js';
-        document.body.append(script);
-      }
-    </script>
-  </body>
+  <!-- <script src="js/main.bundle.js" crossorigin="anonymous" integrity="sha512-UGo1vJumc5ctKhuYyJ9iq9zCtixUzZZxAijRQ//JvNgXldxEoSyb9LZrpT6fkBCxnce+p7zsfvSqDYAzFPvKFg==" async></script> -->
+  <script src="index.js" crossorigin="anonymous" integrity="sha512-uaOOsZDeNmpUf8F2SLthNFVjIaqQ9aoX2H5b+Dmynh+CtofOrGfS5QGF3B8EoYZRQpxFS8TS53f7zPCZjCxatw==" async></script>
+
+</body>
+
 </html>

@@ -1,6 +1,6 @@
 /* eslint-disable no-console, prefer-arrow-callback, no-undef */
 
-import { template } from 'lodash-es'
+import { safeHtml } from 'common-tags'
 
 import postRobot from 'post-robot'
 
@@ -10,7 +10,7 @@ export function loadVault(mainElement) { // eslint-disable-line
   // Load Webworker
   const worker = new Worker()
 
-  const templateFn = template(`<div class="col-md-6 col-lg-4 offset-lg-4 offset-md-3 fade-in">
+  const htmlTemplate = (safeHtml`<div class="col-md-6 col-lg-4 offset-lg-4 offset-md-3 fade-in">
     <div class="card animate-on-opacity" id="tx-detail">
       <div class="card-header text-center bg-secondary text-white">
         <h4><i class="fas fa-lock"></i> Transaction Detail</h4>
@@ -34,10 +34,11 @@ export function loadVault(mainElement) { // eslint-disable-line
           </div>
     </div><!-- #loading-box -->
 
-    <div class="card hide-on-screen" id="tx-broadcasting">
+    <div class="card hide-on-screen" id="tx-signing">
       <div class="card-header text-center bg-secondary text-white">
-          <h4><i class="fas fa-broadcast-tower"></i> Broadcasting</h4>
+          <h4><i class="fas fa-broadcast-tower"></i> Signing Transaction</h4>
       </div>
+      <div class="card-body"></div>
       <div class="justify-content-center flex-row align-items-center h-30 d-flex p-2">
           <div class="lds-roller">
             <div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div>
@@ -50,7 +51,7 @@ export function loadVault(mainElement) { // eslint-disable-line
           <h4><i class="fas fa-check-square"></i> Thank You!</h4>
       </div>
       <div class="card-body">
-          <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Mauris consectetur sollicitudin lacus sit amet lobortis. Duis consectetur lacinia sem. Sed vitae nulla pellentesque, porttitor mi vel, pulvinar turpis. </p>
+          <p>Thank you for using Keyhub softwallet. Your transaction has been signed and returned to the main application.</p>
           <div class="text-center">
             <button class="btn btn-primary" id="back-to-app"><i class="fas fa-mobile-alt"></i> Back to app</button>
           </div>
@@ -58,12 +59,10 @@ export function loadVault(mainElement) { // eslint-disable-line
     </div><!-- #thank-you-card -->
   </div>`)
 
-  const templateVars = {}
-
-  mainElement.innerHTML = templateFn(templateVars) // eslint-disable-line no-param-reassign
+  mainElement.innerHTML = htmlTemplate // eslint-disable-line no-param-reassign
 
   const txDetail = document.getElementById('tx-detail')
-  const txBroadcasting = document.getElementById('tx-broadcasting')
+  const txSigning = document.getElementById('tx-signing')
   const thankYouCard = document.getElementById('thank-you-card')
 
   const transactionDetail = document.getElementById('transaction-detail')
@@ -112,20 +111,26 @@ export function loadVault(mainElement) { // eslint-disable-line
 
   const signTransaction = (tx, callback) => {
     console.log(tx)
-    worker.postMessage(['signTransaction', tx.type, tx.data])
-
-    txDetail.style.display = 'none'
-    txBroadcasting.style.display = 'flex'
 
     worker.onerror = (error) => {
       // clear event listeners
       worker.onerror = null
       worker.onmessage = null
+
+      // display error message on error
+      const cardBody = txSigning.getElementsByClassName('card-body')[0]
+      cardBody.appendChild(document.createTextNode(`Could not sign transaction: ${error.message || error}`))
+
       // call the function in the parent window once signed data is available
       callback(error).then(() => {
-        window.alert(`Could not sign transaction: ${error.message || error}`)
+        setTimeout(() => {
+          txSigning.style.display = 'none'
+          txDetail.style.display = 'flex'
+        }, 5000)
       }).catch((err) => {
         window.alert(`Could not return error to parent window: ${err.message || err}`)
+        txSigning.style.display = 'none'
+        txDetail.style.display = 'flex'
       })
     }
 
@@ -133,19 +138,33 @@ export function loadVault(mainElement) { // eslint-disable-line
       // clear event listeners
       worker.onerror = null
       worker.onmessage = null
+
+      // display error message on error
+      if (data.errorCode) {
+        const cardBody = txSigning.getElementsByClassName('card-body')[0]
+        cardBody.appendChild(document.createTextNode(data.errorDescription))
+        setTimeout(() => {
+          txSigning.style.display = 'none'
+          txDetail.style.display = 'flex'
+        }, 5000)
+        return
+      }
+
       // call the function in the parent window once signed data is available
       callback(null, data).then(() => {
-        txBroadcasting.style.display = 'none'
+        txSigning.style.display = 'none'
         thankYouCard.style.display = 'flex'
       }).catch((error) => {
         window.alert(`Could not return result to parent window: ${error.message || error}`)
+        txSigning.style.display = 'none'
+        txDetail.style.display = 'flex'
       })
     }
 
-    // setTimeout(function () {
-    //   txBroadcasting.style.display = 'none'
-    //   thankYouCard.style.display = 'flex'
-    // }, 5000)
+    worker.postMessage(['signTransaction', tx.type, tx.data])
+
+    txDetail.style.display = 'none'
+    txSigning.style.display = 'flex'
   }
 
   if (window.opener) {
@@ -169,7 +188,9 @@ export function loadVault(mainElement) { // eslint-disable-line
         console.error(err)
       })
   } else {
-    window.alert('Please reopen this window from the Main App.')
+    transactionDetail.appendChild(
+      document.createTextNode('Transaction Detail not available. Please reopen this window/tab from the main app.')
+    )
 
     // Testing code
     worker.onmessage = (event) => {

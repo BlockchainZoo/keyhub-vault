@@ -102,7 +102,7 @@ bridge.load((NRS) => {
   // })
 
   // // Send Transaction
-  // console.log('Sending a transaction...')
+  // console.log('Sending a setAccountProperty transaction...')
   // const property = '$$Trader'
   // const recipient = 'EQH-4226-5SWH-A9CM-8W7P6'
   // const recipientPublicKey = 'd6b0716dce96a33d224100c15437013d3e550f025119918e86859075ae730133'
@@ -126,6 +126,8 @@ bridge.load((NRS) => {
   //   console.log(JSON.stringify(response, null, 2))
   // })
 
+  // // Send Transaction
+  // console.log('Sending a placeBidOrder transaction...')
   // const decimals = 2
   // const quantity = 2.5
   // const price = 1.3
