@@ -1724,25 +1724,25 @@ var NRS = (function(NRS, $, undefined) {
 	};
 
     NRS.printEnvInfo = function() {
-        NRS.logProperty("navigator.userAgent");
-        NRS.logProperty("navigator.platform");
-        NRS.logProperty("navigator.appVersion");
-        NRS.logProperty("navigator.appName");
-        NRS.logProperty("navigator.appCodeName");
-        NRS.logProperty("navigator.hardwareConcurrency");
-        NRS.logProperty("navigator.maxTouchPoints");
-        NRS.logProperty("navigator.languages");
-        NRS.logProperty("navigator.language");
-        NRS.logProperty("navigator.userLanguage");
-        NRS.logProperty("navigator.cookieEnabled");
-        NRS.logProperty("navigator.onLine");
+        NRS.logProperty("navigator.userAgent", navigator.userAgent);
+        NRS.logProperty("navigator.platform", navigator.platform);
+        NRS.logProperty("navigator.appVersion", navigator.appVersion);
+        NRS.logProperty("navigator.appName", navigator.appName);
+        NRS.logProperty("navigator.appCodeName", navigator.appCodeName);
+        NRS.logProperty("navigator.hardwareConcurrency", navigator.hardwareConcurrency);
+        NRS.logProperty("navigator.maxTouchPoints", navigator.maxTouchPoints);
+        NRS.logProperty("navigator.languages", navigator.languages);
+        NRS.logProperty("navigator.language", navigator.language);
+        NRS.logProperty("navigator.userLanguage", navigator.userLanguage);
+        NRS.logProperty("navigator.cookieEnabled", navigator.cookieEnabled);
+        NRS.logProperty("navigator.onLine", navigator.onLine);
 		if (window["cordova"]) {
-			NRS.logProperty("device.model");
-			NRS.logProperty("device.platform");
-			NRS.logProperty("device.version");
+			NRS.logProperty("device.model", device.model);
+			NRS.logProperty("device.platform", device.platform);
+			NRS.logProperty("device.version", device.version);
 		}
-        NRS.logProperty("NRS.isTestNet");
-        NRS.logProperty("NRS.needsAdminPassword");
+        NRS.logProperty("NRS.isTestNet", NRS.isTestNet);
+        NRS.logProperty("NRS.needsAdminPassword", NRS.needsAdminPassword);
     };
 
 	$("#id_search").on("submit", function(e) {

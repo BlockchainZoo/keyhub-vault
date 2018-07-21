@@ -62,8 +62,8 @@ var NRS = (function (NRS, $) {
         level = logLevel;
     };
 
-    NRS.logProperty = function(property) {
-        NRS.logConsole(property + " = " + eval(property.escapeHTML()));
+    NRS.logProperty = function(property, value) {
+        NRS.logConsole(property + " = " + value.escapeHTML());
     };
 
     NRS.logArrayContent = function(array) {
