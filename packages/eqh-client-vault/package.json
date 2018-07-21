@@ -5,8 +5,9 @@
   "private": false,
   "main": "dist/index.js",
   "scripts": {
+    "start": "caddy",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "[ -e dist/openpgp.worker.bundle.js ] || browserify -p browserify-derequire -r openpgp/src/worker/worker -s openpgp -o dist/openpgp.worker.bundle.js && webpack --config webpack.config.js && node src/openpgp.sign.js"
+    "build": "[ -e dist/openpgp.worker.bundle.js ] || browserify -p browserify-derequire -r openpgp/src/worker/worker -s openpgp -o dist/openpgp.worker.bundle.js && webpack --config webpack.config.js"
   },
   "repository": {
     "type": "git",
@@ -22,12 +23,12 @@
     "abortcontroller-polyfill": "^1.1.9",
     "async": "^2.6.1",
     "cheerio": "^1.0.0-rc.2",
+    "common-tags": "^1.8.0",
     "crypto-js": "^3.1.9-1",
     "diceware-wordlist-en-eff": "^1.0.1",
     "jquery": "^3.3.1",
     "jsbn": "^1.1.0",
     "jsdom": "^11.11.0",
-    "lodash-es": "^4.17.10",
     "node-fetch": "^2.1.2",
     "openpgp": "github:heri16/openpgpjs#v3.1.0",
     "pako": "^1.0.6",
@@ -36,12 +37,6 @@
     "whatwg-fetch": "^2.0.4"
   },
   "devDependencies": {
-    "@babel/core": "^7.0.0-beta.52",
-    "@babel/plugin-proposal-object-rest-spread": "^7.0.0-beta.52",
-    "@babel/preset-env": "^7.0.0-beta.52",
-    "babel-loader": "^8.0.0-beta.4",
-    "browserify": "^16.2.2",
-    "browserify-derequire": "^0.9.6",
     "ssri": "^6.0.0",
     "worker-loader": "^2.0.0"
   }
