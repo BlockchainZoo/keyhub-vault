@@ -136,7 +136,6 @@ const defaultOptions = {
   isTestNet: false, // Select testnet or mainnet
   adminPassword: '', // Node admin password
   lastKnownBlock: { id: '15547113949993887183', height: '712' }, // last known EcBlock
-  genesisRS: 'EQH-SCH6-Z6RU-VGSG-3K7C8', // RS of the genesis account
 }
 
 class NrsBridge {
@@ -145,6 +144,13 @@ class NrsBridge {
     if (params) Object.assign(this.options, params, { init: true })
     return this
   }
+
+  // static setGenesisAccount(accountRS, client) {
+  //   // eslint-disable-next-line no-param-reassign
+  //   client.constants.GENESIS = client.convertRSToNumericAccountFormat(accountRS)
+  //   // eslint-disable-next-line no-param-reassign
+  //   client.constants.GENESIS_RS = client.convertNumericToRSAccountFormat(client.constants.GENESIS)
+  // }
 
   static setCurrentAccount(accountRS, client) {
     // eslint-disable-next-line no-param-reassign
@@ -166,19 +172,11 @@ class NrsBridge {
     }
   }
 
-  static setGenesisAccount(accountRS, client) {
-    // eslint-disable-next-line no-param-reassign
-    client.constants.GENESIS = client.convertRSToNumericAccountFormat(accountRS)
-    // eslint-disable-next-line no-param-reassign
-    client.constants.GENESIS_RS = client.convertNumericToRSAccountFormat(client.constants.GENESIS)
-  }
-
   configure(params = this.options, client = this.client) {
     // eslint-disable-next-line no-param-reassign
     client.isTestNet = params.isTestNet || this.options.isTestNet
     this.constructor.setCurrentAccount(params.accountRS || this.options.accountRS, client)
     this.constructor.setLastKnownBlock(params.lastKnownBlock || this.options.lastKnownBlock, client)
-    this.constructor.setGenesisAccount(params.genesisRS || this.options.genesisRS, client)
 
     if (params.getter) {
       client.getModuleConfig = params.getter // eslint-disable-line no-param-reassign
