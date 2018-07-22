@@ -4,6 +4,9 @@
 const NRS = (typeof global.NRS === 'undefined') ? { constants: {} } : NRS
 
 NRS.constants.SERVER = {
+  "epochBeginning": 1385294400000,
+  "genesisAccountId": "1380548969593842148",
+  // "genesisBlockId": "2680262203532249785",
   "transactionSubTypes": {
     "ReserveClaim": {
       "isPhasable": true,
@@ -438,7 +441,6 @@ NRS.constants.SERVER = {
       "isPhasingSafe": false
     }
   },
-  "genesisAccountId": "1739068987193023818",
   "transactionTypes": {
     "0": {
       "subtypes": {
@@ -1039,7 +1041,6 @@ NRS.constants.SERVER = {
   "disabledAPIs": [
     []
   ],
-  "genesisBlockId": "2680262203532249785",
   "currencyTypes": {
     "EXCHANGEABLE": 1,
     "CLAIMABLE": 8,
@@ -1053,7 +1054,6 @@ NRS.constants.SERVER = {
     "NON_CONNECTED": 0,
     "CONNECTED": 1
   },
-  "epochBeginning": 1385294400000,
   "minBalanceModels": {
     "NQT": 1,
     "CURRENCY": 3,
