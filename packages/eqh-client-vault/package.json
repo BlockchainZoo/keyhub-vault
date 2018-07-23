@@ -7,7 +7,7 @@
   "scripts": {
     "start": "caddy",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "prepare": "[ -e dist/openpgp.worker.bundle.js ] || browserify -p browserify-derequire -r openpgp/src/worker/worker -s openpgp -o dist/openpgp.worker.bundle.js && webpack --config webpack.config.js"
+    "prepare": "[ -e dist/js/openpgp.worker.bundle.js ] || browserify -p browserify-derequire -r openpgp/src/worker/worker -s openpgp -o dist/js/openpgp.worker.bundle.js && webpack --config webpack.config.js"
   },
   "repository": {
     "type": "git",
@@ -37,6 +37,8 @@
     "whatwg-fetch": "^2.0.4"
   },
   "devDependencies": {
+    "copy-webpack-plugin": "^4.5.2",
+    "serverless-s3-sync": "^1.6.1",
     "ssri": "^6.0.0",
     "worker-loader": "^2.0.0"
   }

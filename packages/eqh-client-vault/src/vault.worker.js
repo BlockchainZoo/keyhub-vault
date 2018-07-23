@@ -19,12 +19,12 @@ bridge.load((NRS) => {
 
   const fixTxNumberFormat = ({ assetId, decimals, quantity, price, amount, ...txData }) => {
     /* eslint-disable no-param-reassign */
-    if (decimals) {
+    if (decimals !== undefined) {
       if (quantity) txData.quantityQNT = NRS.convertToQNT(quantity, decimals)
       if (price) txData.priceNQT = NRS.calculatePricePerWholeQNT(NRS.convertToNQT(price), decimals)
     }
-    if (amount) txData.amountNQT = NRS.convertToNQT(amount)
-    if (assetId) txData.asset = assetId
+    if (amount !== undefined) txData.amountNQT = NRS.convertToNQT(amount)
+    if (assetId !== undefined) txData.asset = assetId
 
     return txData
   }

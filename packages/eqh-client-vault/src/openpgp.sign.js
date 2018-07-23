@@ -7,7 +7,7 @@ const hkp = new openpgp.HKP('https://pgp.mit.edu')
 openpgp.initWorker({ path: 'openpgp.worker.js' }) // set the relative web worker path
 
 const FILEPATH_TO_KEYPAIR = './eqh-codesign-pgp'
-const FILEPATH_TO_SIGN = './dist/main.bundle.js'
+const FILEPATH_TO_SIGN = process.argv[2] || './dist/js/main.bundle.js'
 
 const options = {
   userIds: [
@@ -57,9 +57,9 @@ openpgp.generateKey(options)
 // eslint-disable-next-line import/no-extraneous-dependencies
 const ssri = require('ssri')
 
-ssri.fromStream(fs.createReadStream('dist/openpgp.worker.bundle.js'))
+ssri.fromStream(fs.createReadStream('dist/js/openpgp.worker.bundle.js'))
   .then((sri) => {
-    console.log('sri of openpgp.worker.bundle.js:', sri.toString()) // eslint-disable-line no-console
+    console.log('sri of dist/js/openpgp.worker.bundle.js:', sri.toString()) // eslint-disable-line no-console
   })
 
 ssri.fromStream(fs.createReadStream('public/index.js'))

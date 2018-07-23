@@ -1,39 +1,11 @@
 localhost:5500 {
-  root ./
+  root ./dist
   tls self_signed
 
-  rewrite /css/ {
-    to /public/css/{file}
-  }
-
-  rewrite /js/ {
-    to /dist/{file}
-  }
-
-  rewrite /index.js {
-    to /public/{file}
-  }
-
+  index index.txt
   rewrite / {
     if {path} is /
-    to /public{path}
-  }
-
-  header /public/ {
-    # Store PGP public key permanently in the user browser
-    Cache-Control "public, max-age=31536000, immutable"
-    # Disallow loading of dangerous external scripts and resources
-    Content-Security-Policy "default-src 'none'; style-src 'self'; img-src 'self'; media-src 'self'; manifest-src 'self'; font-src 'self'; script-src blob: 'self'; connect-src 'self'"
-  }
-
-  header /dist/ {
-    # Disallow loading of dangerous external scripts and resources
-    Content-Security-Policy "default-src 'none'"
-  }
-
-  header /dist/openpgp.worker.bundle.js {
-    # Store PGP public key permanently in the user browser
-    Cache-Control "public, max-age=31536000, immutable"
+    to {path}index.html
   }
 
   header / {
@@ -47,4 +19,27 @@ localhost:5500 {
     # Disallow the site to be rendered within a frame (clickjacking protection)
     X-Frame-Options "DENY"
   }
+
+  header /index.html {
+    # Store index.html permanently in the user browser
+    Cache-Control "public, max-age=31536000, immutable"
+    # Disallow loading of dangerous external scripts and resources
+    Content-Security-Policy "default-src 'none'; style-src 'self'; img-src 'self'; media-src 'self'; manifest-src 'self'; font-src 'self'; script-src blob: 'self'; connect-src 'self'"
+  }
+
+  header /index.js {
+    # Store PGP public key permanently in the user browser
+    Cache-Control "public, max-age=31536000, immutable"
+  }
+
+  header /js/ {
+    # Disallow loading of dangerous external scripts and resources
+    Content-Security-Policy "default-src 'none'"
+  }
+
+  header /js/openpgp.worker.bundle.js {
+    # Store OpenPGP library permanently in the user browser
+    Cache-Control "public, max-age=31536000, immutable"
+  }
+
 }
