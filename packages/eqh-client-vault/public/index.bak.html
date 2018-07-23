@@ -1,61 +1,45 @@
-<html>
-  <head>
-    <meta charset="utf8">
-    <title>Enhanced Fetch() Progress Indicator</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="icon" href="../favicon.ico" type="image/png" />
-    <link rel="stylesheet" type="text/css" href="app.css">
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+        <meta name="description" content="Equinehub Client Application">
+        <meta name="author" content="Blockchain Zoo">
+        <meta name="theme-color" content="#000000">
+        <!--
+        manifest.json provides metadata used when your web app is added to the
+        homescreen on Android. See https://developers.google.com/web/fundamentals/engage-and-retain/web-app-manifest/
+        -->
+        <link rel="manifest" href="%PUBLIC_URL%/manifest.json">
+        <link rel="shortcut icon" href="%PUBLIC_URL%/favicon.ico">
+        <!-- <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css"> -->
+        <!--
+        Notice the use of %PUBLIC_URL% in the tags above.
+        It will be replaced with the URL of the `public` folder during the build.
+        Only files inside the `public` folder can be referenced from the HTML.
 
-    <meta name="description" content="Examples for showing progress indicators with Streams, Service Workers, and Fetch">
-    <meta name="twitter:card" content="summary" />
-    <meta name="twitter:site" content="@AnthumChris" />
-    <meta name="og:title" content="Progress Indicators using Streams, Service Workers, and Fetch" />
-    <meta name="twitter:title" content="Progress Indicators using Streams, Service Workers, and Fetch" />
-    <meta name="og:description" content="Examples for showing progress indicators with Streams, Service Workers, and Fetch" />
-    <meta name="twitter:description" content="Examples for showing progress indicators with Streams, Service Workers, and Fetch" />
-    <meta name="og:image" content="https://fetch-progress.anthum.com/images/logo-streams-300.png" />
-    <meta name="twitter:image" content="https://fetch-progress.anthum.com/images/logo-streams-300.png" />
+        Unlike "/favicon.ico" or "favicon.ico", "%PUBLIC_URL%/favicon.ico" will
+        work correctly both with client-side routing and a non-root public URL.
+        Learn how to configure a non-root public URL by running `npm run build`.
+        -->
+        <title>EquineHub KeyVault</title>
+    </head>
 
-    <!-- <script async src="https://www.googletagmanager.com/gtag/js?id=UA-50610215-6"></script>
-    <script>
-      window.dataLayer = window.dataLayer || [];
-      function gtag(){dataLayer.push(arguments);}
-      gtag('js', new Date());
-      gtag('config', 'UA-50610215-6');
-    </script> -->
-  </head>
-  <body>
-    <main>
-      <div class="loader" id="loader">
-        <div id="image" class="image x40-21"><div class="progress-bar" id="progress-bar"><div class="progress" id="progress"></div></div><img id="img" src=""></div>
-        <div class="btn btn-restart"><a href="javascript:void(0)" onclick="imageLoader.startDownload()">Restart</a></div>
-        <div class="btn btn-stop"><a href="javascript:void(0)" onclick="imageLoader.stopDownload()">Stop</a></div>
-        <div id="error" class="error"></div>
-      </div>
-      <p>
-        This example uses a <code>ReadableStream</code> to update a progress bar while a remote image is downloaded with a declarative <code>fetch()</code> request.
-        Users probably prefer seeing images load progressively with inline <code>&lt;img&gt;</code> tags, and
-        progress bars may be better suited for larger, non-image <code>fetch()</code> requests.
-      </p>
-      <p>
-        The <a href="../sw-basic/">Service Worker example</a> shows progress indicators while inline images load
-        natively with <code>&lt;img&gt;</code> tags.
-      </p>
-    </main>
-    <footer>
-      <a href="../">More Examples</a>
-      <a href="https://github.com/AnthumChris/fetch-progress-indicators">View on GitHub</a>
-    </footer>
+    <body class="footer-fixed">
+        <noscript>
+        You need to enable JavaScript to run this app.
+        </noscript>
+        <div id="root"></div>
+        <!--
+        This HTML file is a template.
+        If you open it directly in the browser, you will see an empty page.
 
-    <script>
-      // Ensure unsupported browsers don't load invalid JS (e.g. ES6, Promises), compile successfully, and show errors
-      if (!(window.fetch && window.ReadableStream)) {
-        document.getElementsByTagName('main')[0].innerHTML = '<div style="margin-top: 2rem; color: #fff;">Fetch or ReadableStream API is not supported in this browser.<br><br>This demo cannot function without them.</div>'
-      } else {
-        var script = document.createElement('script');
-        script.src = 'index.js';
-        document.body.append(script);
-      }
-    </script>
-  </body>
+        You can add webfonts, meta tags, or analytics to this file.
+        The build step will place the bundled scripts into the <body> tag.
+
+        To begin the development, run `npm start` or `yarn start`.
+        To create a production bundle, use `npm run build` or `yarn build`.
+        -->
+    </body>
 </html>

@@ -1,7 +1,3 @@
-/* eslint-disable strict */
-
-'use strict'
-
 const openpgpURL = './js/openpgp.worker.bundle.js'
 const openpgpSRI = 'sha512-z3XKhRza4Rjp0AFLiYK6c4laL5jTzB22LbM+QWTkr21j53MsiHS33GlzuzaVxnExWhGSZdYcAFGjaPaVbcAASA=='
 
@@ -24,6 +20,15 @@ fQEA/HmvD8QGC18EuOAmk3UXaWyZMnFT3Fs08dcjqKr3uAg=
 =NzpF
 -----END PGP PUBLIC KEY BLOCK-----`)
 
+
+const documentBody = document.getElementById('body') // eslint-disable-line no-undef
+documentBody.innerHTML = ''
+const printLog = (msg) => {
+  documentBody.innerHTML += `<div>${msg}</div>`
+  console.info(msg) // eslint-disable-line no-console
+}
+
+printLog('Loading OpenPGP library...')
 const loadOpenpgp = new Promise((resolve, reject) => {
   /* eslint-disable no-undef */
   const openpgpScript = document.createElement('script')
@@ -37,18 +42,23 @@ const loadOpenpgp = new Promise((resolve, reject) => {
   document.body.appendChild(openpgpScript)
 })
 
-loadOpenpgp.then(openpgp => (
+loadOpenpgp.then((openpgp) => {
+  printLog('Loading OpenPGP webworker...')
   fetch(openpgpURL, { integrity: openpgpSRI })
     .then(res => res.ok && res.blob()).then(blob => URL.createObjectURL(blob)).then(url => (
       openpgp.initWorker({ path: url })
     ))
-    .then(() => Promise.all([
-      fetch(scriptURL).then(res1 => res1.ok && res1.arrayBuffer().then(b => [b, res1])),
-      fetch(scriptSignatureURL).then(res2 => res2.ok && res2.text().then(t => [t, res2])),
-    ]))
-    .then(([[msgBuffer, msgRes], [detachedSig]]) => {
-      const data = new Uint8Array(msgBuffer)
+    .then(() => {
+      printLog('Downloading main script and PGP signature...')
+      return Promise.all([
+        fetch(scriptURL).then(res1 => res1.ok && res1.arrayBuffer().then(b => [b, res1])),
+        fetch(scriptSignatureURL).then(res2 => res2.ok && res2.text().then(t => [t, res2])),
+      ])
+    })
+    .then(([[msgBuffer, msgRes], [detachedSig, detachedSigRes]]) => {
+      printLog(`Verifying signature of main script at ${msgRes.url} using signature at ${detachedSigRes.url} ...`)
 
+      const data = new Uint8Array(msgBuffer)
       const params = {
         message: openpgp.message.fromBinary(data), // input as Message object
         signature: openpgp.signature.readArmored(detachedSig), // parse detached signature
@@ -58,17 +68,20 @@ loadOpenpgp.then(openpgp => (
       return openpgp.verify(params).then((verified) => {
         const validity = verified.signatures[0].valid // true
         if (validity) {
-          // eslint-disable-next-line no-console
-          console.info(`Security Check Passed! Javascript at ${msgRes.url} signed by PGP key id ${verified.signatures[0].keyid.toHex()}`)
+          const okMessage = `Security Check Passed! Main script signed by PGP key id ${verified.signatures[0].keyid.toHex()}`
+          printLog(`<strong>${okMessage}</strong>`)
 
           const blob = new Blob([data], { type: msgRes.headers.get('content-type') })
           return URL.createObjectURL(blob)
         }
 
-        throw new Error('Security Breach! Javascript has been tampered with! Please contact Keyhub Support immediately.')
+        const errorMessage = 'Security Breach! Javascript has been tampered with! Please contact Keyhub Support immediately.'
+        printLog(`<h3>${errorMessage}</h3>`)
+        throw new Error(errorMessage)
       })
     })
     .then(localBlobURL => new Promise((resolve, reject) => {
+      printLog('Adding main script to the page...')
       const payloadScript = document.createElement('script')
       payloadScript.type = 'text/javascript'
       payloadScript.src = localBlobURL
@@ -77,11 +90,17 @@ loadOpenpgp.then(openpgp => (
       payloadScript.onload = resolve
       payloadScript.onerror = reject
       document.head.appendChild(payloadScript)
+      printLog('Starting up...')
     }))
     .catch((error) => {
-      window.alert(error.message || error) // eslint-disable-line no-alert
+      const errorMessage = `Could not start due to Fatal Error: ${error.message || error}`
+      printLog(errorMessage)
+      window.alert(errorMessage) // eslint-disable-line no-alert
       self.close() // eslint-disable-line no-restricted-globals
     })
-)).catch((event) => {
-  window.alert(`Cannot load: ${event.error || event.target.src}. Your connection might be broken or insecure. Please try again.`) // eslint-disable-line no-alert
+}).catch((event) => {
+  const errorMessage = `Could not load OpenPGP library: ${event.error || event.target.src} . \nYour connection might be broken or insecure. Please try again.`
+  printLog(errorMessage)
+  window.alert(errorMessage) // eslint-disable-line no-alert
+  self.close() // eslint-disable-line no-restricted-globals
 })

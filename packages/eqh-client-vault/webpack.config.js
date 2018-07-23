@@ -4,6 +4,7 @@ const { spawn } = require('child_process')
 
 // eslint-disable-next-line import/no-extraneous-dependencies
 const webpack = require('webpack')
+const CopyWebpackPlugin = require('copy-webpack-plugin')
 // eslint-disable-next-line import/no-extraneous-dependencies
 const babelPluginObjectRestSpread = require('@babel/plugin-proposal-object-rest-spread')
 
@@ -18,7 +19,7 @@ module.exports = {
   },
   output: {
     filename: '[name].bundle.js',
-    path: path.resolve(__dirname, 'dist'),
+    path: path.resolve(__dirname, 'dist', 'js'),
   },
   plugins: [
     new webpack.DefinePlugin({
@@ -32,12 +33,21 @@ module.exports = {
       apply: compiler => (
         compiler.hooks.afterEmit.tap('AfterEmitPlugin', (compilation) => {
           process.stdout.write(`FullHash: ${compilation.fullHash}\n`)
-          const child = spawn('node', ['src/openpgp.sign.js'])
+          const child = spawn('node', ['src/openpgp.sign.js', './dist/js/main.bundle.js'])
           child.stdout.on('data', data => process.stdout.write(data))
           child.stderr.on('data', data => process.stderr.write(data))
         })
       ),
     },
+    new CopyWebpackPlugin([
+      {
+        from: path.resolve(__dirname, 'public/'),
+        to: path.resolve(__dirname, 'dist/'),
+        force: true,
+      },
+    ], {
+      ignore: ['*.bak', '*.bak.html'],
+    }),
   ],
   module: {
     rules: [
