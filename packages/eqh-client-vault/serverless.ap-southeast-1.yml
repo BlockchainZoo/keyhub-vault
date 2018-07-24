@@ -1,0 +1,73 @@
+service: keyhub-vault
+
+frameworkVersion: ">=1.2.0 <2.0.0"
+
+plugins:
+  - serverless-stack-output
+  - serverless-s3-sync
+
+custom:
+  output:
+    file: .build/ap-southeast-1.yaml
+  # Bucket name that will host the site
+  s3Bucket: keyhub-vault
+  s3Sync:
+    - bucketName: ${self:custom.s3Bucket} # required
+      localDir: dist # required
+      followSymlinks: true # optional
+      defaultContentType: text/html # optional
+      # acl: public-read # optional
+      params: # optional
+        - "index.html":
+            # Store index.html permanently in the user browser
+            CacheControl: "public, max-age=31536000, s-maxage=600, immutable"
+        - "index.js":
+            # Store PGP public key permanently in the user browser
+            CacheControl: "public, max-age=31536000, s-maxage=600, immutable"
+        - "js/openpgp.worker.bundle.js":
+            # Store OpenPGP library permanently in the user browser
+            CacheControl: "public, max-age=31536000, s-maxage=600, immutable"
+
+provider:
+  name: aws
+  region: 'ap-southeast-1'
+
+functions:
+  '':
+    handler: lambda-edge.addSecurityHeaders
+
+package:
+  exclude:
+    - '**'
+  include:
+    - lambda-edge.js
+
+resources:
+  Resources:
+    ## Specifying the S3 Bucket
+    WebAppS3Bucket:
+      Type: AWS::S3::Bucket
+      Properties:
+        BucketName: ${self:custom.s3Bucket}
+        AccessControl: PublicRead
+        WebsiteConfiguration:
+          IndexDocument: index.html
+          ErrorDocument: index.html
+    ## Specifying the policies to make sure all files inside the Bucket are avaialble to CloudFront
+    WebAppS3BucketPolicy:
+      Type: AWS::S3::BucketPolicy
+      Properties:
+        Bucket: { Ref: WebAppS3Bucket }
+        PolicyDocument:
+          Statement:
+            - Sid: PublicReadGetObject
+              Effect: Allow
+              Principal: "*"
+              Action:
+              - s3:GetObject
+              Resource: arn:aws:s3:::${self:custom.s3Bucket}/*
+
+  ## In order to print out the hosted domain via `serverless info` we need to define the DomainName output for CloudFormation
+  Outputs:
+    WebAppS3BucketDomainName:
+      Value: { 'Fn::GetAtt': [ 'WebAppS3Bucket', 'DomainName' ] }

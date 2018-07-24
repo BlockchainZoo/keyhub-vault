@@ -1,0 +1,124 @@
+service: keyhub-vault
+
+frameworkVersion: ">=1.2.0 <2.0.0"
+
+plugins:
+  - serverless-plugin-cloudfront-lambda-edge
+
+custom:
+  # DNS hostname that points to the site
+  siteDnsName: vault.keyhub.app
+  # Please pre-create an ACM certificate in us-east-1 region via AWS-Console, and copy its ARN here (as CF does not yet support DNS validation of ACM requests)
+  httpsCertArn: 'arn:aws:acm:us-east-1:359026654074:certificate/c19a85ed-d1a8-49c5-8583-7cb9c5b70ef4'
+  # DomainName of s3Bucket
+  s3BucketDomainName: ${file(.build/ap-southeast-1.yaml):WebAppS3BucketDomainName, 'keyhub-vault.s3.amazonaws.com'} # ${cf:keyhub-vault-dev.WebAppS3BucketDomainName}
+
+
+provider:
+  name: aws
+  region: 'us-east-1'
+  runtime: nodejs6.10 # Because this runs on CloudFront (lambda@edge) it must be 6.10
+
+functions:
+  edgeAddSecurityHeaders:
+    handler: lambda-edge.addSecurityHeaders
+    memorySize: 128
+    timeout: 3
+    lambdaAtEdge: # Must be in us-east-1 region
+      distribution: 'WebAppCloudFrontDistribution'
+      eventType: 'origin-response'
+
+package:
+  exclude:
+    - '**'
+  include:
+    - lambda-edge.js
+
+resources:
+  Resources:
+    ## Specifying the CloudFront Distribution to server your Web Application
+    WebAppCloudFrontDistribution:
+      Type: AWS::CloudFront::Distribution
+      Properties:
+        DistributionConfig:
+          Enabled: 'true'
+          ## Enable http2
+          HttpVersion: http2
+          ## Limit the CDN edge locations to U.S., Canada, Europe, Asia and Africa
+          PriceClass: 'PriceClass_200'
+          ## Using a custom domain
+          Aliases:
+            - ${self:custom.siteDnsName}
+          ## The certificate to use when viewers use HTTPS to request objects.
+          ViewerCertificate:
+            SslSupportMethod: sni-only
+            MinimumProtocolVersion: TLSv1.2_2018
+            AcmCertificateArn: ${self:custom.httpsCertArn}
+            # CloudFrontDefaultCertificate: 'true'
+          Origins:
+            - DomainName: ${self:custom.s3BucketDomainName}
+              ## An identifier for the origin which must be unique within the distribution
+              Id: WebApp
+              CustomOriginConfig:
+                HTTPPort: 80
+                HTTPSPort: 443
+                OriginProtocolPolicy: https-only
+                OriginSSLProtocols:
+                  - TLSv1.2
+              ## In case you want to restrict the bucket access use S3OriginConfig and remove CustomOriginConfig
+              # S3OriginConfig:
+              #   OriginAccessIdentity: origin-access-identity/cloudfront/E127EXAMPLE51Z
+          DefaultRootObject: index.html
+          ## Since the Single Page App is taking care of the routing we need to make sure ever path is served with index.html
+          ## The only exception are files that actually exist e.h. app.js, reset.css
+          CustomErrorResponses:
+            - ErrorCode: 404
+              ResponseCode: 200
+              ResponsePagePath: /index.html
+          DefaultCacheBehavior:
+            ## The DefaultTTL applies only when your custom origin does not add HTTP headers, such as Cache-Control
+            DefaultTTL: 600 # ten minutes
+            ## The protocol that users can use to access the files in the origin. To allow HTTP use `allow-all`
+            ViewerProtocolPolicy: redirect-to-https
+            ## Enable automatic compression by CloudFront
+            Compress: true
+            ## HTTP methods that CloudFront processes and forwards
+            AllowedMethods:
+              - GET
+              - HEAD
+              - OPTIONS
+            ## The origin id defined above
+            TargetOriginId: WebApp
+            ## Defining if and how the QueryString and Cookies are forwarded to the origin which in this case is S3
+            ForwardedValues:
+              QueryString: 'false'
+              Cookies:
+                Forward: none
+          ## Uncomment the following section in case you want to enable logging for CloudFront requests
+          # Logging:
+          #   IncludeCookies: 'false'
+          #   Bucket: mylogs.s3.amazonaws.com
+          #   Prefix: myprefix
+    ## Specifying the DNS Records to be added to Route 53
+    WebAppDnsRecords:
+      Type: AWS::Route53::RecordSetGroup
+      Properties:
+        HostedZoneName: '${self:custom.siteDnsName}.'
+        RecordSets:
+          -
+            Name: '${self:custom.siteDnsName}.'
+            Type: 'A'
+            AliasTarget:
+              DNSName: { 'Fn::GetAtt': [ 'WebAppCloudFrontDistribution', 'DomainName' ] }
+              HostedZoneId: 'Z2FDTNDATAQYW2' # Cloudfront uses Z2FDTNDATAQYW2
+          -
+            Name: '${self:custom.siteDnsName}.'
+            Type: 'AAAA'
+            AliasTarget:
+              DNSName: { 'Fn::GetAtt': [ 'WebAppCloudFrontDistribution', 'DomainName' ] }
+              HostedZoneId: 'Z2FDTNDATAQYW2' # Cloudfront uses Z2FDTNDATAQYW2
+
+  ## In order to print out the hosted domain via `serverless info` we need to define the DomainName output for CloudFormation
+  Outputs:
+    WebAppCloudFrontDistributionDomainName:
+      Value: { 'Fn::GetAtt': [ WebAppCloudFrontDistribution, DomainName ] }
