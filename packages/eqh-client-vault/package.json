@@ -34,10 +34,12 @@
     "pako": "^1.0.6",
     "post-robot": "^8.0.28",
     "qs": "^6.5.2",
+    "tweetnacl": "^1.0.0",
     "whatwg-fetch": "^2.0.4"
   },
   "devDependencies": {
     "copy-webpack-plugin": "^4.5.2",
+    "serverless-plugin-cloudfront-lambda-edge": "^2.0.0",
     "serverless-s3-sync": "^1.6.1",
     "ssri": "^6.0.0",
     "worker-loader": "^2.0.0"

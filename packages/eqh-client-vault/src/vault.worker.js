@@ -1,7 +1,9 @@
 /* eslint-disable no-console */
 
+const nacl = require('tweetnacl')
 const wordlistEnEff = require('diceware-wordlist-en-eff')
 const dicewareGen = require('./diceware-generator')
+const { secureRandom } = require('./util/crypto')
 
 const { NrsBridge } = require('./js/nrs.cheerio.bridge')
 // import { NrsBridge } from './js/nrs.cheerio.bridge'
@@ -48,6 +50,30 @@ bridge.load((NRS) => {
 
       callback(null, {
         secretPhrase,
+        publicKey,
+        accountId,
+        accountRS,
+      })
+    },
+    encryptKeyPair: (secretPhrase, secretPin, callback) => {
+      const nonce = secureRandom(24, { type: 'Uint8Array' })
+      const message = Uint8Array.from(NRS.converters.stringToByteArray(secretPhrase))
+      // const secret = Uint8Array.from(NRS.converters.stringToByteArray(secretPin))
+      const secretKey = secureRandom(32, { type: 'Uint8Array' })
+
+      const encryptedMessage = nacl.secretbox(message, nonce, secretKey)
+      const decryptedMessage = nacl.secretbox.open(encryptedMessage, nonce, secretKey)
+      const decryptedSecretPhrase = NRS.converters.byteArrayToString(decryptedMessage)
+
+      const publicKey = NRS.generatePublicKey(`eqh${decryptedSecretPhrase}`)
+      const accountId = NRS.getAccountIdFromPublicKey(publicKey)
+      const accountRS = NRS.convertNumericToRSAccountFormat(accountId)
+
+      callback(null, {
+        encryptedSecretPhrase: {
+          message: encryptedMessage,
+          nonce,
+        },
         publicKey,
         accountId,
         accountRS,
@@ -142,4 +168,9 @@ bridge.load((NRS) => {
   //   if (err) throw err
   //   console.log(JSON.stringify(response, null, 2))
   // })
+
+  methods.encryptKeyPair('test word word dlnlkwqdjqwd qwidbqwlidbqwiword', 'pinjfbsjhkfaewbfiuawefewoifbaewohbf123456', (err, res) => {
+    if (err) throw err
+    console.log(JSON.stringify(res, null, 2))
+  })
 })
