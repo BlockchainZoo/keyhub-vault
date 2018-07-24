@@ -1,36 +1,63 @@
-service: ${file(./serverless.${opt:file}.yml):service, 'keyhub-vault'}
+service: keyhub-vault
 
 frameworkVersion: ">=1.2.0 <2.0.0"
 
 plugins:
-  - serverless-s3-sync
-  - serverless-plugin-cloudfront-lambda-edge
   - serverless-stack-output
+  - serverless-s3-sync
 
-# custom: ${file(./serverless.${opt:file}.yml):custom}
 custom:
-  output: ${file(./serverless.${opt:file}.yml):custom.output}
-  s3Bucket: ${file(./serverless.${opt:file}.yml):custom.s3Bucket}
-  s3Sync: ${file(./serverless.${opt:file}.yml):custom.s3Sync}
-  siteDnsName: ${file(./serverless.${opt:file}.yml):custom.siteDnsName}
-  httpsCertArn: ${file(./serverless.${opt:file}.yml):custom.httpsCertArn}
-  s3BucketDomainName: ${file(./serverless.${opt:file}.yml):custom.s3BucketDomainName}
+  # Bucket name that will host the site
+  s3Bucket: keyhub-vault
+  s3Sync:
+    - bucketName: ${self:custom.s3Bucket} # required
+      localDir: dist # required
+      followSymlinks: true # optional
+      defaultContentType: text/html # optional
+      # acl: public-read # optional
+      params: # optional
+        - "index.html":
+            # Store index.html permanently in the user browser
+            CacheControl: "public, max-age=31536000, s-maxage=600, immutable"
+        - "index.js":
+            # Store PGP public key permanently in the user browser
+            CacheControl: "public, max-age=31536000, s-maxage=600, immutable"
+        - "js/openpgp.worker.bundle.js":
+            # Store OpenPGP library permanently in the user browser
+            CacheControl: "public, max-age=31536000, s-maxage=600, immutable"
+  output:
+    file: cloudfront/stack.ap-southeast-1.yaml
 
 provider:
   name: aws
-  region: ${opt:file}
-  runtime: nodejs6.10 # Because this runs on CloudFront (lambda@edge) it must be 6.10
-
-functions:
-  ${file(./serverless.${opt:file}.yml):functions}
-
-# package: ${file(./serverless.${opt:file}.yml):package}
-package:
-  exclude:
-    - '**'
-  include:
-    - lambda-edge.js
+  region: 'ap-southeast-1'
 
 resources:
-  Outputs: ${file(./serverless.${opt:file}.yml):resources.Outputs}
-  Resources: ${file(./serverless.${opt:file}.yml):resources.Resources}
+  Resources:
+    ## Specifying the S3 Bucket
+    WebAppS3Bucket:
+      Type: AWS::S3::Bucket
+      Properties:
+        BucketName: ${self:custom.s3Bucket}
+        AccessControl: PublicRead
+        WebsiteConfiguration:
+          IndexDocument: index.html
+          ErrorDocument: index.html
+    ## Specifying the policies to make sure all files inside the Bucket are avaialble to CloudFront
+    WebAppS3BucketPolicy:
+      Type: AWS::S3::BucketPolicy
+      Properties:
+        Bucket: { Ref: WebAppS3Bucket }
+        PolicyDocument:
+          Statement:
+            - Sid: PublicReadGetObject
+              Effect: Allow
+              Principal: "*"
+              Action:
+              - s3:GetObject
+              Resource: arn:aws:s3:::${self:custom.s3Bucket}/*
+
+  ## In order to print out the hosted domain via `serverless info` we need to define the DomainName output for CloudFormation
+  Outputs:
+    WebAppS3BucketDomainName:
+      Value: { 'Fn::GetAtt': [ 'WebAppS3Bucket', 'DomainName' ] }

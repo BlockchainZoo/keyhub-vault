@@ -34,17 +34,11 @@ exports.addSecurityHeaders = (event, context, callback) => {
   }];
 
   // Disallow loading of dangerous external scripts and resources
-  if (response.uri === '/index.html' || response.uri === '/') {
-    headers['content-security-policy'] = [{
-      key: 'Content-Security-Policy',
-      value: "default-src 'none'; style-src 'self'; img-src 'self'; media-src 'self'; manifest-src 'self'; font-src 'self'; script-src blob: 'self'; connect-src 'self'",
-    }];
-  } else {
-    headers['content-security-policy'] = [{
-      key: 'Content-Security-Policy',
-      value: "default-src 'none'",
-    }];
-  }
+  console.log(response.uri, response);
+  headers['content-security-policy'] = [{
+    key: 'Content-Security-Policy',
+    value: "default-src 'none'; style-src 'self'; img-src 'self'; media-src 'self'; manifest-src 'self'; font-src 'self'; script-src blob: 'self'; connect-src 'self'",
+  }];
 
   // Return modified response
   callback(null, response);
