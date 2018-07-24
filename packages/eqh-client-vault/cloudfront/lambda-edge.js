@@ -7,6 +7,9 @@ exports.addSecurityHeaders = (event, context, callback) => {
   const response = event.Records[0].cf.response; // eslint-disable-line prefer-destructuring
   const headers = response.headers; // eslint-disable-line prefer-destructuring
 
+  // For HTTP security headers, see: https://observatory.mozilla.org/analyze/vault.keyhub.app
+  // For TLS security ciphers: see: https://www.ssllabs.com/ssltest/analyze.html?d=vault.keyhub.app&hideResults=on&latest
+
   // Enable HTTP Strict Transport Security (HSTS) to force clients to always connect via HTTPS
   headers['strict-transport-security'] = [{
     key: 'Strict-Transport-Security',
@@ -32,12 +35,15 @@ exports.addSecurityHeaders = (event, context, callback) => {
     key: 'Referrer-Policy',
     value: 'strict-origin',
   }];
-
+  // Enforce Certificate Transparency
+  headers['expect-ct'] = [{
+    key: 'Expect-CT',
+    value: 'max-age=63072000, enforce',
+  }];
   // Disallow loading of dangerous external scripts and resources
-  console.log(response.uri, response);
   headers['content-security-policy'] = [{
     key: 'Content-Security-Policy',
-    value: "default-src 'none'; style-src 'self'; img-src 'self'; media-src 'self'; manifest-src 'self'; font-src 'self'; script-src blob: 'self'; connect-src 'self'",
+    value: "default-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; style-src 'self'; img-src 'self'; media-src 'self'; manifest-src 'self'; font-src 'self'; script-src blob: 'self'; connect-src 'self'",
   }];
 
   // Return modified response
