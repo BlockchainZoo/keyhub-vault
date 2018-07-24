@@ -11,8 +11,7 @@ custom:
   # Please pre-create an ACM certificate in us-east-1 region via AWS-Console, and copy its ARN here (as CF does not yet support DNS validation of ACM requests)
   httpsCertArn: 'arn:aws:acm:us-east-1:359026654074:certificate/c19a85ed-d1a8-49c5-8583-7cb9c5b70ef4'
   # DomainName of s3Bucket
-  s3BucketDomainName: ${file(.build/ap-southeast-1.yaml):WebAppS3BucketDomainName, 'keyhub-vault.s3.amazonaws.com'} # ${cf:keyhub-vault-dev.WebAppS3BucketDomainName}
-
+  s3BucketDomainName: ${file(./stack.ap-southeast-1.yaml):WebAppS3BucketDomainName, 'keyhub-vault.s3.amazonaws.com'} # ${cf:keyhub-vault-dev.WebAppS3BucketDomainName}
 
 provider:
   name: aws
