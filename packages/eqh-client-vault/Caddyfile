@@ -8,10 +8,13 @@ localhost:5500 {
     to {path}index.html
   }
 
+  # For HTTP security headers, see: https://observatory.mozilla.org/analyze/vault.keyhub.app
+  # For TLS security ciphers: see: https://www.ssllabs.com/ssltest/analyze.html?d=vault.keyhub.app&hideResults=on&latest
+
   header / {
     # Enable HTTP Strict Transport Security (HSTS) to force clients to always
     # connect via HTTPS (do not use if only testing)
-    Strict-Transport-Security "max-age=31536000;"
+    Strict-Transport-Security "max-age=63072000; includeSubdomains; preload"
     # Enable cross-site filter (XSS) and tell browser to block detected attacks
     X-XSS-Protection "1; mode=block"
     # Prevent some browsers from MIME-sniffing a response away from the declared Content-Type
@@ -20,13 +23,15 @@ localhost:5500 {
     X-Frame-Options "DENY"
     # Only send the origin of the document as the referrer
     Referrer-Policy "strict-origin"
+    # Enforce Certificate Transparency
+    Expect-CT "max-age=63072000, enforce"
   }
 
   header /index.html {
     # Store index.html permanently in the user browser
     Cache-Control "public, max-age=31536000, immutable"
     # Disallow loading of dangerous external scripts and resources
-    Content-Security-Policy "default-src 'none'; style-src 'self'; img-src 'self'; media-src 'self'; manifest-src 'self'; font-src 'self'; script-src blob: 'self'; connect-src 'self'"
+    Content-Security-Policy "default-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; style-src 'self'; img-src 'self'; media-src 'self'; manifest-src 'self'; font-src 'self'; script-src blob: 'self'; connect-src 'self'"
   }
 
   header /index.js {
@@ -36,7 +41,7 @@ localhost:5500 {
 
   header /js/ {
     # Disallow loading of dangerous external scripts and resources
-    Content-Security-Policy "default-src 'none'"
+    Content-Security-Policy "default-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
   }
 
   header /js/openpgp.worker.bundle.js {
