@@ -18,6 +18,8 @@ localhost:5500 {
     X-Content-Type-Options "nosniff"
     # Disallow the site to be rendered within a frame (clickjacking protection)
     X-Frame-Options "DENY"
+    # Only send the origin of the document as the referrer
+    Referrer-Policy "strict-origin"
   }
 
   header /index.html {

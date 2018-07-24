@@ -1,0 +1,36 @@
+service: ${file(./serverless.${opt:file}.yml):service, 'keyhub-vault'}
+
+frameworkVersion: ">=1.2.0 <2.0.0"
+
+plugins:
+  - serverless-s3-sync
+  - serverless-plugin-cloudfront-lambda-edge
+  - serverless-stack-output
+
+# custom: ${file(./serverless.${opt:file}.yml):custom}
+custom:
+  output: ${file(./serverless.${opt:file}.yml):custom.output}
+  s3Bucket: ${file(./serverless.${opt:file}.yml):custom.s3Bucket}
+  s3Sync: ${file(./serverless.${opt:file}.yml):custom.s3Sync}
+  siteDnsName: ${file(./serverless.${opt:file}.yml):custom.siteDnsName}
+  httpsCertArn: ${file(./serverless.${opt:file}.yml):custom.httpsCertArn}
+  s3BucketDomainName: ${file(./serverless.${opt:file}.yml):custom.s3BucketDomainName}
+
+provider:
+  name: aws
+  region: ${opt:file}
+  runtime: nodejs6.10 # Because this runs on CloudFront (lambda@edge) it must be 6.10
+
+functions:
+  ${file(./serverless.${opt:file}.yml):functions}
+
+# package: ${file(./serverless.${opt:file}.yml):package}
+package:
+  exclude:
+    - '**'
+  include:
+    - lambda-edge.js
+
+resources:
+  Outputs: ${file(./serverless.${opt:file}.yml):resources.Outputs}
+  Resources: ${file(./serverless.${opt:file}.yml):resources.Resources}
