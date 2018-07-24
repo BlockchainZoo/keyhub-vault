@@ -149,7 +149,8 @@ class NrsBridge {
   //   // eslint-disable-next-line no-param-reassign
   //   client.constants.GENESIS = client.convertRSToNumericAccountFormat(accountRS)
   //   // eslint-disable-next-line no-param-reassign
-  //   client.constants.GENESIS_RS = client.convertNumericToRSAccountFormat(client.constants.GENESIS)
+  //   client.constants.GENESIS_RS =
+  //     client.convertNumericToRSAccountFormat(client.constants.GENESIS)
   // }
 
   static setCurrentAccount(accountRS, client) {
@@ -263,6 +264,7 @@ class NrsBridge {
       // Now load the constants locally since we cannot trust the remote node to
       // return the correct constants.
       client.processConstants(require('../conf/constants'))
+      client.converters = global.converters
       this.client = client
       callback(this.client)
     } catch (err) {

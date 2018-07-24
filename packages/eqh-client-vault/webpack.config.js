@@ -10,7 +10,7 @@ const babelPluginObjectRestSpread = require('@babel/plugin-proposal-object-rest-
 
 module.exports = {
   mode: 'production',
-  // devtool: 'nosources-source-map',
+  devtool: 'nosources-source-map',
   // watch: true,
   entry: {
     'whatwg-fetch': 'whatwg-fetch',
