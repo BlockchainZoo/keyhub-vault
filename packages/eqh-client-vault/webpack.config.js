@@ -11,7 +11,9 @@ const babelPluginObjectRestSpread = require('@babel/plugin-proposal-object-rest-
 module.exports = {
   mode: 'production',
   devtool: 'nosources-source-map',
-  // watch: true,
+  optimization: {
+    minimize: false,
+  },
   entry: {
     'whatwg-fetch': 'whatwg-fetch',
     'abortcontroller-polyfill': 'abortcontroller-polyfill/dist/polyfill-patch-fetch',
@@ -20,6 +22,7 @@ module.exports = {
   output: {
     filename: '[name].bundle.js',
     path: path.resolve(__dirname, 'dist', 'js'),
+    publicPath: '/js/',
   },
   plugins: [
     new webpack.DefinePlugin({

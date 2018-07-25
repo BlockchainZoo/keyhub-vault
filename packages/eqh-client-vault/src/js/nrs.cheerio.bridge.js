@@ -264,7 +264,6 @@ class NrsBridge {
       // Now load the constants locally since we cannot trust the remote node to
       // return the correct constants.
       client.processConstants(require('../conf/constants'))
-      client.converters = global.converters
       this.client = client
       callback(this.client)
     } catch (err) {

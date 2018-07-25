@@ -1,4 +1,3 @@
-/* eslint-disable no-console, prefer-arrow-callback, no-undef */
 
 import { safeHtml } from 'common-tags'
 
@@ -14,15 +13,9 @@ import {
   ConfirmPassphraseScreen,
 } from './screen'
 
-// Convert a callback function into a promise-returning function
-// const promisify = func => (...args) => new Promise((resolve, reject) => {
-//   func(...args, (err, res) => {
-//     if (err) reject(err)
-//     else resolve(res)
-//   })
-// })
+const { callOnStore } = require('./util/indexeddb')
 
-export function loadVault(mainElement) { // eslint-disable-line
+export default function loadVault(document, mainElement) {
   // Load Webworker
   const worker = new Worker()
 
@@ -33,7 +26,7 @@ export function loadVault(mainElement) { // eslint-disable-line
           Accounts
         </div>
         <div id="account-list"></div>
-        <button class="btn btn-secondary btn-sm ml-1" id="goto-create-account-btn">Add Blockchain Account</button>
+        <button class="btn btn-secondary btn-sm ml-1" id="goto-create-account-btn">Add Key</button>
       </div>
       <div class="col-md-9 bg-white">
         <div class="entry-page py-3" id="content"></div>
@@ -43,60 +36,135 @@ export function loadVault(mainElement) { // eslint-disable-line
 
   mainElement.innerHTML = vaultLayoutHTML // eslint-disable-line no-param-reassign
 
-  const content = document.getElementById('content')
-  const welcomeDiv = WelcomeScreen(document)
-  content.appendChild(welcomeDiv)
+  const contentDiv = document.getElementById('content')
+  const accountListDiv = document.getElementById('account-list')
 
-  const addAccountDiv = AddAccountScreen(document, (err, platform) => {
-    if (err) return null
-    content.innerHTML = ''
-    content.appendChild(LoadingScreen(document, platform))
+  let welcomeDiv = null
 
-    worker.onmessage = ({ data }) => {
-      const { secretPhrase } = data
+  const updateAccountListDiv = () => new Promise((resolve, reject) => {
+    try {
+      callOnStore('accounts', (store) => {
+        const req = store.getAll()
+        req.onsuccess = ({ target: { result } }) => {
+          if (Array.isArray(result) && result.length > 0) {
+            // Group by platform
+            const accountsByPlatform = result.reduce((acc, i) => {
+              const g = acc[i.platform]
+              if (g) g.push(i)
+              else acc[i.platform] = [i]
+              return acc
+            }, {})
 
-      const displayPassphraseDiv = DisplayPassphraseScreen(document, secretPhrase, (err2, [choice, passphrase]) => {
-        if (err2) return null
-        if (choice === 'ok') {
-          content.innerHTML = ''
-          const hasLocalStorage = (typeof window.localStorage !== 'undefined')
-          return content.appendChild(ConfirmPassphraseScreen(document, passphrase, hasLocalStorage, (err3, [choice3, pin]) => {
-            if (err3) return null
-            if (choice3 === 'ok') {
-              worker.onmessage = ({ data: accountData }) => {
-                // const { encryptedSecretPhrase, publicKey, accountId, accountRS } = accountData
+            accountListDiv.innerHTML = ''
+            Object.keys(accountsByPlatform).forEach((platform) => {
+              const ul = document.createElement('ul')
+              const accounts = accountsByPlatform[platform]
+              accounts.forEach((account) => {
+                const li = document.createElement('li')
+                li.appendChild(document.createTextNode(account.address))
+                ul.appendChild(li)
+              })
+              accountListDiv.appendChild(ul)
+            })
 
-                const accountsString = window.localStorage.getItem('accounts')
-                const accounts = accountsString !== null
-                  ? JSON.parse(accountsString)
-                  : {}
-
-                accounts.push(accountData)
-                window.localStorage.setItem('accounts', JSON.stringify(accounts))
-              }
-
-              worker.postMessage(['encryptKeyPair', passphrase, pin])
-            }
-
-            content.innerHTML = ''
-            return content.appendChild(welcomeDiv)
-          }))
+            resolve(true)
+          } else {
+            resolve(false)
+          }
         }
-
-        content.innerHTML = ''
-        return content.appendChild(welcomeDiv)
       })
-
-      content.innerHTML = ''
-      content.appendChild(displayPassphraseDiv)
+    } catch (err) {
+      reject(err)
     }
+  })
 
-    return worker.postMessage(['generateKeyPair'])
+  const showAddAccountScreen = () => (
+    Promise.resolve()
+      .then(() => new Promise((resolve, reject) => {
+        contentDiv.innerHTML = ''
+        contentDiv.appendChild(AddAccountScreen(document, (err, res) => {
+          if (err) reject(err)
+          else resolve(res)
+        }))
+      }))
+      .then((platform) => {
+        contentDiv.innerHTML = ''
+        contentDiv.appendChild(LoadingScreen(document, `Generating secretPhrase for ${platform} account`))
+
+        const promise = new Promise((resolve, reject) => {
+          worker.onmessage = resolve
+          worker.onerror = reject
+          worker.postMessage(['generateSecretPhrase'])
+        }).then(({ data: { error, secretPhrase } }) => {
+          if (error) throw new Error(error)
+          return secretPhrase
+        })
+
+        return Promise.resolve(promise)
+          .then(secretPhrase => new Promise((resolve, reject) => {
+            contentDiv.innerHTML = ''
+            contentDiv.appendChild(
+              DisplayPassphraseScreen(document, secretPhrase, (err, res) => {
+                if (err) reject(err)
+                else resolve(res)
+              })
+            )
+          }))
+          .then(([choice, passphrase]) => {
+            if (choice !== 'ok') throw new Error('cancelled by user')
+
+            return new Promise((resolve, reject) => {
+              contentDiv.innerHTML = ''
+              contentDiv.appendChild(
+                ConfirmPassphraseScreen(document, passphrase, true, (err, res) => {
+                  if (err) reject(err)
+                  else resolve(res)
+                })
+              )
+            }).then(([choice2, pin]) => {
+              if (choice2 !== 'ok') throw new Error('cancelled by user')
+
+              contentDiv.innerHTML = ''
+              contentDiv.appendChild(LoadingScreen(document, `Encrypting your secretPhrase for ${platform} account`))
+
+              return new Promise((resolve, reject) => {
+                worker.onmessage = resolve
+                worker.onerror = reject
+                worker.postMessage(['storeKeyPair', platform, `${platform.toLowerCase()}${passphrase}`, pin])
+              }).then(({ data: { error, accountId, accountRS, publicKey } }) => {
+                if (error) throw new Error(error)
+                return { accountId, accountRS, publicKey }
+              })
+            })
+          })
+      })
+  )
+
+
+  updateAccountListDiv().then((hasAccounts) => {
+    // Show welcome screen on startup
+    welcomeDiv = WelcomeScreen(document, hasAccounts)
+    contentDiv.appendChild(welcomeDiv)
+  }).catch(() => {
+    welcomeDiv = WelcomeScreen(document, false)
+    contentDiv.appendChild(welcomeDiv)
   })
 
   document.getElementById('goto-create-account-btn').addEventListener('click', () => {
-    content.innerHTML = ''
-    content.appendChild(addAccountDiv)
+    showAddAccountScreen()
+      .then(({ accountRS, publicKey }) => {
+        console.log(accountRS, publicKey)
+        updateAccountListDiv()
+        contentDiv.innerHTML = ''
+        contentDiv.appendChild(welcomeDiv)
+      })
+      .catch((err) => {
+        if (err.message !== 'cancelled by user') {
+          alert(`Error: ${err.message || err}`) // eslint-disable-line
+        }
+        contentDiv.innerHTML = ''
+        contentDiv.appendChild(welcomeDiv)
+      })
   })
 
   // if (window.opener) {

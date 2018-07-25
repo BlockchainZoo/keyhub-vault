@@ -40,6 +40,11 @@ exports.addSecurityHeaders = (event, context, callback) => {
     key: 'Expect-CT',
     value: 'max-age=63072000, enforce',
   }];
+  // Pin to Certificate Issuers for 1 week (https://www.amazontrust.com/repository/)
+  headers['public-key-pins'] = [{
+    key: 'Public-Key-Pins',
+    value: 'max-age=604800; includeSubDomains; pin-sha256="fbe3018031f9586bcbf41727e417b7d1c45c2f47f93be372a17b96b50757d5a2"; pin-sha256="7f4296fc5b6a4e3b35d3c369623e364ab1af381d8fa7121533c9d6c633ea2461"; pin-sha256="36abc32656acfc645c61b71613c4bf21c787f5cabbee48348d58597803d7abc9"; pin-sha256="f7ecded5c66047d28ed6466b543c40e0743abe81d109254dcf845d4c2c7853c5"',
+  }];
   // Disallow loading of dangerous external scripts and resources
   headers['content-security-policy'] = [{
     key: 'Content-Security-Policy',

@@ -16,9 +16,9 @@ const nodeRandom = (count, options, crypto) => {
   }
 }
 
-const browserRandom = (count, options) => {
+const browserRandom = (count, options, window = window || self) => { // eslint-disable-line
   const nativeArr = new Uint8Array(count)
-  const crypto = window.crypto || window.msCrypto // eslint-disable-line no-undef
+  const crypto = window.crypto || window.msCrypto
   crypto.getRandomValues(nativeArr)
 
   switch (options.type) {
@@ -34,16 +34,32 @@ const browserRandom = (count, options) => {
   }
 }
 
-function secureRandom(count, options = { type: 'Array' }) {
+const secureRandom = (count, options = { type: 'Array' }, window = window || self) => { // eslint-disable-line
   // we check for process.pid to prevent browserify from tricking us
   if (process.env.APP_ENV !== 'browser' && typeof process !== 'undefined' && typeof process.pid === 'number') {
     const crypto = require('crypto') // eslint-disable-line global-require
     return nodeRandom(count, options, crypto)
   }
 
-  const crypto = window.crypto || window.msCrypto // eslint-disable-line no-undef
+  const crypto = window.crypto || window.msCrypto
   if (!crypto) throw new Error('Your browser does not support window.crypto.')
   return browserRandom(count, options)
+}
+
+const getCrypto = (window = window || self) => { // eslint-disable-line
+  // we check for process.pid to prevent browserify from tricking us
+  if (process.env.APP_ENV !== 'browser' && typeof process !== 'undefined' && typeof process.pid === 'number') {
+    return require('crypto') // eslint-disable-line global-require
+  }
+
+  const crypto = window.crypto || window.msCrypto
+  if (!crypto) throw new Error('Your browser does not support window.crypto.')
+  return crypto
+}
+
+const getCryptoSubtle = (window = window || self) => { // eslint-disable-line
+  const crypto = getCrypto(window)
+  return crypto.webkitSubtle || crypto.subtle
 }
 
 const getRandomInt = (min, max) => {
@@ -58,4 +74,5 @@ const getRandomInt = (min, max) => {
 module.exports = {
   secureRandom,
   getRandomInt,
+  getCryptoSubtle,
 }

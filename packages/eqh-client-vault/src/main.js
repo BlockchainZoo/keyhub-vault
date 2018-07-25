@@ -1,6 +1,6 @@
 import { safeHtml } from 'common-tags'
 
-import { loadVault } from './vault'
+import loadVault from './vault'
 
 const vars = {
   mainDiv: 'main',
@@ -94,4 +94,5 @@ document.getElementById('body').innerHTML = htmlTemplate
 
 // eslint-disable-next-line no-undef
 const mainElement = document.getElementById(vars.mainDiv)
-loadVault(mainElement)
+// eslint-disable-next-line no-undef
+loadVault(document, mainElement)

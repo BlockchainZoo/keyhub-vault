@@ -7,10 +7,10 @@ export default function createElement(document, passphrase, callback) {
     <label for="text-passphrase">Your automatically generated passphrase is:</label><br>
     <textarea class="form-control" id="passphrase-input">${passphrase}</textarea>
   </div>
-  <p>Please write down or memorize these 12 words (their order and capitalization matters - always lowercase). This passphrase is needed in order to access your Eqh account.</p>
+  <p>Please write down or memorize these 12 words (their order and capitalization matters - always lowercase). This passphrase is needed in order to access your account.</p>
   <div class="form-group">
     <div class="alert alert-danger">
-      Attention: Don't ever disclose your passphrase. If you lose it you lose access to your account!
+      Attention: Don't ever disclose your passphrase. If you lose it you lose access to your blockchain account!
     </div>
   </div>
   <div class="form-group">
@@ -21,9 +21,10 @@ export default function createElement(document, passphrase, callback) {
   if (callback) {
     const passphraseInput = div.querySelector('#passphrase-input')
     div.querySelectorAll('button').forEach(b => (
-      b.addEventListener('click', ev => (
-        callback(null, [ev.currentTarget.dataset.choice, passphraseInput.value.trim()])
-      ))
+      b.addEventListener('click', (ev) => {
+        const { dataset: { choice } } = ev.currentTarget
+        callback(null, [choice, passphraseInput.value.trim()])
+      })
     ))
   }
 

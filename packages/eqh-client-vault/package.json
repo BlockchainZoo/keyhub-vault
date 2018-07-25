@@ -34,7 +34,6 @@
     "pako": "^1.0.6",
     "post-robot": "^8.0.28",
     "qs": "^6.5.2",
-    "tweetnacl": "^1.0.0",
     "whatwg-fetch": "^2.0.4"
   },
   "devDependencies": {
