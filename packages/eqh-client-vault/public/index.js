@@ -95,7 +95,7 @@ loadOpenpgp.then((openpgp) => {
       printLog('Starting up...')
     }))
     .catch((error) => {
-      const errorMessage = `Could not start due to Fatal Error: ${error.message || error}`
+      const errorMessage = `Fatal Error: ${error.message || error}. Please try again.`
       printLog(errorMessage)
       window.alert(errorMessage) // eslint-disable-line no-alert
       self.close() // eslint-disable-line no-restricted-globals

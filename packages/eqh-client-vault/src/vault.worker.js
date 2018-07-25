@@ -42,7 +42,7 @@ bridge.load((NRS) => {
     generateSecretPhrase: (wordcount, callback = wordcount) => {
       const randomWords = dicewareGen({
         language: wordlistEnEff,
-        wordcount: +wordcount || 13,
+        wordcount: +wordcount || 10,
         format: 'array',
       })
       const secretPhrase = randomWords.join(' ')

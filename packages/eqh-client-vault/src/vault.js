@@ -89,12 +89,12 @@ export default function loadVault(document, mainElement) {
       }))
       .then((platform) => {
         contentDiv.innerHTML = ''
-        contentDiv.appendChild(LoadingScreen(document, `Generating secretPhrase for ${platform} account`))
+        contentDiv.appendChild(LoadingScreen(document, `Generating SecretPhrase for ${platform}`))
 
         const promise = new Promise((resolve, reject) => {
           worker.onmessage = resolve
           worker.onerror = reject
-          worker.postMessage(['generateSecretPhrase'])
+          worker.postMessage(['generateSecretPhrase', 10])
         }).then(({ data: { error, secretPhrase } }) => {
           if (error) throw new Error(error)
           return secretPhrase
@@ -125,7 +125,7 @@ export default function loadVault(document, mainElement) {
               if (choice2 !== 'ok') throw new Error('cancelled by user')
 
               contentDiv.innerHTML = ''
-              contentDiv.appendChild(LoadingScreen(document, `Encrypting your secretPhrase for ${platform} account`))
+              contentDiv.appendChild(LoadingScreen(document, 'Encrypting your SecretPhrase'))
 
               return new Promise((resolve, reject) => {
                 worker.onmessage = resolve
