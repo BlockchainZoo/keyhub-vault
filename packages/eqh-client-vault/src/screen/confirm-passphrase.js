@@ -59,7 +59,7 @@ export default function createElement(document, passphrase, withPin, callback) {
   const pinForm = (safeHtml`
     <div id="passphrase-alert" class="d-hide form-group"></div>
     <div class="form-group">
-      <label for="text-pin">Please create 6 Digit Pin: (Numeric)</label><br>
+      <label for="text-pin">Please create your Security Pin: (AlphaNumeric)</label><br>
       <input type="password" class="form-control" id="pin-input" />
     </div>
     <div class="form-group">

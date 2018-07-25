@@ -1,15 +1,16 @@
 import { safeHtml } from 'common-tags'
 
-export default function createElement(document) {
+export default function createElement(document, hasAccounts) {
   const div = document.createElement('div')
   div.innerHTML = (safeHtml`
   <h2 class="page-title">Welcome</h2>
   <div class="entry-content">
-    <p>
-      Welcome to KeyHub!
-      Keyhub is "Paypal for Blockchain". Just as using Paypal ensures merchants do not hold unto sensitive credit-card data, using Keyhub ensures merchants do not have access to your private keys.
-      Click "Add Account" on the left sidebar to begin. / Please select one of your accounts on the left sidebar to continue.
-    </p>
+    <p>Welcome to KeyHub!</p>
+    <p>Keyhub is "Paypal for Blockchain".</p>
+    <p>Using Paypal ensures that merchant websites you visit do not get permanent access to your sensitive credit-card data.</p>
+    <p>Using Keyhub ensures that merchant websites you visit do not get permanent access to your private key data.</p>
+    <p></p>
+    <p>${hasAccounts ? 'Please select one of your accounts on the left sidebar to continue.' : 'Click "Add Key" on the left sidebar to begin.'}</p>
   </div>
   `)
   return div

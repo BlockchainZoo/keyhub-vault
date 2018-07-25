@@ -1,21 +1,23 @@
-/* eslint-disable no-console */
 
-const nacl = require('tweetnacl')
 const wordlistEnEff = require('diceware-wordlist-en-eff')
 const dicewareGen = require('./diceware-generator')
-const { secureRandom } = require('./util/crypto')
+const { callOnStore } = require('./util/indexeddb')
+const { secureRandom, getCryptoSubtle } = require('./util/crypto')
+
+const subtle = getCryptoSubtle()
 
 const { NrsBridge } = require('./js/nrs.cheerio.bridge')
 // import { NrsBridge } from './js/nrs.cheerio.bridge'
+const bridge = new NrsBridge()
+
+global.isNode = true
+const converters = require('./js/util/converters')
 
 const nxtConfig = require('./conf/nxt.json')
 const secrets = require('./conf/secrets.json')
 
-
-const bridge = new NrsBridge()
-
 bridge.load((NRS) => {
-  console.log('NRS-client ready') // eslint-disable-line no-console
+  console.log('NRS-bridge ready') // eslint-disable-line no-console
 
   bridge.configure(nxtConfig)
 
@@ -37,47 +39,73 @@ bridge.load((NRS) => {
       bridge.configure(config)
       callback(null, true)
     },
-    generateKeyPair: (wordcount, callback = wordcount) => {
+    generateSecretPhrase: (wordcount, callback = wordcount) => {
       const randomWords = dicewareGen({
         language: wordlistEnEff,
-        wordcount: +wordcount || 9,
+        wordcount: +wordcount || 13,
         format: 'array',
       })
       const secretPhrase = randomWords.join(' ')
-      const publicKey = NRS.generatePublicKey(`eqh${secretPhrase}`)
-      const accountId = NRS.getAccountIdFromPublicKey(publicKey)
-      const accountRS = NRS.convertNumericToRSAccountFormat(accountId)
 
       callback(null, {
         secretPhrase,
-        publicKey,
-        accountId,
-        accountRS,
       })
     },
-    encryptKeyPair: (secretPhrase, secretPin, callback) => {
-      const nonce = secureRandom(24, { type: 'Uint8Array' })
-      const message = Uint8Array.from(NRS.converters.stringToByteArray(secretPhrase))
-      // const secret = Uint8Array.from(NRS.converters.stringToByteArray(secretPin))
-      const secretKey = secureRandom(32, { type: 'Uint8Array' })
+    storeKeyPair: (platform, secretPhrase, secretPin, callback) => {
+      const deriveParams = {
+        name: 'PBKDF2',
+        hash: 'SHA-256',
+        salt: secureRandom(16, { type: 'Uint8Array' }),
+        iterations: 1e6,
+      }
 
-      const encryptedMessage = nacl.secretbox(message, nonce, secretKey)
-      const decryptedMessage = nacl.secretbox.open(encryptedMessage, nonce, secretKey)
-      const decryptedSecretPhrase = NRS.converters.byteArrayToString(decryptedMessage)
+      const secretPhraseUint8 = Uint8Array.from(converters.stringToByteArray(secretPhrase))
+      const secretPinUint8 = Uint8Array.from(converters.stringToByteArray(secretPin))
 
-      const publicKey = NRS.generatePublicKey(`eqh${decryptedSecretPhrase}`)
-      const accountId = NRS.getAccountIdFromPublicKey(publicKey)
-      const accountRS = NRS.convertNumericToRSAccountFormat(accountId)
-
-      callback(null, {
-        encryptedSecretPhrase: {
-          message: encryptedMessage,
-          nonce,
-        },
-        publicKey,
-        accountId,
-        accountRS,
-      })
+      subtle.digest({ name: 'SHA-512' }, secretPhraseUint8).then(secretPhraseHashBuffer => (
+        subtle.importKey('raw', secretPinUint8, 'PBKDF2', false, ['deriveKey']).then(weakKey => (
+          subtle.deriveKey(deriveParams, weakKey, { name: 'AES-CBC', length: 256 }, false, ['encrypt'])
+        )).then((strongKey) => {
+          const encryptParams = {
+            name: 'AES-CBC',
+            iv: secureRandom(16, { type: 'Uint8Array' }),
+          }
+          return subtle.encrypt(encryptParams, strongKey, secretPhraseHashBuffer)
+        }).then((encryptedSecretPhraseHashBuffer) => {
+          const secretPhraseHashHex = converters.byteArrayToHexString(
+            Array.from(new Uint8Array(secretPhraseHashBuffer))
+          )
+          const encryptedSecretPhraseHashHex = converters.byteArrayToHexString(
+            Array.from(new Uint8Array(encryptedSecretPhraseHashBuffer))
+          )
+          return [secretPhraseHashHex, encryptedSecretPhraseHashHex]
+        })
+      )).then(([secretPhraseHashHex, encryptedSecretPhraseHashHex]) => {
+        const publicKey = NRS.generatePublicKey(secretPhraseHashHex)
+        const accountId = NRS.getAccountIdFromPublicKey(publicKey)
+        const accountRS = NRS.convertNumericToRSAccountFormat(accountId)
+        callOnStore('accounts', (store) => {
+          store.put({
+            id: `${platform}-${accountId}`,
+            platform,
+            number: accountId,
+            address: accountRS,
+            publicKey,
+            secretPhrase: {
+              encrypted: encryptedSecretPhraseHashHex,
+              algo: deriveParams.name,
+              hash: deriveParams.hash,
+              iterations: deriveParams.iterations,
+              salt: converters.byteArrayToHexString(Array.from(deriveParams.salt)),
+            },
+          })
+        })
+        callback(null, {
+          publicKey,
+          accountId,
+          accountRS,
+        })
+      }).catch(error => callback(error))
     },
     signTransaction: (txType, txData, callback) => {
       if (typeof txType !== 'string') throw new Error('Invalid transaction type')
@@ -169,8 +197,7 @@ bridge.load((NRS) => {
   //   console.log(JSON.stringify(response, null, 2))
   // })
 
-  methods.encryptKeyPair('test word word dlnlkwqdjqwd qwidbqwlidbqwiword', 'pinjfbsjhkfaewbfiuawefewoifbaewohbf123456', (err, res) => {
-    if (err) throw err
-    console.log(JSON.stringify(res, null, 2))
-  })
+  // methods.storeKeyPair('secret here', 'pin123456', (err, res) => {
+  //   console.log(err, res)
+  // })
 })
