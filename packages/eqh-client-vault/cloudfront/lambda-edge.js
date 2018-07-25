@@ -48,7 +48,7 @@ exports.addSecurityHeaders = (event, context, callback) => {
   // Disallow loading of dangerous external scripts and resources
   headers['content-security-policy'] = [{
     key: 'Content-Security-Policy',
-    value: "default-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; style-src 'self'; img-src 'self'; media-src 'self'; manifest-src 'self'; font-src 'self'; script-src blob: 'self'; connect-src 'self'",
+    value: "default-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; style-src 'self'; img-src 'self'; media-src 'self'; manifest-src 'self'; font-src 'self'; script-src blob: 'self'; connect-src 'self' https://nxt1.vault.keyhub.app",
   }];
 
   // Return modified response

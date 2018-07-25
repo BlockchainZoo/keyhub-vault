@@ -59,20 +59,20 @@ export default function createElement(document, passphrase, withPin, callback) {
   const pinForm = (safeHtml`
     <div id="passphrase-alert" class="d-hide form-group"></div>
     <div class="form-group">
-      <label for="text-pin">Please create your Security Pin: (AlphaNumeric)</label><br>
+      <label for="text-pin">Please input a new Security Pin: (alphanumeric - used for key encryption)</label><br>
       <input type="password" class="form-control" id="pin-input" />
     </div>
     <div class="form-group">
-      <label for="text-pin-confirm">Please Re-type your Pin:</label><br>
+      <label for="text-pin-confirm">Please re-input your Security Pin:</label><br>
       <input type="password" class="form-control" id="pin-confirm-input" />
     </div>
     <div id="pin-alert" class="d-hide form-group"></div>
   `)
 
   div.innerHTML = (html`
-    <h2 class="page-title">EQH Generate Passhphrase</h2>
+    <h2 class="page-title">Confirm Backup of Passhphrase</h2>
     <div class="form-group">
-      <label for="text-passphrase-copied">Your passphrase is very important! In order to be sure that you have saved it, please write your passphrase below:</label><br>
+      <label for="text-passphrase-copied">Your passphrase is very important! In order to be sure that you have written it to paper, please type your passphrase below:</label><br>
       <textarea class="form-control" id="passphrase-input"></textarea>
     </div>
     ${withPin ? pinForm : ''}
@@ -87,6 +87,8 @@ export default function createElement(document, passphrase, withPin, callback) {
   const pinInput = div.querySelector('#pin-input')
   const pinConfirmInput = div.querySelector('#pin-confirm-input')
   const pinAlert = div.querySelector('#pin-alert')
+
+  passphraseInput.addEventListener('paste', event => event.preventDefault())
 
   const verifyChoice = (choice) => {
     if (choice === 'ok') {
