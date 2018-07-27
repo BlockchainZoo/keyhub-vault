@@ -43,12 +43,12 @@ exports.addSecurityHeaders = (event, context, callback) => {
   // Pin to Certificate Issuers for 1 week (https://www.amazontrust.com/repository/)
   headers['public-key-pins'] = [{
     key: 'Public-Key-Pins',
-    value: 'max-age=604800; includeSubDomains; pin-sha256="fbe3018031f9586bcbf41727e417b7d1c45c2f47f93be372a17b96b50757d5a2"; pin-sha256="7f4296fc5b6a4e3b35d3c369623e364ab1af381d8fa7121533c9d6c633ea2461"; pin-sha256="36abc32656acfc645c61b71613c4bf21c787f5cabbee48348d58597803d7abc9"; pin-sha256="f7ecded5c66047d28ed6466b543c40e0743abe81d109254dcf845d4c2c7853c5"',
+    value: 'max-age=604800; includeSubDomains; pin-sha256="++MBgDH5WGvL9Bcn5Be30cRcL0f5O+NyoXuWtQdX1aI="; pin-sha256="f0KW/FtqTjs108NpYj42SrGvOB2PpxIVM8nWxjPqJGE="; pin-sha256="NqvDJlas/GRcYbcWE8S/IceH9cq77kg0jVhZeAPXq8k="; pin-sha256="9+ze1cZgR9KO1kZrVDxA4HQ6voHRCSVNz4RdTCx4U8U="',
   }];
   // Disallow loading of dangerous external scripts and resources
   headers['content-security-policy'] = [{
     key: 'Content-Security-Policy',
-    value: "default-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; style-src 'self'; img-src 'self'; media-src 'self'; manifest-src 'self'; font-src 'self'; script-src blob: 'self'; connect-src 'self' https://nxt1.vault.keyhub.app",
+    value: "default-src 'none'; child-src blob:; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; style-src 'self'; img-src 'self'; media-src 'self'; manifest-src 'self'; font-src 'self'; script-src blob: 'self'; connect-src 'self' https://nxt1.vault.keyhub.app",
   }];
 
   // Return modified response

@@ -12,7 +12,7 @@ module.exports = {
   mode: 'production',
   devtool: 'nosources-source-map',
   optimization: {
-    minimize: false,
+    minimize: true,
   },
   entry: {
     'whatwg-fetch': 'whatwg-fetch',
@@ -73,7 +73,7 @@ module.exports = {
         test: /\.worker\.js$/,
         use: {
           loader: 'worker-loader',
-          options: { inline: true },
+          options: { inline: true, fallback: false },
         },
       },
     ],

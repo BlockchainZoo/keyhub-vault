@@ -14,7 +14,6 @@ global.isNode = true
 const converters = require('./js/util/converters')
 
 const nxtConfig = require('./conf/nxt.json')
-const secrets = require('./conf/secrets.json')
 
 bridge.load((NRS) => {
   console.log('NRS-bridge ready') // eslint-disable-line no-console
@@ -39,88 +38,150 @@ bridge.load((NRS) => {
       bridge.configure(config)
       callback(null, true)
     },
-    generateSecretPhrase: (wordcount, callback = wordcount) => {
+    generatePassphrase: (wordcount, callback = wordcount) => {
       const randomWords = dicewareGen({
         language: wordlistEnEff,
         wordcount: +wordcount || 10,
         format: 'array',
       })
-      const secretPhrase = randomWords.join(' ')
+      const passphrase = randomWords.join(' ')
 
       callback(null, {
-        secretPhrase,
+        passphrase,
       })
     },
-    storeKeyPair: (platform, secretPhrase, secretPin, callback) => {
-      const deriveParams = {
-        name: 'PBKDF2',
-        hash: 'SHA-256',
-        salt: secureRandom(16, { type: 'Uint8Array' }),
-        iterations: 1e6,
+    createKeyPair: (platform, passphrase, secretPin, callback) => {
+      const keyAlgo = {
+        name: 'AES-GCM',
+        length: 256,
       }
 
-      const secretPhraseUint8 = Uint8Array.from(converters.stringToByteArray(secretPhrase))
+      const deriveParams = Object.assign(Object.create(null), {
+        name: 'PBKDF2',
+        hash: 'SHA-256',
+        salt: secureRandom(16, { type: 'Uint8Array' }).buffer,
+        iterations: 1e6,
+      })
+
+      const wrapParams = Object.assign(Object.create(null), {
+        name: 'AES-GCM',
+        iv: secureRandom(12, { type: 'Uint8Array' }).buffer,
+      })
+
+      const passphraseUint8 = Uint8Array.from(converters.stringToByteArray(passphrase))
       const secretPinUint8 = Uint8Array.from(converters.stringToByteArray(secretPin))
 
-      subtle.digest({ name: 'SHA-512' }, secretPhraseUint8).then(secretPhraseHashBuffer => (
+      subtle.digest({ name: `SHA-${keyAlgo.length}` }, passphraseUint8).then(secretPhraseBuffer => (
+        // Convert teh secretPhrase into a native CryptoKey
+        subtle.importKey('raw', secretPhraseBuffer, keyAlgo, true, ['encrypt', 'decrypt'])
+      )).then(secretPhraseCryptoKey => (
+        // Convert the Pin into a native CryptoKey
         subtle.importKey('raw', secretPinUint8, 'PBKDF2', false, ['deriveKey']).then(weakKey => (
-          subtle.deriveKey(deriveParams, weakKey, { name: 'AES-CBC', length: 256 }, false, ['encrypt'])
-        )).then((strongKey) => {
-          const encryptParams = {
-            name: 'AES-CBC',
-            iv: secureRandom(16, { type: 'Uint8Array' }),
-          }
-          return subtle.encrypt(encryptParams, strongKey, secretPhraseHashBuffer)
-        }).then((encryptedSecretPhraseHashBuffer) => {
-          const secretPhraseHashHex = converters.byteArrayToHexString(
-            Array.from(new Uint8Array(secretPhraseHashBuffer))
-          )
-          const encryptedSecretPhraseHashHex = converters.byteArrayToHexString(
-            Array.from(new Uint8Array(encryptedSecretPhraseHashBuffer))
-          )
-          return [secretPhraseHashHex, encryptedSecretPhraseHashHex]
-        })
-      )).then(([secretPhraseHashHex, encryptedSecretPhraseHashHex]) => {
-        const publicKey = NRS.generatePublicKey(secretPhraseHashHex)
+          // Strengthen the Pin CryptoKey by using PBKDF2
+          subtle.deriveKey(deriveParams, weakKey, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'wrapKey'])
+        )).then(strongKey => (
+          // Use the Strengthened CryptoKey to wrap the secretPhrase CryptoKey
+          subtle.wrapKey('jwk', secretPhraseCryptoKey, strongKey, wrapParams)
+        )).then(secretPhraseJwk => (
+          // Retreive the secretPhrase as a HexString
+          subtle.exportKey('raw', secretPhraseCryptoKey)
+            .then((secretPhraseBuffer) => {
+              const secretPhraseHex = converters.byteArrayToHexString(
+                Array.from(new Uint8Array(secretPhraseBuffer))
+              )
+              return [secretPhraseHex, secretPhraseJwk]
+            })
+        ))
+      )).then(([secretPhraseHex, secretPhraseJwk]) => {
+        // secretPhraseHex is the sha256 hash of the user's passphrase
+        // secretPhraseHex is the real secretPhrase used to sign transactions
+        // secretPhraseJwk is the encrypted secretPhrase in 'jwk' format
+        const publicKey = NRS.generatePublicKey(secretPhraseHex)
         const accountId = NRS.getAccountIdFromPublicKey(publicKey)
         const accountRS = NRS.convertNumericToRSAccountFormat(accountId)
+
+        // Store account in browser's indexedDB
+        const dbKey = accountRS
         callOnStore('accounts', (store) => {
           store.put({
-            id: `${platform}-${accountId}`,
+            id: dbKey,
             platform,
             number: accountId,
             address: accountRS,
             publicKey,
             secretPhrase: {
-              encrypted: encryptedSecretPhraseHashHex,
-              algo: deriveParams.name,
-              hash: deriveParams.hash,
-              iterations: deriveParams.iterations,
-              salt: converters.byteArrayToHexString(Array.from(deriveParams.salt)),
+              format: 'jwk',
+              key: secretPhraseJwk,
+              keyAlgo,
+              deriveParams,
+              unwrapParams: wrapParams,
             },
+            createdAt: new Date(),
+            lastUsedAt: null,
           })
         })
         callback(null, {
-          publicKey,
+          dbKey: accountRS,
           accountId,
           accountRS,
+          publicKey,
         })
-      }).catch(error => callback(error))
+      }).catch(error => callback(error)) // eslint-disable-line newline-per-chained-call
     },
-    signTransaction: (txType, txData, callback) => {
+    signTransaction: (dbKey, secretPin, txType, txData, callback) => {
       if (typeof txType !== 'string') throw new Error('Invalid transaction type')
       if (typeof txData !== 'object') throw new Error('Invalid transaction data')
 
-      const { secretPhrase } = secrets
-      const data = {
-        ...fixTxNumberFormat(txData),
-        broadcast: 'false',
-        secretPhrase: `eqh${secretPhrase}`,
-        ...NRS.getMandatoryParams(),
-      }
+      const secretPinUint8 = Uint8Array.from(converters.stringToByteArray(secretPin))
 
-      NRS.sendRequest(txType, data, (response) => {
-        callback(null, response)
+      // Get account from  browser's indexedDB
+      callOnStore('accounts', (store) => {
+        const req = store.get(dbKey)
+        req.onerror = err => callback(err)
+        req.onsuccess = () => {
+          if (!req.result) callback(new Error('account dbKey is not found in this browser'))
+          if (!req.result.secretPhrase) callback(new Error('account secretPhrase is not stored in this browser'))
+          const { format, key, keyAlgo, unwrapParams, deriveParams } = req.result.secretPhrase
+
+          // TODO: Update the lastUsedAt timestamp
+
+          // Convert the Pin into a native CryptoKey
+          subtle.importKey('raw', secretPinUint8, 'PBKDF2', false, ['deriveKey'])
+            .then(weakKey => (
+              // Strengthen the Pin CryptoKey by using PBKDF2
+              subtle.deriveKey(deriveParams, weakKey, { name: 'AES-GCM', length: 256 }, false, ['decrypt', 'unwrapKey'])
+            ))
+            .then(strongKey => (
+              // Use the Strengthened CryptoKey to unwrap the secretPhrase CryptoKey
+              subtle.unwrapKey(format, key, strongKey, unwrapParams, keyAlgo, true, ['encrypt', 'decrypt'])
+            ))
+            .then(secretPhraseCryptoKey => (
+              // Retreive the secretPhrase as a HexString
+              subtle.exportKey('raw', secretPhraseCryptoKey)
+                .then((secretPhraseBuffer) => {
+                  const secretPhraseHex = converters.byteArrayToHexString(
+                    Array.from(new Uint8Array(secretPhraseBuffer))
+                  )
+                  return secretPhraseHex
+                })
+            ))
+            .then((secretPhraseHex) => {
+              // secretPhraseHex is the sha256 hash of the user's passphrase
+              const data = {
+                ...fixTxNumberFormat(txData),
+                broadcast: 'false',
+                secretPhrase: secretPhraseHex,
+                ...NRS.getMandatoryParams(),
+              }
+              // Use NRS bridge to sign the transaction data
+              NRS.sendRequest(txType, data, (signResponse) => {
+                callback(null, {
+                  signResponse,
+                })
+              })
+            })
+            .catch(error => callback(error))
+        }
       })
     },
   })
@@ -197,7 +258,7 @@ bridge.load((NRS) => {
   //   console.log(JSON.stringify(response, null, 2))
   // })
 
-  // methods.storeKeyPair('secret here', 'pin123456', (err, res) => {
+  // methods.createKeyPair('secret here', 'pin123456', (err, res) => {
   //   console.log(err, res)
   // })
 })
