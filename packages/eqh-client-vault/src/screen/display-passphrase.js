@@ -7,7 +7,8 @@ export default function createElement(document, passphrase, callback) {
     <label for="text-passphrase">Your automatically generated passphrase is:</label><br>
     <textarea class="form-control" id="passphrase-input">${passphrase}</textarea>
   </div>
-  <p>Please write down on paper or memorize these 10 words (their order and capitalization matters - always lowercase). This passphrase is needed in order to recover access to your account on another computer.</p>
+  <p>Please write down on paper or memorize these 10 words (their order and capitalization matters - always lowercase).</p>
+  <p>This passphrase is needed in order to recover access to your account on another computer. (Copy & paste has been disabled because of this.)</p>
   <div class="form-group">
     <div class="alert alert-danger">
       Attention: Don't ever disclose your passphrase. If you lose it, you lose access to your account!
@@ -20,7 +21,7 @@ export default function createElement(document, passphrase, callback) {
 
   const passphraseInput = div.querySelector('#passphrase-input')
   passphraseInput.addEventListener('copy', event => event.preventDefault())
-  passphraseInput.addEventListener('cut', event => event.preventDefault())
+  // passphraseInput.addEventListener('cut', event => event.preventDefault())
 
   if (callback) {
     div.querySelectorAll('button').forEach(b => (

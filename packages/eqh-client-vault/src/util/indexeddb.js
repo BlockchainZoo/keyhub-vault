@@ -1,6 +1,5 @@
-/* eslint-disable no-undef */
 
-const callOnStore = (storeName, fn) => {
+const callOnStore = (storeName, fn, window = window || self) => { // eslint-disable-line
   // This works on all devices/browsers, and uses IndexedDBShim as a final fallback
   const indexedDB = (
     window.indexedDB || window.mozIndexedDB || window.webkitIndexedDB
@@ -24,12 +23,22 @@ const callOnStore = (storeName, fn) => {
     const tx = db.transaction(storeName, 'readwrite')
     const store = tx.objectStore(storeName)
 
+    // Close the db when the transaction errors
+    tx.onerror = (error) => {
+      db.close()
+      throw error
+    }
+
     fn(store)
 
     // Close the db when the transaction is done
     tx.oncomplete = () => {
       db.close()
     }
+  }
+
+  open.onerror = (error) => {
+    throw error
   }
 }
 

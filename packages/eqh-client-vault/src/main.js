@@ -95,4 +95,4 @@ document.getElementById('body').innerHTML = htmlTemplate
 // eslint-disable-next-line no-undef
 const mainElement = document.getElementById(vars.mainDiv)
 // eslint-disable-next-line no-undef
-loadVault(document, mainElement)
+loadVault(window, document, mainElement)

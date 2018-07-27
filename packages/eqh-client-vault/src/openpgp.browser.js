@@ -1,3 +1,6 @@
+// eslint-disable-next-line
+'use strict'
+
 const openpgpURL = './js/openpgp.worker.bundle.js'
 const openpgpSRI = 'sha512-z3XKhRza4Rjp0AFLiYK6c4laL5jTzB22LbM+QWTkr21j53MsiHS33GlzuzaVxnExWhGSZdYcAFGjaPaVbcAASA=='
 
@@ -69,7 +72,7 @@ loadOpenpgp.then((openpgp) => {
         const validity = verified.signatures[0].valid // true
         if (validity) {
           const okMessage = `Security Check Passed! Main script signed by PGP key id ${verified.signatures[0].keyid.toHex()}`
-          printLog(`<strong>${okMessage}</strong>`)
+          printLog(okMessage)
 
           const blob = new Blob([data], { type: msgRes.headers.get('content-type') })
           return URL.createObjectURL(blob)
@@ -93,7 +96,7 @@ loadOpenpgp.then((openpgp) => {
       printLog('Starting up...')
     }))
     .catch((error) => {
-      const errorMessage = `Could not start due to Fatal Error: ${error.message || error}`
+      const errorMessage = `Fatal Error: ${error.message || error}. Please try again.`
       printLog(errorMessage)
       window.alert(errorMessage) // eslint-disable-line no-alert
       self.close() // eslint-disable-line no-restricted-globals

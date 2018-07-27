@@ -57,7 +57,6 @@ export default function createElement(document, passphrase, withPin, callback) {
   const div = document.createElement('div')
 
   const pinForm = (safeHtml`
-    <div id="passphrase-alert" class="d-hide form-group"></div>
     <div class="form-group">
       <label for="text-pin">Please input a new Security Pin: (alphanumeric - used for key encryption)</label><br>
       <input type="password" class="form-control" id="pin-input" />
@@ -75,6 +74,7 @@ export default function createElement(document, passphrase, withPin, callback) {
       <label for="text-passphrase-copied">Your passphrase is very important! In order to be sure that you have written it to paper, please type your passphrase below:</label><br>
       <textarea class="form-control" id="passphrase-input"></textarea>
     </div>
+    <div id="passphrase-alert" class="d-hide form-group"></div>
     ${withPin ? pinForm : ''}
     <div class="form-group">
       <button type="button" class="btn btn-secondary" data-choice="ok">Finish</button>
@@ -88,7 +88,7 @@ export default function createElement(document, passphrase, withPin, callback) {
   const pinConfirmInput = div.querySelector('#pin-confirm-input')
   const pinAlert = div.querySelector('#pin-alert')
 
-  passphraseInput.addEventListener('paste', event => event.preventDefault())
+  // passphraseInput.addEventListener('paste', event => event.preventDefault())
 
   const verifyChoice = (choice) => {
     if (choice === 'ok') {
@@ -97,7 +97,7 @@ export default function createElement(document, passphrase, withPin, callback) {
       if (!isValid) return
     }
 
-    callback(null, [choice, pinInput.value])
+    callback(null, [choice, pinInput.value.trim()])
   }
 
   if (callback) {
