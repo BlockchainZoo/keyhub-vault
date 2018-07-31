@@ -97,6 +97,7 @@ export default function loadVault(window, document, mainElement) {
               accounts.forEach((account) => {
                 const li = document.createElement('li')
                 const button = document.createElement('button') // eslint-disable-line
+                button.type = 'button'
                 button.classList.add('btn', 'btn-light')
                 button.appendChild(document.createTextNode(account.address))
                 button.dataset.address = account.address

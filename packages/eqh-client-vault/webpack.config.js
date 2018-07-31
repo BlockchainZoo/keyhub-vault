@@ -25,6 +25,11 @@ module.exports = {
     publicPath: '/js/',
   },
   plugins: [
+    // new webpack.SourceMapDevToolPlugin({
+    //   filename: '[file].map',
+    //   publicPath: 'https://localhost:5500/js/',
+    //   fileContext: '',
+    // }),
     new webpack.DefinePlugin({
       'process.env': {
         NODE_ENV: JSON.stringify('production'),
