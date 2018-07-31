@@ -1,0 +1,18 @@
+.block-title{
+  margin-left: -15px;
+  margin-right: -15px;
+  padding: 0 1rem 1rem;
+  font-weight: bold;
+  font-size: 1.125rem;
+}
+.account-list{
+  &>ul {
+    list-style: none;
+    padding: 0 0 0 0.95rem;
+    margin: 0 0 0.95rem;
+
+    li{
+      margin: 0 0 0.556rem;
+    }
+  }
+}
