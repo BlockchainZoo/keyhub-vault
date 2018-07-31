@@ -29,7 +29,7 @@ custom:
             # Cache must revalidate main.bundle.js
             CacheControl: "no-cache, no-transform"
         - "js/main.bundle.js.*":
-            # Cache must revalidate signature of main.bundle.js
+            # Cache must revalidate sourcemap & signature of main.bundle.js
             CacheControl: "no-cache, no-transform"
   output:
     file: cloudfront/stack.ap-southeast-1.yaml
