@@ -1,11 +1,13 @@
-/* eslint-disable semi, strict */
-
+/* eslint-disable semi */
+// eslint-disable-next-line
 'use strict'
 
-exports.addSecurityHeaders = (event, context, callback) => {
-  // Get contents of response
-  const response = event.Records[0].cf.response; // eslint-disable-line prefer-destructuring
-  const headers = response.headers; // eslint-disable-line prefer-destructuring
+exports.addSecurityHeaders = function (event, context, callback) {
+  // Get contents of request & response
+  // See: https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/lambda-event-structure.html#lambda-event-structure-response
+  const { cf } = event.Records[0];
+  const { request, response } = cf;
+  const { headers } = response;
 
   // For HTTP security headers, see: https://observatory.mozilla.org/analyze/vault.keyhub.app
   // For TLS security ciphers: see: https://www.ssllabs.com/ssltest/analyze.html?d=vault.keyhub.app&hideResults=on&latest
@@ -45,11 +47,14 @@ exports.addSecurityHeaders = (event, context, callback) => {
     key: 'Public-Key-Pins',
     value: 'max-age=604800; includeSubDomains; pin-sha256="oqUMkN9oXG0EbcAuVyj3TUTgja/3skXUiBBPUeYS1oo="; pin-sha256="++MBgDH5WGvL9Bcn5Be30cRcL0f5O+NyoXuWtQdX1aI="; pin-sha256="f0KW/FtqTjs108NpYj42SrGvOB2PpxIVM8nWxjPqJGE="; pin-sha256="NqvDJlas/GRcYbcWE8S/IceH9cq77kg0jVhZeAPXq8k="; pin-sha256="9+ze1cZgR9KO1kZrVDxA4HQ6voHRCSVNz4RdTCx4U8U="',
   }];
-  // Disallow loading of dangerous external scripts and resources
-  headers['content-security-policy'] = [{
-    key: 'Content-Security-Policy',
-    value: "default-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; manifest-src 'self'; style-src 'self'; img-src 'self'; media-src 'self'; font-src 'self'; child-src blob:; script-src blob: 'self'; connect-src 'self' https://nxt1.vault.keyhub.app",
-  }];
+
+  if (request.uri === '/' || request.uri.endsWith('/') || request.uri.endsWith('.html')) {
+    // Disallow loading of dangerous external scripts and resources
+    headers['content-security-policy'] = [{
+      key: 'Content-Security-Policy',
+      value: "default-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; manifest-src 'self'; style-src 'self'; img-src 'self'; media-src 'self'; font-src 'self'; worker-src blob: data:; child-src blob: data:; script-src 'self' blob:; connect-src 'self' https://nxt1.vault.keyhub.app",
+    }];
+  }
 
   // Return modified response
   callback(null, response);
