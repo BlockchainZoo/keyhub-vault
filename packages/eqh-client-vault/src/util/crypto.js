@@ -71,8 +71,34 @@ const getRandomInt = (min, max) => {
   return min + (byteArray[0] % r)
 }
 
+const unwrapSecretPhrase = (
+  secretPinBytes,
+  { format, key, keyAlgo, unwrapParams, deriveParams },
+) => {
+  const subtle = getCryptoSubtle()
+
+  const secretPinUint8 = Uint8Array.from(secretPinBytes)
+
+  // Convert the Pin into a native CryptoKey
+  return subtle.importKey('raw', secretPinUint8, 'PBKDF2', false, ['deriveKey'])
+    .then(weakKey => (
+      // Strengthen the Pin CryptoKey by using PBKDF2
+      subtle.deriveKey(deriveParams, weakKey, { name: 'AES-GCM', length: 256 }, false, ['decrypt', 'unwrapKey'])
+    ))
+    .then(strongKey => (
+      // Use the Strengthened CryptoKey to unwrap the secretPhrase CryptoKey
+      subtle.unwrapKey(format, key, strongKey, unwrapParams, keyAlgo, true, ['encrypt', 'decrypt'])
+    ))
+    .then(secretPhraseCryptoKey => (
+      // Retrieve the secretPhrase as an ArrayBuffer
+      subtle.exportKey('raw', secretPhraseCryptoKey)
+    ))
+    .then(secretPhraseArrayBuffer => new Uint8Array(secretPhraseArrayBuffer))
+}
+
 module.exports = {
   secureRandom,
   getRandomInt,
   getCryptoSubtle,
+  unwrapSecretPhrase,
 }

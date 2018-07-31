@@ -2,7 +2,7 @@
 const wordlistEnEff = require('diceware-wordlist-en-eff')
 const dicewareGen = require('./diceware-generator')
 const { callOnStore } = require('./util/indexeddb')
-const { secureRandom, getCryptoSubtle } = require('./util/crypto')
+const { secureRandom, getCryptoSubtle, unwrapSecretPhrase } = require('./util/crypto')
 
 const subtle = getCryptoSubtle()
 
@@ -34,9 +34,16 @@ bridge.load((NRS) => {
 
   const methods = Object.assign(Object.create(null), {
     configure: (config, callback) => {
-      if (typeof config !== 'object') throw new Error('Invalid configuration')
-      bridge.configure(config)
-      callback(null, true)
+      if (typeof config !== 'object') throw new Error('config is not an object')
+      if (config.address !== undefined) {
+        const { address, ...conf } = config
+        conf.accountRS = address
+        bridge.configure(conf)
+        callback(null, { config: conf })
+      } else {
+        bridge.configure(config)
+        callback(null, { config })
+      }
     },
     generatePassphrase: (wordcount, callback = wordcount) => {
       const randomWords = dicewareGen({
@@ -50,7 +57,26 @@ bridge.load((NRS) => {
         passphrase,
       })
     },
-    createKeyPair: (platform, passphrase, secretPin, callback) => {
+    hasKeyPair: (address, callback) => {
+      // Get account from browser's indexedDB
+      const dbKey = address
+      callOnStore('accounts', (store) => {
+        const req = store.get(dbKey)
+        req.onerror = err => callback(err)
+        req.onsuccess = () => {
+          callback(null, !!req.result)
+        }
+      })
+    },
+    createKeyPair: (passphrase, secretPin, callback) => {
+      if (typeof passphrase !== 'string') throw new Error('passphrase is not a string')
+      if (typeof secretPin !== 'string') throw new Error('secretPin is not a string')
+
+      const passphraseUint8 = Uint8Array.from(converters.stringToByteArray(passphrase))
+      const secretPinUint8 = Uint8Array.from(converters.stringToByteArray(secretPin))
+
+      const platform = 'EQH'
+
       const keyAlgo = {
         name: 'AES-GCM',
         length: 256,
@@ -67,9 +93,6 @@ bridge.load((NRS) => {
         name: 'AES-GCM',
         iv: secureRandom(12, { type: 'Uint8Array' }).buffer,
       })
-
-      const passphraseUint8 = Uint8Array.from(converters.stringToByteArray(passphrase))
-      const secretPinUint8 = Uint8Array.from(converters.stringToByteArray(secretPin))
 
       subtle.digest({ name: `SHA-${keyAlgo.length}` }, passphraseUint8).then(secretPhraseBuffer => (
         // Convert teh secretPhrase into a native CryptoKey
@@ -101,13 +124,15 @@ bridge.load((NRS) => {
         const accountRS = NRS.convertNumericToRSAccountFormat(accountId)
 
         // Store account in browser's indexedDB
-        const dbKey = accountRS
+        const accountNo = accountId
+        const address = accountRS
+        const dbKey = address
         callOnStore('accounts', (store) => {
           store.put({
             id: dbKey,
             platform,
-            number: accountId,
-            address: accountRS,
+            accountNo,
+            address,
             publicKey,
             secretPhrase: {
               format: 'jwk',
@@ -121,49 +146,37 @@ bridge.load((NRS) => {
           })
         })
         callback(null, {
-          dbKey: accountRS,
-          accountId,
-          accountRS,
+          address,
+          accountNo,
           publicKey,
         })
       }).catch(error => callback(error)) // eslint-disable-line newline-per-chained-call
     },
-    signTransaction: (dbKey, secretPin, txType, txData, callback) => {
-      if (typeof txType !== 'string') throw new Error('Invalid transaction type')
-      if (typeof txData !== 'object') throw new Error('Invalid transaction data')
+    signTransaction: (address, secretPin, txType, txData, callback) => {
+      if (typeof address !== 'string') throw new Error('address is not a string')
+      if (typeof secretPin !== 'string') throw new Error('secretPin is not a string')
+      if (typeof txType !== 'string') throw new Error('txType is not a string')
+      if (typeof txData !== 'object') throw new Error('txData is not an object')
 
-      const secretPinUint8 = Uint8Array.from(converters.stringToByteArray(secretPin))
+      const secretPinBytes = converters.stringToByteArray(secretPin)
 
       // Get account from  browser's indexedDB
+      const dbKey = address
       callOnStore('accounts', (store) => {
         const req = store.get(dbKey)
         req.onerror = err => callback(err)
         req.onsuccess = () => {
           if (!req.result) callback(new Error('account dbKey is not found in this browser'))
           if (!req.result.secretPhrase) callback(new Error('account secretPhrase is not stored in this browser'))
-          const { format, key, keyAlgo, unwrapParams, deriveParams } = req.result.secretPhrase
+          // const { format, key, keyAlgo, unwrapParams, deriveParams } = req.result.secretPhrase
+          const secretPhraseObj = req.result.secretPhrase
 
           // TODO: Update the lastUsedAt timestamp
 
-          // Convert the Pin into a native CryptoKey
-          subtle.importKey('raw', secretPinUint8, 'PBKDF2', false, ['deriveKey'])
-            .then(weakKey => (
-              // Strengthen the Pin CryptoKey by using PBKDF2
-              subtle.deriveKey(deriveParams, weakKey, { name: 'AES-GCM', length: 256 }, false, ['decrypt', 'unwrapKey'])
-            ))
-            .then(strongKey => (
-              // Use the Strengthened CryptoKey to unwrap the secretPhrase CryptoKey
-              subtle.unwrapKey(format, key, strongKey, unwrapParams, keyAlgo, true, ['encrypt', 'decrypt'])
-            ))
-            .then(secretPhraseCryptoKey => (
-              // Retreive the secretPhrase as a HexString
-              subtle.exportKey('raw', secretPhraseCryptoKey)
-                .then((secretPhraseBuffer) => {
-                  const secretPhraseHex = converters.byteArrayToHexString(
-                    Array.from(new Uint8Array(secretPhraseBuffer))
-                  )
-                  return secretPhraseHex
-                })
+          // Unwrap the wrapped secretPhrase object
+          unwrapSecretPhrase(secretPinBytes, secretPhraseObj)
+            .then(secretPhraseUint8 => converters.byteArrayToHexString(
+              Array.from(secretPhraseUint8)
             ))
             .then((secretPhraseHex) => {
               // secretPhraseHex is the sha256 hash of the user's passphrase
@@ -179,6 +192,43 @@ bridge.load((NRS) => {
                   signResponse,
                 })
               })
+            })
+            .catch(error => callback(error))
+        }
+      })
+    },
+    signMessage: (address, secretPin, message, callback) => {
+      if (typeof address !== 'string') throw new Error('address is not a string')
+      if (typeof secretPin !== 'string') throw new Error('secretPin is not a string')
+      if (typeof message !== 'string') throw new Error('message is not a string')
+
+      const secretPinBytes = converters.stringToByteArray(secretPin)
+      const messageBytes = converters.stringToByteArray(message)
+
+      // Get account from  browser's indexedDB
+      const dbKey = address
+      callOnStore('accounts', (store) => {
+        const req = store.get(dbKey)
+        req.onerror = err => callback(err)
+        req.onsuccess = () => {
+          if (!req.result) callback(new Error('account dbKey is not found in this browser'))
+          if (!req.result.secretPhrase) callback(new Error('account secretPhrase is not stored in this browser'))
+          // const { format, key, keyAlgo, unwrapParams, deriveParams } = req.result.secretPhrase
+          const secretPhraseObj = req.result.secretPhrase
+
+          // TODO: Update the lastUsedAt timestamp
+
+          // Unwrap the wrapped secretPhrase object
+          unwrapSecretPhrase(secretPinBytes, secretPhraseObj)
+            .then(secretPhraseUint8 => converters.byteArrayToHexString(
+              Array.from(secretPhraseUint8)
+            ))
+            .then((secretPhraseHex) => {
+              const signature = NRS.signBytes(
+                messageBytes,
+                converters.stringToHexString(secretPhraseHex),
+              )
+              callback(null, { signature })
             })
             .catch(error => callback(error))
         }
