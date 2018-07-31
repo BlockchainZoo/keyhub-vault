@@ -1,6 +1,5 @@
 {
   "url": "https://nxt1.vault.keyhub.app",
-  "accountRS": "EQH-WAAX-XSUM-U97H-HT39F",
   "isTestNet": false,
   "adminPassword": "",
   "lastKnownBlock": { "id": "15547113949993887183", "height": "712" }
