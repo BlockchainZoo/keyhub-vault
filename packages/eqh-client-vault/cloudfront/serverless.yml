@@ -76,7 +76,11 @@ resources:
               ResponsePagePath: /index.html
           DefaultCacheBehavior:
             ## The DefaultTTL applies only when your custom origin does not add HTTP headers, such as Cache-Control
-            DefaultTTL: 600 # ten minutes
+            DefaultTTL: 300 # five minutes
+            ## The MaxTTL applies only when your custom origin adds HTTP headers, such as Cache-Control
+            MaxTTL: 600 # ten minutes
+            ## The MinTTL applies only when your custom origin adds HTTP headers, such as Cache-Control
+            MinTTL: 10 # 10 seconds
             ## The protocol that users can use to access the files in the origin. To allow HTTP use `allow-all`
             ViewerProtocolPolicy: redirect-to-https
             ## Enable automatic compression by CloudFront
