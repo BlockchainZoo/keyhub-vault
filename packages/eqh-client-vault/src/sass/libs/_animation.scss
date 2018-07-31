@@ -1,16 +1,16 @@
 @keyframes fadeIn{
-    0% {
-        opacity:0;
-    }
-    100% {
-        opacity:1;
-    }
+  0% {
+    opacity:0;
+  }
+  100% {
+    opacity:1;
+  }
 }
 
 .fade-in {
-    animation: fadeIn 1.0s ease-in forwards;
+  animation: fadeIn 1.0s ease-in forwards;
 }
 
 .animate-on-opacity{
-    transition: opacity 500ms ease-out;
+  transition: opacity 500ms ease-out;
 }

@@ -5,8 +5,10 @@ $border-radius: 0;
 $primary: #7ca0b4;
 $secondary: #153960;
 
-$fa-font-path: "./webfonts";
-
 $border-radius: $border-radius;
 $border-radius-lg: $border-radius;
 $border-radius-sm: $border-radius;
+
+$box-shadow-kh:  0.0625rem 0.125rem 0.375rem rgba(0,0,0,0.1);
+
+$fa-font-path: "./fonts";
