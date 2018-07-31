@@ -98,11 +98,11 @@ loadOpenpgp.then((openpgp) => {
       const errorMessage = `Fatal Error: ${error.message || error}. Please try again.`
       printLog(errorMessage)
       window.alert(errorMessage) // eslint-disable-line no-alert
-      self.close() // eslint-disable-line no-restricted-globals
+      setTimeout(() => self.close(), 5000) // eslint-disable-line no-restricted-globals
     })
 }).catch((event) => {
   const errorMessage = `Could not load OpenPGP library: ${event.error || event.target.src} . \nYour connection might be broken or insecure. Please try again.`
   printLog(errorMessage)
   window.alert(errorMessage) // eslint-disable-line no-alert
-  self.close() // eslint-disable-line no-restricted-globals
+  setTimeout(() => self.close(), 5000) // eslint-disable-line no-restricted-globals
 })
