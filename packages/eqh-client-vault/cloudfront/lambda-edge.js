@@ -43,7 +43,7 @@ exports.addSecurityHeaders = (event, context, callback) => {
   // Pin to Certificate Issuers for 1 week (https://www.amazontrust.com/repository/)
   headers['public-key-pins'] = [{
     key: 'Public-Key-Pins',
-    value: 'max-age=604800; includeSubDomains; pin-sha256="++MBgDH5WGvL9Bcn5Be30cRcL0f5O+NyoXuWtQdX1aI="; pin-sha256="f0KW/FtqTjs108NpYj42SrGvOB2PpxIVM8nWxjPqJGE="; pin-sha256="NqvDJlas/GRcYbcWE8S/IceH9cq77kg0jVhZeAPXq8k="; pin-sha256="9+ze1cZgR9KO1kZrVDxA4HQ6voHRCSVNz4RdTCx4U8U="',
+    value: 'max-age=604800; includeSubDomains; pin-sha256="oqUMkN9oXG0EbcAuVyj3TUTgja/3skXUiBBPUeYS1oo="; pin-sha256="++MBgDH5WGvL9Bcn5Be30cRcL0f5O+NyoXuWtQdX1aI="; pin-sha256="f0KW/FtqTjs108NpYj42SrGvOB2PpxIVM8nWxjPqJGE="; pin-sha256="NqvDJlas/GRcYbcWE8S/IceH9cq77kg0jVhZeAPXq8k="; pin-sha256="9+ze1cZgR9KO1kZrVDxA4HQ6voHRCSVNz4RdTCx4U8U="',
   }];
   // Disallow loading of dangerous external scripts and resources
   headers['content-security-policy'] = [{
