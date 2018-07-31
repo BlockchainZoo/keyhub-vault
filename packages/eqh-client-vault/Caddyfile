@@ -31,7 +31,7 @@ localhost:5500 {
     # Store index.html permanently in the user browser
     Cache-Control "public, max-age=31536000, immutable"
     # Disallow loading of dangerous external scripts and resources
-    Content-Security-Policy "default-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; manifest-src 'self'; style-src 'self'; img-src 'self'; media-src 'self'; font-src 'self'; child-src blob:; script-src blob: 'self'; connect-src 'self' https://nxt1.vault.keyhub.app"
+    Content-Security-Policy "default-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; manifest-src 'self'; style-src 'self'; img-src 'self'; media-src 'self'; font-src 'self'; worker-src blob: data:; child-src blob: data:; script-src 'self' blob:; connect-src 'self' https://nxt1.vault.keyhub.app"
   }
 
   header /index.js {
@@ -39,14 +39,23 @@ localhost:5500 {
     Cache-Control "public, max-age=31536000, immutable"
   }
 
-  header /js/ {
-    # Disallow loading of dangerous external scripts and resources
-    Content-Security-Policy "default-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
-  }
-
   header /js/openpgp.worker.bundle.js {
     # Store OpenPGP library permanently in the user browser
     Cache-Control "public, max-age=31536000, immutable"
   }
 
+  header /js/main.bundle.js {
+    # Cache must revalidate main.bundle.js
+    Cache-Control "no-cache, no-transform"
+  }
+
+  header /js/main.bundle.js.map {
+    # Cache must revalidate sourcemap of main.bundle.js
+    Cache-Control "no-cache, no-transform"
+  }
+
+  header /js/main.bundle.js.sig.asc {
+    # Cache must revalidate signature of main.bundle.js
+    Cache-Control "no-cache, no-transform"
+  }
 }
