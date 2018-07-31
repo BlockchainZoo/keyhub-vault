@@ -19,10 +19,10 @@ provider:
   runtime: nodejs6.10 # Because this runs on CloudFront (lambda@edge) it must be 6.10
 
 functions:
-  edgeAddSecurityHeaders:
+  edgeAddSecurityHeaders1:
     handler: lambda-edge.addSecurityHeaders
     memorySize: 128
-    timeout: 3
+    timeout: 5 # See: https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/cloudfront-limits.html#limits-lambda-at-edge
     lambdaAtEdge: # Must be in us-east-1 region
       distribution: 'WebAppCloudFrontDistribution'
       eventType: 'origin-response'
