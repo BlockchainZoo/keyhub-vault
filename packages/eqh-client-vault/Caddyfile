@@ -13,7 +13,7 @@ localhost:5500 {
 
   header / {
     # Enable HTTP Strict Transport Security (HSTS) to force clients to always
-    # connect via HTTPS (do not use if only testing)
+    # connect via HTTPS (do not use if only testing with self_signed cert)
     #Strict-Transport-Security "max-age=63072000; includeSubdomains; preload"
     # Enable cross-site filter (XSS) and tell browser to block detected attacks
     X-XSS-Protection "1; mode=block"
@@ -31,7 +31,7 @@ localhost:5500 {
     # Store index.html permanently in the user browser
     Cache-Control "public, max-age=31536000, immutable"
     # Disallow loading of dangerous external scripts and resources
-    Content-Security-Policy "default-src 'none'; child-src blob:; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; style-src 'self'; img-src 'self'; media-src 'self'; manifest-src 'self'; font-src 'self'; script-src blob: 'self'; connect-src 'self'"
+    Content-Security-Policy "default-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; manifest-src 'self'; style-src 'self'; img-src 'self'; media-src 'self'; font-src 'self'; child-src blob:; script-src blob: 'self'; connect-src 'self' https://nxt1.vault.keyhub.app"
   }
 
   header /index.js {
