@@ -259,7 +259,7 @@ class NrsBridge {
       Object.assign(client, require('./nrs'))
       Object.assign(client, require('./nrs.server'))
 
-      if (this.options.init) this.config(this.options, client)
+      if (this.options.init) this.configure(this.options, client)
 
       // Now load the constants locally since we cannot trust the remote node to
       // return the correct constants.
