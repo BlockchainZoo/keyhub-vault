@@ -204,7 +204,7 @@ export default function loadVault(window, document, mainElement) {
       worker.postMessage(['signMessage', address, pin, message])
     }).then(({ data: { error, signature } }) => {
       if (error) throw new Error(error)
-      return { signature }
+      return signature
     })
   }
 
