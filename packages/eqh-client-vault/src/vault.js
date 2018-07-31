@@ -221,14 +221,14 @@ export default function loadVault(window, document, mainElement) {
     return new Promise((resolve, reject) => {
       worker.onmessage = resolve
       worker.onerror = reject
-      worker.postMessage(['hasKeyPair', address])
-    }).then(({ data: { error, hasKeyPair } }) => {
+      worker.postMessage(['getKeyPair', address])
+    }).then(({ data: { error, accountNo } }) => {
       if (error) throw new Error(error)
-      return hasKeyPair
-    }).then((hasKeyPair) => {
-      if (!hasKeyPair) {
+      return accountNo
+    }).then((accountNo) => {
+      if (!accountNo) {
         return new Promise((resolve, reject) => {
-          const message = 'You do not seem to have this private key stored in this browser. Please use your other browser or computer. To restore a key from backup, click the "Add Key" button.'
+          const message = 'You do not seem to have the private key stored in this browser. Please use your other browser or computer. To restore a key from backup, click the "Add Key" button.'
           contentDiv.appendChild(ErrorScreen(document, 'Key Missing', message, (err) => {
             if (err) reject(err)
             else reject(new Error('key missing'))
@@ -237,7 +237,14 @@ export default function loadVault(window, document, mainElement) {
       }
 
       return new Promise((resolve, reject) => {
-        const txDetailDiv = TxDetailScreen(document, platform, tx, (err, res) => {
+        worker.onmessage = resolve
+        worker.onerror = reject
+        worker.postMessage(['configure', { address }])
+      }).then(({ data: { error, config } }) => {
+        if (error) throw Error(error)
+        return config
+      }).then(() => new Promise((resolve, reject) => {
+        const txDetailDiv = TxDetailScreen(document, platform, accountNo, tx, (err, res) => {
           if (err) {
             reject(err)
           } else {
@@ -247,7 +254,7 @@ export default function loadVault(window, document, mainElement) {
           }
         })
         contentDiv.appendChild(txDetailDiv)
-      }).then(([choice, pin]) => {
+      })).then(([choice, pin]) => {
         if (choice !== 'ok') throw new Error('cancelled by user')
 
         // call signTransaction on background webworker
@@ -255,22 +262,10 @@ export default function loadVault(window, document, mainElement) {
           worker.onmessage = resolve
           worker.onerror = reject
           worker.postMessage(['signTransaction', address, pin, tx.type, tx.data])
-        }).then(({ data: { error, signResponse } }) => {
+        }).then(({ data: { error, transactionJSON, transactionBytes } }) => {
           if (error) throw new Error(error)
-          return { signResponse }
+          return { transactionJSON, transactionBytes }
         })
-      }).catch((error) => {
-        // if (error.message === 'invalid pin') {
-        //   loadingDiv.classList.add('d-none')
-        //   txDetailDiv.classList.remove('d-none')
-
-        //   return new Promise((resolve) => {
-        //     txDetailDiv.querySelectorAll('button').forEach(b => (
-        //       b.addEventListener('click', ev => resolve(ev.currentTarget.dataset.choice))
-        //     ))
-        //   })
-        // }
-        throw error
       })
     })
   }
@@ -358,9 +353,9 @@ export default function loadVault(window, document, mainElement) {
           const [platform, address, tx] = params
 
           return showTxDetailScreen(tx, platform, address)
-            .then(({ signResponse }) => (
+            .then(({ transactionBytes, transactionJSON }) => (
               // callback to the parent window once signed data is available
-              callback(null, signResponse)
+              callback(null, { transactionBytes, transactionJSON })
             ))
             .then(() => new Promise((resolve, reject) => {
               const message = 'Transaction Signed. Thank you for using Keyhub soft wallet. You will be returned to the main application.'

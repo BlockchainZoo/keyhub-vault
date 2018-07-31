@@ -7,18 +7,16 @@ const { secureRandom, getCryptoSubtle, unwrapSecretPhrase } = require('./util/cr
 const subtle = getCryptoSubtle()
 
 const { NrsBridge } = require('./js/nrs.cheerio.bridge')
-// import { NrsBridge } from './js/nrs.cheerio.bridge'
-const bridge = new NrsBridge()
 
 global.isNode = true
 const converters = require('./js/util/converters')
 
 const nxtConfig = require('./conf/nxt.json')
 
+const bridge = new NrsBridge(nxtConfig)
+
 bridge.load((NRS) => {
   console.log('NRS-bridge ready') // eslint-disable-line no-console
-
-  bridge.configure(nxtConfig)
 
   const fixTxNumberFormat = ({ assetId, decimals, quantity, price, amount, ...txData }) => {
     /* eslint-disable no-param-reassign */
@@ -57,14 +55,29 @@ bridge.load((NRS) => {
         passphrase,
       })
     },
-    hasKeyPair: (address, callback) => {
+    getKeyPair: (address, callback) => {
       // Get account from browser's indexedDB
       const dbKey = address
       callOnStore('accounts', (store) => {
         const req = store.get(dbKey)
         req.onerror = err => callback(err)
         req.onsuccess = () => {
-          callback(null, !!req.result)
+          if (!req.result) {
+            callback(null, {})
+          } else {
+            const {
+              accountNo,
+              address: addr,
+              publicKey,
+              createdAt,
+            } = req.result
+            callback(null, {
+              address: addr,
+              accountNo,
+              publicKey,
+              createdAt,
+            })
+          }
         }
       })
     },
@@ -127,6 +140,7 @@ bridge.load((NRS) => {
         const accountNo = accountId
         const address = accountRS
         const dbKey = address
+        const createdAt = new Date()
         callOnStore('accounts', (store) => {
           store.put({
             id: dbKey,
@@ -141,7 +155,7 @@ bridge.load((NRS) => {
               deriveParams,
               unwrapParams: wrapParams,
             },
-            createdAt: new Date(),
+            createdAt,
             lastUsedAt: null,
           })
         })
@@ -149,6 +163,7 @@ bridge.load((NRS) => {
           address,
           accountNo,
           publicKey,
+          createdAt,
         })
       }).catch(error => callback(error)) // eslint-disable-line newline-per-chained-call
     },
@@ -187,9 +202,12 @@ bridge.load((NRS) => {
                 ...NRS.getMandatoryParams(),
               }
               // Use NRS bridge to sign the transaction data
-              NRS.sendRequest(txType, data, (signResponse) => {
+              NRS.sendRequest(txType, data, (res) => {
+                const { errorDescription, transactionJSON, transactionBytes } = res
+                if (errorDescription) throw new Error(errorDescription)
                 callback(null, {
-                  signResponse,
+                  transactionJSON,
+                  transactionBytes,
                 })
               })
             })

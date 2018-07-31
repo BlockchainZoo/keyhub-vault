@@ -49,7 +49,7 @@ const displayTransaction = (document, detailDiv, { type, data }) => {
   detailDiv.appendChild(domFragment)
 }
 
-export default function createElement(document, platform, tx, callback) {
+export default function createElement(document, platform, accountNo, tx, callback) {
   const div = document.createElement('div')
 
   const pinForm = (safeHtml`
@@ -65,6 +65,7 @@ export default function createElement(document, platform, tx, callback) {
     <h4><i class="fas fa-lock"></i> ${platform} Transaction Detail</h4>
   </div>
   <div class="card-body">
+    <div>Your Account No.: ${accountNo}</div>
     <div id="transaction-detail"></div>
 
     ${pinForm}
