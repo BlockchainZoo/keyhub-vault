@@ -70,7 +70,8 @@ var NRS = (function (NRS, $) {
         return converters.shortArrayToHexString(curve25519_clamp(converters.byteArrayToShortArray(bytes)));
 	};
 
-	NRS.getAccountId = function(secretPhrase, isRsFormat) {
+	NRS.getAccountId = function(secretPhrase, isRsFormat, isAlreadyHex) {
+    if (isAlreadyHex) return NRS.getAccountIdFromPublicKey(NRS.getPublicKey(secretPhrase), isRsFormat);
 		return NRS.getAccountIdFromPublicKey(NRS.getPublicKey(converters.stringToHexString(secretPhrase)), isRsFormat);
 	};
 
