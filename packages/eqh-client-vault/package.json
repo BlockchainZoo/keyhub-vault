@@ -7,6 +7,7 @@
   "scripts": {
     "start": "caddy",
     "test": "echo \"Error: no test specified\" && exit 1",
+    "postinstall": "(cat ./node_modules/openpgp/src/worker/worker.js | normalize-newline > ./node_modules/openpgp/src/worker/worker.js) && (cat ./node_modules/openpgp/dist/openpgp.min.js | normalize-newline > ./node_modules/openpgp/dist/openpgp.min.js)",
     "prepare": "[ -e dist/js/openpgp.worker.bundle.js ] || browserify -p browserify-derequire -r openpgp/src/worker/worker -s openpgp -o dist/js/openpgp.worker.bundle.js && webpack --config webpack.config.js"
   },
   "repository": {
@@ -40,6 +41,7 @@
     "@fortawesome/fontawesome-free": "^5.2.0",
     "bootstrap": "^4.1.3",
     "copy-webpack-plugin": "^4.5.2",
+    "normalize-newline-cli": "^1.1.0",
     "serverless-plugin-cloudfront-lambda-edge": "^2.0.0",
     "serverless-s3-sync": "^1.6.1",
     "serverless-stack-output": "^0.2.3",
