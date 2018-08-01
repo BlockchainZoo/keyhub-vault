@@ -180,15 +180,19 @@ var NRS = (function (NRS, $, undefined) {
         //gets account id from passphrase client side, used only for login.
         var accountId;
         if (requestType === "getAccountId") {
-            accountId = NRS.getAccountId(data.secretPhrase);
+            // heri16@github.com: Support passing secretPhrase in HexString format
+            if (data.secretPhraseHex) accountId = NRS.getAccountId(data.secretPhraseHex, false, true);
+            else accountId = NRS.getAccountId(data.secretPhrase);
             NRS.sendRequest("getAccount", { account: accountId }, function(response) {
                 callback(response);
             });
             return;
         }
         //check to see if secretPhrase supplied matches logged in account, if not - show error.
-        if ("secretPhrase" in data) {
-            accountId = NRS.getAccountId(NRS.rememberPassword ? _password : data.secretPhrase);
+        if ("secretPhrase" in data || "secretPhraseHex" in data) {
+            // heri16@github.com: Support passing secretPhrase in HexString format
+            if (data.secretPhraseHex) accountId = NRS.getAccountId(NRS.rememberPassword ? _password : data.secretPhraseHex, false, true);
+            else accountId = NRS.getAccountId(NRS.rememberPassword ? _password : data.secretPhrase);
             if (accountId !== NRS.account && !data.calculateFee) {
                 callback({
                     "errorCode": 1,
@@ -239,7 +243,8 @@ var NRS = (function (NRS, $, undefined) {
             currentSubPage = NRS.currentSubPage;
         }
 
-        var httpMethod = (NRS.isRequirePost(requestType) || "secretPhrase" in data || "doNotSign" in data || "adminPassword" in data ? "POST" : "GET");
+        // heri16@github.com: Support passing secretPhrase in HexString format
+        var httpMethod = (NRS.isRequirePost(requestType) || "secretPhrase" in data || "secretPhraseHex" in data || "doNotSign" in data || "adminPassword" in data ? "POST" : "GET");
         if (httpMethod === "GET") {
             if (typeof data === "string") {
                 data += "&random=" + Math.random();
@@ -248,7 +253,8 @@ var NRS = (function (NRS, $, undefined) {
             }
         }
 
-        if ((NRS.isRequirePost(requestType) || "secretPhrase" in data) &&
+        // heri16@github.com: Support passing secretPhrase in HexString format
+        if ((NRS.isRequirePost(requestType) || "secretPhrase" in data || "secretPhraseHex" in data) &&
             NRS.isRequireBlockchain(requestType) && NRS.accountInfo.errorCode && NRS.accountInfo.errorCode === 5) {
             callback({
                 "errorCode": 2,
@@ -267,8 +273,10 @@ var NRS = (function (NRS, $, undefined) {
             }
         }
 
+        // heri16@github.com: Support passing secretPhrase in HexString format
         var secretPhrase = "";
-        var isVolatile = isVolatileRequest(data.doNotSign, httpMethod, requestType, data.secretPhrase);
+        var secretPhraseIsHex = false;
+        var isVolatile = isVolatileRequest(data.doNotSign, httpMethod, requestType, data.secretPhraseHex || data.secretPhrase);
         if (NRS.isScheduleRequest(requestType)) {
             data.adminPassword = NRS.getAdminPassword();
             if (!extra) {
@@ -287,15 +295,20 @@ var NRS = (function (NRS, $, undefined) {
             if (NRS.rememberPassword) {
                 secretPhrase = _password;
             } else {
-                secretPhrase = data.secretPhrase;
+                // heri16@github.com: Support passing secretPhrase in HexString format
+                secretPhraseIsHex = !!data.secretPhraseHex;
+                secretPhrase = data.secretPhraseHex || data.secretPhrase;
             }
 
+            // heri16@github.com: Support passing secretPhrase in HexString format
+            delete data.secretPhraseHex;
             delete data.secretPhrase;
 
             if (NRS.accountInfo && NRS.accountInfo.publicKey) {
                 data.publicKey = NRS.accountInfo.publicKey;
             } else if (!data.doNotSign && secretPhrase) {
-                data.publicKey = NRS.generatePublicKey(secretPhrase);
+                // heri16@github.com: Support passing secretPhrase in HexString format
+                data.publicKey = secretPhraseIsHex ? NRS.getPublicKey(secretPhrase) : NRS.generatePublicKey(secretPhrase);
                 NRS.accountInfo.publicKey = data.publicKey;
             }
             var ecBlock = NRS.getECBlock(NRS.isTestNet);
@@ -410,8 +423,9 @@ var NRS = (function (NRS, $, undefined) {
             }
             addAddressData(data);
             if (secretPhrase && response.unsignedTransactionBytes && !data.doNotSign && !response.errorCode && !response.error && !data.calculateFee)  {
-                var publicKey = NRS.generatePublicKey(secretPhrase);
-                var signature = NRS.signBytes(response.unsignedTransactionBytes, converters.stringToHexString(secretPhrase));
+                // heri16@github.com: Support passing secretPhrase in HexString format
+                var publicKey = secretPhraseIsHex ? NRS.getPublicKey(secretPhrase) : NRS.generatePublicKey(secretPhrase);
+                var signature = NRS.signBytes(response.unsignedTransactionBytes, secretPhraseIsHex ? secretPhrase : converters.stringToHexString(secretPhrase));
 
                 if (!NRS.verifySignature(signature, response.unsignedTransactionBytes, publicKey, callback)) {
                     return;

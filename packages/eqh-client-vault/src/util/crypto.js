@@ -71,13 +71,41 @@ const getRandomInt = (min, max) => {
   return min + (byteArray[0] % r)
 }
 
-const unwrapSecretPhrase = (
-  secretPinBytes,
-  { format, key, keyAlgo, unwrapParams, deriveParams },
+const wrapSecretPhrase = (
+  secretPinUint8,
+  secretPhraseUint8,
+  { format, keyAlgo, wrapParams, deriveParams },
 ) => {
   const subtle = getCryptoSubtle()
 
-  const secretPinUint8 = Uint8Array.from(secretPinBytes)
+  // Convert the secretPhrase into a native CryptoKey
+  return subtle.importKey('raw', secretPhraseUint8, keyAlgo, true, ['encrypt', 'decrypt'])
+    .then(secretPhraseCryptoKey => (
+      // Convert the Pin into a native CryptoKey
+      subtle.importKey('raw', secretPinUint8, 'PBKDF2', false, ['deriveKey']).then(weakKey => (
+        // Strengthen the Pin CryptoKey by using PBKDF2
+        subtle.deriveKey(deriveParams, weakKey, keyAlgo, false, ['encrypt', 'wrapKey'])
+      )).then(strongKey => (
+        // Use the Strengthened CryptoKey to wrap the secretPhrase CryptoKey
+        subtle.wrapKey(format, secretPhraseCryptoKey, strongKey, wrapParams)
+      )).then(secretPhraseJwk => [
+        secretPhraseCryptoKey,
+        {
+          format,
+          key: secretPhraseJwk,
+          keyAlgo,
+          unwrapParams: wrapParams,
+          deriveParams,
+        },
+      ])
+    ))
+}
+
+const unwrapSecretPhrase = (
+  secretPinUint8,
+  { format, key, keyAlgo, unwrapParams, deriveParams },
+) => {
+  const subtle = getCryptoSubtle()
 
   // Convert the Pin into a native CryptoKey
   return subtle.importKey('raw', secretPinUint8, 'PBKDF2', false, ['deriveKey'])
@@ -97,8 +125,10 @@ const unwrapSecretPhrase = (
 }
 
 module.exports = {
+  get crypto() { return getCrypto() },
+  get subtle() { return getCryptoSubtle() },
   secureRandom,
   getRandomInt,
-  getCryptoSubtle,
+  wrapSecretPhrase,
   unwrapSecretPhrase,
 }

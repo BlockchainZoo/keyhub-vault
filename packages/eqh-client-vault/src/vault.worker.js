@@ -2,9 +2,7 @@
 const wordlistEnEff = require('diceware-wordlist-en-eff')
 const dicewareGen = require('./diceware-generator')
 const { callOnStore } = require('./util/indexeddb')
-const { secureRandom, getCryptoSubtle, unwrapSecretPhrase } = require('./util/crypto')
-
-const subtle = getCryptoSubtle()
+const { secureRandom, subtle, wrapSecretPhrase, unwrapSecretPhrase } = require('./util/crypto')
 
 const { NrsBridge } = require('./js/nrs.cheerio.bridge')
 
@@ -13,10 +11,12 @@ const converters = require('./js/util/converters')
 
 const nxtConfig = require('./conf/nxt.json')
 
+console.log('Loading NRS-bridge...') // eslint-disable-line no-console
+
 const bridge = new NrsBridge(nxtConfig)
 
 bridge.load((NRS) => {
-  console.log('NRS-bridge ready') // eslint-disable-line no-console
+  console.log('Loaded NRS-bridge.') // eslint-disable-line no-console
 
   const fixTxNumberFormat = ({ assetId, decimals, quantity, price, amount, ...txData }) => {
     /* eslint-disable no-param-reassign */
@@ -107,32 +107,30 @@ bridge.load((NRS) => {
         iv: secureRandom(12, { type: 'Uint8Array' }).buffer,
       })
 
+      const opts = {
+        format: 'jwk',
+        keyAlgo,
+        deriveParams,
+        wrapParams,
+      }
+
+      // Hash the user's passphrase to get the secretPhrase
       subtle.digest({ name: `SHA-${keyAlgo.length}` }, passphraseUint8).then(secretPhraseBuffer => (
-        // Convert teh secretPhrase into a native CryptoKey
-        subtle.importKey('raw', secretPhraseBuffer, keyAlgo, true, ['encrypt', 'decrypt'])
-      )).then(secretPhraseCryptoKey => (
-        // Convert the Pin into a native CryptoKey
-        subtle.importKey('raw', secretPinUint8, 'PBKDF2', false, ['deriveKey']).then(weakKey => (
-          // Strengthen the Pin CryptoKey by using PBKDF2
-          subtle.deriveKey(deriveParams, weakKey, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'wrapKey'])
-        )).then(strongKey => (
-          // Use the Strengthened CryptoKey to wrap the secretPhrase CryptoKey
-          subtle.wrapKey('jwk', secretPhraseCryptoKey, strongKey, wrapParams)
-        )).then(secretPhraseJwk => (
-          // Retreive the secretPhrase as a HexString
-          subtle.exportKey('raw', secretPhraseCryptoKey)
-            .then((secretPhraseBuffer) => {
-              const secretPhraseHex = converters.byteArrayToHexString(
-                Array.from(new Uint8Array(secretPhraseBuffer))
-              )
-              return [secretPhraseHex, secretPhraseJwk]
-            })
-        ))
-      )).then(([secretPhraseHex, secretPhraseJwk]) => {
-        // secretPhraseHex is the sha256 hash of the user's passphrase
+        wrapSecretPhrase(secretPinUint8, secretPhraseBuffer, opts)
+      )).then(([secretPhraseCryptoKey, secretPhraseObj]) => (
+        // Retrieve the secretPhrase as a HexString
+        subtle.exportKey('raw', secretPhraseCryptoKey)
+          .then((secretPhraseBuffer) => {
+            const secretPhraseHex = converters.byteArrayToHexString(
+              Array.from(new Uint8Array(secretPhraseBuffer))
+            )
+            return [secretPhraseHex, secretPhraseObj]
+          })
+      )).then(([secretPhraseHex, secretPhraseObj]) => {
         // secretPhraseHex is the real secretPhrase used to sign transactions
         // secretPhraseJwk is the encrypted secretPhrase in 'jwk' format
-        const publicKey = NRS.generatePublicKey(secretPhraseHex)
+        // const publicKey = NRS.generatePublicKey(secretPhraseHex)
+        const publicKey = NRS.getPublicKey(secretPhraseHex)
         const accountId = NRS.getAccountIdFromPublicKey(publicKey)
         const accountRS = NRS.convertNumericToRSAccountFormat(accountId)
 
@@ -148,13 +146,7 @@ bridge.load((NRS) => {
             accountNo,
             address,
             publicKey,
-            secretPhrase: {
-              format: 'jwk',
-              key: secretPhraseJwk,
-              keyAlgo,
-              deriveParams,
-              unwrapParams: wrapParams,
-            },
+            secretPhrase: secretPhraseObj,
             createdAt,
             lastUsedAt: null,
           })
@@ -174,6 +166,7 @@ bridge.load((NRS) => {
       if (typeof txData !== 'object') throw new Error('txData is not an object')
 
       const secretPinBytes = converters.stringToByteArray(secretPin)
+      const secretPinUint8 = Uint8Array.from(secretPinBytes)
 
       // Get account from  browser's indexedDB
       const dbKey = address
@@ -189,7 +182,7 @@ bridge.load((NRS) => {
           // TODO: Update the lastUsedAt timestamp
 
           // Unwrap the wrapped secretPhrase object
-          unwrapSecretPhrase(secretPinBytes, secretPhraseObj)
+          unwrapSecretPhrase(secretPinUint8, secretPhraseObj)
             .then(secretPhraseUint8 => converters.byteArrayToHexString(
               Array.from(secretPhraseUint8)
             ))
@@ -198,7 +191,7 @@ bridge.load((NRS) => {
               const data = {
                 ...fixTxNumberFormat(txData),
                 broadcast: 'false',
-                secretPhrase: secretPhraseHex,
+                secretPhraseHex,
                 ...NRS.getMandatoryParams(),
               }
               // Use NRS bridge to sign the transaction data
@@ -221,7 +214,9 @@ bridge.load((NRS) => {
       if (typeof message !== 'string') throw new Error('message is not a string')
 
       const secretPinBytes = converters.stringToByteArray(secretPin)
-      const messageBytes = converters.stringToByteArray(message)
+      const secretPinUint8 = Uint8Array.from(secretPinBytes)
+
+      const messageHex = converters.stringToHexString(message)
 
       // Get account from  browser's indexedDB
       const dbKey = address
@@ -237,14 +232,14 @@ bridge.load((NRS) => {
           // TODO: Update the lastUsedAt timestamp
 
           // Unwrap the wrapped secretPhrase object
-          unwrapSecretPhrase(secretPinBytes, secretPhraseObj)
+          unwrapSecretPhrase(secretPinUint8, secretPhraseObj)
             .then(secretPhraseUint8 => converters.byteArrayToHexString(
               Array.from(secretPhraseUint8)
             ))
             .then((secretPhraseHex) => {
               const signature = NRS.signBytes(
-                messageBytes,
-                converters.stringToHexString(secretPhraseHex),
+                messageHex,
+                secretPhraseHex,
               )
               callback(null, { signature })
             })
