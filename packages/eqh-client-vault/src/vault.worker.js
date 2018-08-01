@@ -18,13 +18,25 @@ const bridge = new NrsBridge(nxtConfig)
 bridge.load((NRS) => {
   console.log('Loaded NRS-bridge.') // eslint-disable-line no-console
 
-  const fixTxNumberFormat = ({ assetId, decimals, quantity, price, amount, ...txData }) => {
+  const fixTxNumberFormat = ({
+    accountRS,
+    recipientRS,
+    assetId,
+    amount,
+    decimals,
+    quantity,
+    price,
+    ...txData
+  }) => {
     /* eslint-disable no-param-reassign */
+    if (amount !== undefined) txData.amountNQT = NRS.convertToNQT(amount)
     if (decimals !== undefined) {
       if (quantity) txData.quantityQNT = NRS.convertToQNT(quantity, decimals)
       if (price) txData.priceNQT = NRS.calculatePricePerWholeQNT(NRS.convertToNQT(price), decimals)
     }
-    if (amount !== undefined) txData.amountNQT = NRS.convertToNQT(amount)
+
+    if (recipientRS) txData.recipient = NRS.convertRSToNumericAccountFormat(recipientRS)
+    if (accountRS) txData.account = NRS.convertRSToNumericAccountFormat(accountRS)
     if (assetId !== undefined) txData.asset = assetId
 
     return txData
