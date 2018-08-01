@@ -452,6 +452,16 @@ NRS.constants.SERVER = {
           "canHaveRecipient": true,
           "type": 0,
           "isPhasingSafe": true
+        },
+        // heri16@github.com : Add sendReserve txType
+        "1": {
+          "isPhasable": true,
+          "subtype": 1,
+          "mustHaveRecipient": true,
+          "name": "ReservePayment",
+          "canHaveRecipient": true,
+          "type": 0,
+          "isPhasingSafe": true
         }
       }
     },
@@ -1702,6 +1712,15 @@ NRS.constants.SERVER = {
       "enabled": true
     },
     "sendMoney": {
+      "allowRequiredBlockParameters": false,
+      "requireFullClient": false,
+      "requirePassword": false,
+      "requireBlockchain": true,
+      "requirePost": true,
+      "enabled": true
+    },
+    // heri16@github.com : Add sendReserve requestType
+    "sendReserve": {
       "allowRequiredBlockParameters": false,
       "requireFullClient": false,
       "requirePassword": false,
