@@ -620,7 +620,8 @@ var NRS = (function (NRS, $, undefined) {
         var pos;
         if (transaction.version > 0) {
             //has empty attachment, so no attachmentVersion byte...
-            if (requestType === "sendMoney" || requestType === "sendMessage") {
+            // heri16@github.com : Add sendReserve requestType
+            if (requestType === "sendMoney" || requestType === "sendReserve" || requestType === "sendMessage") {
                 pos = 176;
             } else {
                 pos = 177;
@@ -638,6 +639,12 @@ var NRS = (function (NRS, $, undefined) {
         switch (requestType) {
             case "sendMoney":
                 if (transaction.type !== 0 || transaction.subtype !== 0) {
+                    return false;
+                }
+                break;
+            // heri16@github.com : Add sendReserve requestType
+            case "sendReserve":
+                if (transaction.type !== 0 || transaction.subtype !== 1) {
                     return false;
                 }
                 break;
