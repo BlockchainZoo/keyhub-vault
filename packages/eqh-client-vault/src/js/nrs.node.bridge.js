@@ -35,7 +35,7 @@ exports.load = (callback) => {
     // jsdom is necessary to define the window object on which jquery relies
     const { window } = new JSDOM()
 
-    console.log('Initializing NRS-client...')
+    // console.log('Initializing NRS-bridge...')
 
     // Load the necessary node modules and assign them to the global scope
     // the NXT client wasn't designed with modularity in mind therefore we need
