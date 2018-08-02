@@ -2,7 +2,7 @@
 const wordlistEnEff = require('diceware-wordlist-en-eff')
 const dicewareGen = require('./diceware-generator')
 const { callOnStore } = require('./util/indexeddb')
-const { secureRandom, subtle, wrapSecretPhrase, unwrapSecretPhrase } = require('./util/crypto')
+const { secureRandom, subtle, safeObj, wrapSecretPhrase, unwrapSecretPhrase } = require('./util/crypto')
 
 const { NrsBridge } = require('./js/nrs.cheerio.bridge')
 
@@ -42,7 +42,7 @@ bridge.load((NRS) => {
     return txData
   }
 
-  const methods = Object.assign(Object.create(null), {
+  const methods = safeObj({
     configure: (config, callback) => {
       if (typeof config !== 'object') throw new Error('config is not an object')
       if (config.address !== undefined) {
@@ -102,34 +102,37 @@ bridge.load((NRS) => {
 
       const platform = 'EQH'
 
-      const keyAlgo = {
+      const keyAlgo = safeObj({
         name: 'AES-GCM',
         length: 256,
-      }
+      })
 
-      const deriveParams = Object.assign(Object.create(null), {
+      const deriveParams = safeObj({
         name: 'PBKDF2',
-        hash: 'SHA-256',
+        hash: 'SHA-384', // Note: Non-truncated SHA is vulnerable to length extension attack (e.g. sha256 & sha512)
         salt: secureRandom(16, { type: 'Uint8Array' }).buffer,
         iterations: 1e6,
       })
 
-      const wrapParams = Object.assign(Object.create(null), {
+      const wrapParams = safeObj({
         name: 'AES-GCM',
         iv: secureRandom(12, { type: 'Uint8Array' }).buffer,
       })
 
-      const opts = {
+      const opts = safeObj({
         format: 'jwk',
         keyAlgo,
         deriveParams,
         wrapParams,
-      }
+      })
 
       // Hash the user's passphrase to get the secretPhrase
-      subtle.digest({ name: `SHA-${keyAlgo.length}` }, passphraseUint8).then(secretPhraseBuffer => (
-        wrapSecretPhrase(secretPinUint8, secretPhraseBuffer, opts)
-      )).then(([secretPhraseCryptoKey, secretPhraseObj]) => (
+      subtle.digest({ name: 'SHA-384' }, passphraseUint8).then((secretPhraseBuffer) => {
+        // Note: Non-truncated SHA is vulnerable to length extension attack (e.g. sha256 & sha512)
+        // We use a longer hash here and truncate to desired AES keySize
+        const secretPhraseUint8 = new Uint8Array(secretPhraseBuffer, 0, keyAlgo.length / 8)
+        return wrapSecretPhrase(secretPinUint8, secretPhraseUint8, opts)
+      }).then(([secretPhraseCryptoKey, secretPhraseObj]) => (
         // Retrieve the secretPhrase as a HexString
         subtle.exportKey('raw', secretPhraseCryptoKey)
           .then((secretPhraseBuffer) => {
@@ -200,12 +203,12 @@ bridge.load((NRS) => {
             ))
             .then((secretPhraseHex) => {
               // secretPhraseHex is the sha256 hash of the user's passphrase
-              const data = {
+              const data = safeObj({
                 ...fixTxNumberFormat(txData),
                 broadcast: 'false',
                 secretPhraseHex,
                 ...NRS.getMandatoryParams(),
-              }
+              })
               // Use NRS bridge to sign the transaction data
               NRS.sendRequest(txType, data, (res) => {
                 const { errorCode, errorDescription, transactionJSON, transactionBytes } = res

@@ -82,7 +82,7 @@ const wrapSecretPhrase = (
   return subtle.importKey('raw', secretPhraseUint8, keyAlgo, true, ['encrypt', 'decrypt'])
     .then(secretPhraseCryptoKey => (
       // Convert the Pin into a native CryptoKey
-      subtle.importKey('raw', secretPinUint8, 'PBKDF2', false, ['deriveKey']).then(weakKey => (
+      subtle.importKey('raw', secretPinUint8, deriveParams.name, false, ['deriveKey']).then(weakKey => (
         // Strengthen the Pin CryptoKey by using PBKDF2
         subtle.deriveKey(deriveParams, weakKey, keyAlgo, false, ['encrypt', 'wrapKey'])
       )).then(strongKey => (
@@ -108,10 +108,10 @@ const unwrapSecretPhrase = (
   const subtle = getCryptoSubtle()
 
   // Convert the Pin into a native CryptoKey
-  return subtle.importKey('raw', secretPinUint8, 'PBKDF2', false, ['deriveKey'])
+  return subtle.importKey('raw', secretPinUint8, deriveParams.name, false, ['deriveKey'])
     .then(weakKey => (
       // Strengthen the Pin CryptoKey by using PBKDF2
-      subtle.deriveKey(deriveParams, weakKey, { name: 'AES-GCM', length: 256 }, false, ['decrypt', 'unwrapKey'])
+      subtle.deriveKey(deriveParams, weakKey, keyAlgo, false, ['decrypt', 'unwrapKey'])
     ))
     .then(strongKey => (
       // Use the Strengthened CryptoKey to unwrap the secretPhrase CryptoKey
@@ -124,6 +124,8 @@ const unwrapSecretPhrase = (
     .then(secretPhraseArrayBuffer => new Uint8Array(secretPhraseArrayBuffer))
 }
 
+const safeObj = obj => Object.assign(Object.create(null), obj)
+
 module.exports = {
   get crypto() { return getCrypto() },
   get subtle() { return getCryptoSubtle() },
@@ -131,4 +133,5 @@ module.exports = {
   getRandomInt,
   wrapSecretPhrase,
   unwrapSecretPhrase,
+  safeObj,
 }

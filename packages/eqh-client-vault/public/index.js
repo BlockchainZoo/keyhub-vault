@@ -1,7 +1,7 @@
 'use strict'
 
 const openpgpURL = './js/openpgp.worker.bundle.js'
-const openpgpSRI = 'sha512-z3XKhRza4Rjp0AFLiYK6c4laL5jTzB22LbM+QWTkr21j53MsiHS33GlzuzaVxnExWhGSZdYcAFGjaPaVbcAASA=='
+const openpgpSRI = 'sha384-FOhMU3wjaE3eT5B6TIzi1LyTEdGWVmndJuxyQfMqEBpqYQYByN6C0dfHF2GM1k3c'
 
 const scriptURL = './js/main.bundle.js'
 const scriptSignatureURL = './js/main.bundle.js.sig.asc'

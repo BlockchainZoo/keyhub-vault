@@ -57,12 +57,17 @@ openpgp.generateKey(options)
 // eslint-disable-next-line import/no-extraneous-dependencies
 const ssri = require('ssri')
 
-ssri.fromStream(fs.createReadStream('dist/js/openpgp.worker.bundle.js'))
+ssri.fromStream(fs.createReadStream('dist/js/openpgp.worker.bundle.js'), { algorithms: ['sha384'] })
   .then((sri) => {
     console.log('sri of dist/js/openpgp.worker.bundle.js:', sri.toString()) // eslint-disable-line no-console
   })
 
-ssri.fromStream(fs.createReadStream('public/index.js'))
+ssri.fromStream(fs.createReadStream('public/index.js'), { algorithms: ['sha384'] })
   .then((sri) => {
     console.log('sri of public/index.js:', sri.toString()) // eslint-disable-line no-console
+  })
+
+ssri.fromStream(fs.createReadStream('public/css/main.css'), { algorithms: ['sha384'] })
+  .then((sri) => {
+    console.log('sri of public/css/main.css:', sri.toString()) // eslint-disable-line no-console
   })
