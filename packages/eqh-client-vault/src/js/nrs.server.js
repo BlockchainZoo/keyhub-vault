@@ -547,6 +547,16 @@ var NRS = (function (NRS, $, undefined) {
         if (data.broadcast === "false" && !isSchedule) {
             response.transactionBytes = payload;
             response.transactionJSON.signature = signature;
+
+            // heri16@github.com: Add fullHash to response
+            var signatureByteArray = converters.hexStringToByteArray(signature);
+            var sha256 = CryptoJS.algo.SHA256.create();
+            sha256.update(converters.byteArrayToWordArray(byteArray));
+            sha256.update(CryptoJS.SHA256(converters.byteArrayToWordArray(signatureByteArray)));
+            var hashWords = sha256.finalize();
+            var hashByteArray = converters.wordArrayToByteArrayImpl(hashWords, false);
+            response.fullHash = converters.byteArrayToHexString(hashByteArray);
+
             if (!isNode) NRS.showRawTransactionModal(response);
             callback(response);
         } else {

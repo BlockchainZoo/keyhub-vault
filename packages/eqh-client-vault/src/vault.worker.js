@@ -211,11 +211,18 @@ bridge.load((NRS) => {
               })
               // Use NRS bridge to sign the transaction data
               NRS.sendRequest(txType, data, (res) => {
-                const { errorCode, errorDescription, transactionJSON, transactionBytes } = res
+                const {
+                  errorCode,
+                  errorDescription,
+                  transactionJSON,
+                  transactionBytes,
+                  fullHash,
+                } = res
                 if (errorCode) callback(new Error(errorDescription))
                 callback(null, {
                   transactionJSON,
                   transactionBytes,
+                  transactionFullHash: fullHash,
                 })
               })
             })

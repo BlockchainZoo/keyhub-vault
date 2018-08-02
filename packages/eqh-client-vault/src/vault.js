@@ -263,9 +263,9 @@ export default function loadVault(window, document, mainElement) {
           worker.onmessage = resolve
           worker.onerror = reject
           worker.postMessage(['signTransaction', address, pin, tx.type, tx.data])
-        }).then(({ data: { error, transactionJSON, transactionBytes } }) => {
+        }).then(({ data: { error, transactionJSON, transactionBytes, transactionFullHash } }) => {
           if (error) throw new Error(error)
-          return { transactionJSON, transactionBytes }
+          return { transactionJSON, transactionBytes, transactionFullHash }
         })
       })
     })
@@ -349,14 +349,14 @@ export default function loadVault(window, document, mainElement) {
 
         // Trigger C: App wants to sign transaction
         // Input: { action: 'signTx', params: [ 'EQH', 'EQH-xxx-xxx-xxx-xxx', tx ] }
-        // Output: { transactionBytes, transactionJSON }
+        // Output: { transactionBytes, transactionJSON, transactionFullHash }
         if (action === 'signTx' && params) {
           const [platform, address, tx] = params
 
           return showTxDetailScreen(tx, platform, address)
-            .then(({ transactionBytes, transactionJSON }) => (
+            .then(({ transactionBytes, transactionJSON, transactionFullHash }) => (
               // callback to the parent window once signed data is available
-              callback(null, { transactionBytes, transactionJSON })
+              callback(null, { transactionBytes, transactionJSON, transactionFullHash })
             ))
             .then(() => new Promise((resolve, reject) => {
               const message = 'Transaction Signed. Thank you for using Keyhub soft wallet. You will be returned to the main application.'
