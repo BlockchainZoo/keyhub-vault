@@ -52,7 +52,7 @@ exports.addSecurityHeaders = function (event, context, callback) {
     // Disallow loading of dangerous external scripts and resources
     headers['content-security-policy'] = [{
       key: 'Content-Security-Policy',
-      value: "default-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; manifest-src 'self'; style-src 'self'; img-src 'self'; media-src 'self'; font-src 'self'; worker-src blob: data:; child-src blob: data:; script-src 'self' blob:; connect-src 'self' https://nxt1.vault.keyhub.app",
+      value: "sandbox allow-same-origin allow-modals allow-scripts; default-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; manifest-src 'self'; style-src 'self'; img-src 'self'; media-src 'self'; font-src 'self'; frame-src 'none'; worker-src blob: data:; child-src blob: data:; script-src 'self' blob: 'sha384-rPMBYwDhb6zrv3/mO71SlMxpVbRnWUX4Brw4sLnlTGd3OcEFZjcRHS0L2yTUHq4Q' 'strict-dynamic'; connect-src 'self' https://nxt1.vault.keyhub.app; require-sri-for script style",
     }];
   }
 
