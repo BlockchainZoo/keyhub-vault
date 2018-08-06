@@ -12,7 +12,7 @@ const callOnStore = (storeName, fn, window = window || self) => { // eslint-disa
   // Create the schema
   open.onupgradeneeded = () => {
     const db = open.result
-    db.createObjectStore(storeName, { keyPath: 'id' })
+    db.objectStoreNames.contains(storeName) ? null : db.createObjectStore(storeName, { keyPath: 'id' })
     // const store = db.createObjectStore(storeName, { keyPath: 'id' })
     // const index = store.createIndex('NameIndex', ['name.last', 'name.first'])
   }
