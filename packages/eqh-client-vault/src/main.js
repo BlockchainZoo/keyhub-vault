@@ -2,11 +2,12 @@ import { safeHtml } from 'common-tags'
 
 import loadVault from './vault'
 
-const vars = {
-  mainDiv: 'main',
-}
+const window = window // eslint-disable-line
+const document = document // eslint-disable-line
 
-const htmlTemplate = (safeHtml`
+const mainDivId = 'main'
+
+const htmlTemplate = safeHtml`
 <div class="free-background">&nbsp;</div>
 
 <header>
@@ -18,32 +19,26 @@ const htmlTemplate = (safeHtml`
 
   </header>
 
-  <div id="${vars.mainDiv}"></div>
+  <div id="${mainDivId}"></div>
 
   <footer>
     <div class="text-center">
       &copy; Blockchainzoo 2018
     </div>
   </footer>
-`)
+`
 
-// eslint-disable-next-line no-undef
-document.title = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
-  ? 'Keyhub Offline Vault'
-  : 'Keyhub Web Vault'
+const isLocalhost =
+  window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+document.title = isLocalhost ? 'Keyhub Offline Vault' : 'Keyhub Web Vault'
 
-// eslint-disable-next-line no-undef
 const link = document.createElement('link')
 link.type = 'text/css'
 link.rel = 'stylesheet'
 link.href = './css/main.css'
-// eslint-disable-next-line no-undef
 document.head.appendChild(link)
 
-// eslint-disable-next-line no-undef
 document.getElementById('body').innerHTML = htmlTemplate
 
-// eslint-disable-next-line no-undef
-const mainElement = document.getElementById(vars.mainDiv)
-// eslint-disable-next-line no-undef
+const mainElement = document.getElementById(mainDivId)
 loadVault(window, document, mainElement)

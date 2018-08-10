@@ -1,10 +1,14 @@
+'use strict'
 
-const callOnStore = (storeName, fn, window = window || self) => { // eslint-disable-line
+// eslint-disable-next-line
+const callOnStore = (storeName, fn, window = window || self) => {
   // This works on all devices/browsers, and uses IndexedDBShim as a final fallback
-  const indexedDB = (
-    window.indexedDB || window.mozIndexedDB || window.webkitIndexedDB
-    || window.msIndexedDB || window.shimIndexedDB
-  )
+  const indexedDB =
+    window.indexedDB ||
+    window.mozIndexedDB ||
+    window.webkitIndexedDB ||
+    window.msIndexedDB ||
+    window.shimIndexedDB
 
   // Open (or create) the database
   const open = indexedDB.open('vaultdb', 1)
@@ -12,9 +16,8 @@ const callOnStore = (storeName, fn, window = window || self) => { // eslint-disa
   // Create the schema
   open.onupgradeneeded = () => {
     const db = open.result
-    db.objectStoreNames.contains(storeName) ? null : db.createObjectStore(storeName, { keyPath: 'id' })
-    // const store = db.createObjectStore(storeName, { keyPath: 'id' })
-    // const index = store.createIndex('NameIndex', ['name.last', 'name.first'])
+    const store = db.createObjectStore(storeName, { keyPath: 'id' })
+    store.createIndex('addressIndex', ['platform', 'address'])
   }
 
   open.onsuccess = () => {
@@ -24,7 +27,7 @@ const callOnStore = (storeName, fn, window = window || self) => { // eslint-disa
     const store = tx.objectStore(storeName)
 
     // Close the db when the transaction errors
-    tx.onerror = (error) => {
+    tx.onerror = error => {
       db.close()
       throw error
     }
@@ -37,7 +40,7 @@ const callOnStore = (storeName, fn, window = window || self) => { // eslint-disa
     }
   }
 
-  open.onerror = (error) => {
+  open.onerror = error => {
     throw error
   }
 }

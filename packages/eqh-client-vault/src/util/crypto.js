@@ -1,3 +1,5 @@
+'use strict'
+
 const nodeRandom = (count, options, crypto) => {
   const buf = crypto.randomBytes(count)
 
@@ -9,14 +11,18 @@ const nodeRandom = (count, options, crypto) => {
       return buf
     case 'Uint8Array':
       arr = new Uint8Array(count)
-      for (let i = 0; i < count; i += 1) { arr[i] = buf.readUInt8(i) }
+      for (let i = 0; i < count; i += 1) {
+        arr[i] = buf.readUInt8(i)
+      }
       return arr
     default:
       throw new Error(`${options.type} is unsupported.`)
   }
 }
 
-const browserRandom = (count, options, window = window || self) => { // eslint-disable-line
+// eslint-disable-next-line
+const browserRandom = (count, options, window = window || self) => {
+  // eslint-disable-line
   const nativeArr = new Uint8Array(count)
   const crypto = window.crypto || window.msCrypto
   crypto.getRandomValues(nativeArr)
@@ -25,7 +31,13 @@ const browserRandom = (count, options, window = window || self) => { // eslint-d
     case 'Array':
       return [].slice.call(nativeArr)
     case 'Buffer':
-      try { Buffer.alloc(1) } catch (e) { throw new Error('Buffer not supported in this environment. Use Node.js or Browserify for browser support.') }
+      try {
+        Buffer.alloc(1)
+      } catch (e) {
+        throw new Error(
+          'Buffer not supported in this environment. Use Node.js or Browserify for browser support.'
+        )
+      }
       return Buffer.from(nativeArr)
     case 'Uint8Array':
       return nativeArr
@@ -34,9 +46,15 @@ const browserRandom = (count, options, window = window || self) => { // eslint-d
   }
 }
 
-const secureRandom = (count, options = { type: 'Array' }, window = window || self) => { // eslint-disable-line
+// eslint-disable-next-line
+const secureRandom = (count, options = { type: 'Array' }, window = window || self) => {
+  // eslint-disable-line
   // we check for process.pid to prevent browserify from tricking us
-  if (process.env.APP_ENV !== 'browser' && typeof process !== 'undefined' && typeof process.pid === 'number') {
+  if (
+    process.env.APP_ENV !== 'browser' &&
+    typeof process !== 'undefined' &&
+    typeof process.pid === 'number'
+  ) {
     const crypto = require('crypto') // eslint-disable-line global-require
     return nodeRandom(count, options, crypto)
   }
@@ -46,9 +64,15 @@ const secureRandom = (count, options = { type: 'Array' }, window = window || sel
   return browserRandom(count, options)
 }
 
-const getCrypto = (window = window || self) => { // eslint-disable-line
+// eslint-disable-next-line
+const getCrypto = (window = window || self) => {
+  // eslint-disable-line
   // we check for process.pid to prevent browserify from tricking us
-  if (process.env.APP_ENV !== 'browser' && typeof process !== 'undefined' && typeof process.pid === 'number') {
+  if (
+    process.env.APP_ENV !== 'browser' &&
+    typeof process !== 'undefined' &&
+    typeof process.pid === 'number'
+  ) {
     return require('crypto') // eslint-disable-line global-require
   }
 
@@ -57,7 +81,8 @@ const getCrypto = (window = window || self) => { // eslint-disable-line
   return crypto
 }
 
-const getCryptoSubtle = (window = window || self) => { // eslint-disable-line
+// eslint-disable-next-line
+const getCryptoSubtle = (window = window || self) => {
   const crypto = getCrypto(window)
   return crypto.webkitSubtle || crypto.subtle
 }
@@ -74,61 +99,71 @@ const getRandomInt = (min, max) => {
 const wrapSecretPhrase = (
   secretPinUint8,
   secretPhraseUint8,
-  { format, keyAlgo, wrapParams, deriveParams },
+  { format, keyAlgo, wrapParams, deriveParams }
 ) => {
   const subtle = getCryptoSubtle()
 
   // Convert the secretPhrase into a native CryptoKey
-  return subtle.importKey('raw', secretPhraseUint8, keyAlgo, true, ['encrypt', 'decrypt'])
-    .then(secretPhraseCryptoKey => (
+  return subtle
+    .importKey('raw', secretPhraseUint8, keyAlgo, true, ['encrypt', 'decrypt'])
+    .then(secretPhraseCryptoKey =>
       // Convert the Pin into a native CryptoKey
-      subtle.importKey('raw', secretPinUint8, deriveParams.name, false, ['deriveKey']).then(weakKey => (
-        // Strengthen the Pin CryptoKey by using PBKDF2
-        subtle.deriveKey(deriveParams, weakKey, keyAlgo, false, ['encrypt', 'wrapKey'])
-      )).then(strongKey => (
-        // Use the Strengthened CryptoKey to wrap the secretPhrase CryptoKey
-        subtle.wrapKey(format, secretPhraseCryptoKey, strongKey, wrapParams)
-      )).then(secretPhraseJwk => [
-        secretPhraseCryptoKey,
-        {
-          format,
-          key: secretPhraseJwk,
-          keyAlgo,
-          unwrapParams: wrapParams,
-          deriveParams,
-        },
-      ])
-    ))
+      subtle
+        .importKey('raw', secretPinUint8, deriveParams.name, false, ['deriveKey'])
+        .then(weakKey =>
+          // Strengthen the Pin CryptoKey by using PBKDF2
+          subtle.deriveKey(deriveParams, weakKey, keyAlgo, false, ['encrypt', 'wrapKey'])
+        )
+        .then(strongKey =>
+          // Use the Strengthened CryptoKey to wrap the secretPhrase CryptoKey
+          subtle.wrapKey(format, secretPhraseCryptoKey, strongKey, wrapParams)
+        )
+        .then(secretPhraseJwk => [
+          secretPhraseCryptoKey,
+          {
+            format,
+            key: secretPhraseJwk,
+            keyAlgo,
+            unwrapParams: wrapParams,
+            deriveParams,
+          },
+        ])
+    )
 }
 
 const unwrapSecretPhrase = (
   secretPinUint8,
-  { format, key, keyAlgo, unwrapParams, deriveParams },
+  { format, key, keyAlgo, unwrapParams, deriveParams }
 ) => {
   const subtle = getCryptoSubtle()
 
   // Convert the Pin into a native CryptoKey
-  return subtle.importKey('raw', secretPinUint8, deriveParams.name, false, ['deriveKey'])
-    .then(weakKey => (
+  return subtle
+    .importKey('raw', secretPinUint8, deriveParams.name, false, ['deriveKey'])
+    .then(weakKey =>
       // Strengthen the Pin CryptoKey by using PBKDF2
       subtle.deriveKey(deriveParams, weakKey, keyAlgo, false, ['decrypt', 'unwrapKey'])
-    ))
-    .then(strongKey => (
+    )
+    .then(strongKey =>
       // Use the Strengthened CryptoKey to unwrap the secretPhrase CryptoKey
       subtle.unwrapKey(format, key, strongKey, unwrapParams, keyAlgo, true, ['encrypt', 'decrypt'])
-    ))
-    .then(secretPhraseCryptoKey => (
+    )
+    .then(secretPhraseCryptoKey =>
       // Retrieve the secretPhrase as an ArrayBuffer
       subtle.exportKey('raw', secretPhraseCryptoKey)
-    ))
+    )
     .then(secretPhraseArrayBuffer => new Uint8Array(secretPhraseArrayBuffer))
 }
 
 const safeObj = obj => Object.assign(Object.create(null), obj)
 
 module.exports = {
-  get crypto() { return getCrypto() },
-  get subtle() { return getCryptoSubtle() },
+  get crypto() {
+    return getCrypto()
+  },
+  get subtle() {
+    return getCryptoSubtle()
+  },
   secureRandom,
   getRandomInt,
   wrapSecretPhrase,

@@ -1,10 +1,10 @@
 import { safeHtml } from 'common-tags'
 
-export default function createElement(document, title, message, callback) {
+export default function createElement(document, message, callback) {
   const div = document.createElement('div')
   div.innerHTML = safeHtml`<div class="card">
-  <div class="card-header text-center bg-danger text-white">
-      <h4><i class="fas fa-check-square"></i> ${title}</h4>
+  <div class="card-header text-center bg-success text-white">
+      <h4><i class="fas fa-check-square"></i> Thank You!</h4>
   </div>
   <div class="card-body">
       <p>${message}</p>

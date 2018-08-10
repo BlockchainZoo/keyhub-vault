@@ -15,7 +15,8 @@ const validatePassphrase = (passphrase, passphraseInput, passphraseAlert) => {
     }
 
     passphraseInput.classList.add('is-invalid')
-    passphraseAlert.innerHTML = 'Invalid passphrase! Please check your input or generate a new passphrase...'
+    passphraseAlert.innerHTML =
+      'Invalid passphrase! Please check your input or generate a new passphrase...'
     passphraseAlert.classList.add('invalid-feedback', 'd-block')
   } else {
     passphraseInput.classList.add('is-invalid')
@@ -56,7 +57,7 @@ const validatePin = (pinInput, pinConfirmInput, pinAlert) => {
 export default function createElement(document, passphrase, withPin, callback) {
   const div = document.createElement('div')
 
-  const pinForm = (safeHtml`
+  const pinForm = safeHtml`
     <div class="form-group">
       <label for="text-pin">Please input a new Security Pin: (alphanumeric - used for key encryption)</label><br>
       <input type="password" class="form-control" id="pin-input" />
@@ -66,9 +67,9 @@ export default function createElement(document, passphrase, withPin, callback) {
       <input type="password" class="form-control" id="pin-confirm-input" />
     </div>
     <div id="pin-alert" class="d-hide form-group"></div>
-  `)
+  `
 
-  div.innerHTML = (html`
+  div.innerHTML = html`
     <h2 class="page-title">Confirm Backup of Passhphrase</h2>
     <div class="form-group">
       <label for="text-passphrase-copied">Your passphrase is very important! In order to be sure that you have written it to paper, please type your passphrase below:</label><br>
@@ -80,7 +81,7 @@ export default function createElement(document, passphrase, withPin, callback) {
       <button type="button" class="btn btn-secondary" data-choice="ok">Finish</button>
       <button type="button" class="btn btn-primary" data-choice="cancel">Cancel</button>
     </div>
-  `)
+  `
 
   const passphraseInput = div.querySelector('#passphrase-input')
   const passphraseAlert = div.querySelector('#passphrase-alert')
@@ -90,10 +91,11 @@ export default function createElement(document, passphrase, withPin, callback) {
 
   // passphraseInput.addEventListener('paste', event => event.preventDefault())
 
-  const verifyChoice = (choice) => {
+  const verifyChoice = choice => {
     if (choice === 'ok') {
-      const isValid = validatePassphrase(passphrase, passphraseInput, passphraseAlert)
-        && (withPin ? validatePin(pinInput, pinConfirmInput, pinAlert) : true)
+      const isValid =
+        validatePassphrase(passphrase, passphraseInput, passphraseAlert) &&
+        (withPin ? validatePin(pinInput, pinConfirmInput, pinAlert) : true)
       if (!isValid) return
     }
 
@@ -101,9 +103,11 @@ export default function createElement(document, passphrase, withPin, callback) {
   }
 
   if (callback) {
-    div.querySelectorAll('button').forEach(b => (
-      b.addEventListener('click', ev => verifyChoice(ev.currentTarget.dataset.choice))
-    ))
+    div
+      .querySelectorAll('button')
+      .forEach(b =>
+        b.addEventListener('click', ev => verifyChoice(ev.currentTarget.dataset.choice))
+      )
   }
 
   return div
