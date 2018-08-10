@@ -1,18 +1,16 @@
 'use strict'
 
 module.exports = {
-  'plugins': [
-    'lodash-template'
-  ],
-  'extends': [
-    'airbnb',
-    // 'plugin:lodash-template/recommended-with-html',
-  ],
-  'rules': {
-    // http://eslint.org/docs/rules/semi
-    // no semi-colons (YOLO) .. if you really want semicolons, remove this rule and run
-    // '.\node_modules\.bin\eslint --fix src' from the app root to re-add
-    'semi': ['warn', 'never'],
+  extends: ['airbnb-base', 'plugin:prettier/recommended'],
+  plugins: ['prettier'],
+  parserOptions: {
+    ecmaVersion: 8,
+    sourceType: 'script',
+  },
+  rules: {
+    'prettier/prettier': 'warn',
+
+    semi: ['warn', 'never'],
 
     'spaced-comment': ['warn', 'always'],
 
