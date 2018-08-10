@@ -20,7 +20,7 @@ h2.page-title{
  *
 */
 header{
-  min-height: 30vh;
+  min-height: 120px;
 }
 /* // End Of Header */
 
@@ -28,7 +28,7 @@ header{
  * Begin Min Content
 */
 .main-content {
-  min-height: 46vh;
+  min-height: 400px;
 }
 /* //End of Mian Content */
 
@@ -37,7 +37,7 @@ header{
  * Begin Footer
 */
 footer{
-  min-height: 12vh;
+  min-height: 50px;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -54,7 +54,7 @@ footer{
   position: absolute;
   top:0;
   z-index: -222;
-  min-height: 60vh;
+  min-height: 250px;
   background-color: $primary;
 }
 .card{
@@ -89,10 +89,38 @@ footer{
   background-color: $gray-200;
 }
 
+.text-grey{
+  color: #9c9c9c;
+}
+
+.text-strong{
+  font-weight: 700;
+}
+
 .shadow-on{
   box-shadow: $box-shadow-kh;
 }
 
 .shadow-off{
   box-shadow: none !important;
+}
+
+.bullet-icon{
+  display: inline-block;
+  padding: 10px 0;
+  border-radius: 25px;
+  background-color: $gray-200;
+  height: 36px;
+  width: 36px;
+  margin-right: 10px;
+}
+.word-wrap{
+  word-wrap: break-word;
+}
+
+/* Override Container Bootstrap */
+@media (min-width: 768px ) and (max-width: 991px){
+  .container {
+    max-width: 768px;
+  }
 }
