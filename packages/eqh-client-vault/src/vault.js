@@ -1,4 +1,3 @@
-
 import { safeHtml } from 'common-tags'
 
 import postRobot from 'post-robot'
@@ -23,7 +22,7 @@ export default function loadVault(window, document, mainElement) {
   // workers from multiple platforms
   const workers = Object.create(null)
 
-  const vaultLayoutHTML = (safeHtml`<div class="container fade-in">
+  const vaultLayoutHTML = safeHtml`<div class="container fade-in">
     <div class="row shadow-on">
       <div class="sidebar col-md-4 bg-grey py-3" id="sidebar">
         <div class="block-title">Private Keys (in this browser)</div>
@@ -34,7 +33,7 @@ export default function loadVault(window, document, mainElement) {
         <div class="entry-page py-3" id="content"></div>
       </div>
     </div>
-  </div>`)
+  </div>`
 
   mainElement.innerHTML = vaultLayoutHTML // eslint-disable-line no-param-reassign
 
@@ -59,81 +58,88 @@ export default function loadVault(window, document, mainElement) {
     })
   }
 
-  const showAccountDetail = (accountDetail) => {
+  const showAccountDetail = accountDetail => {
     contentDiv.innerHTML = ''
     contentDiv.appendChild(AccountDetail(document, accountDetail))
   }
 
-  const updateAccountListDiv = () => new Promise((resolve, reject) => {
-    try {
-      callOnStore('accounts', (store) => {
-        const req = store.getAll()
-        req.onsuccess = ({ target: { result } }) => {
-          if (Array.isArray(result) && result.length > 0) {
-            // Group by platform
-            const accountsByPlatform = result.reduce((acc, i) => {
-              const g = acc[i.platform]
-              if (g) g.push(i)
-              else acc[i.platform] = [i]
-              return acc
-            }, {})
+  const updateAccountListDiv = () =>
+    new Promise((resolve, reject) => {
+      try {
+        callOnStore('accounts', store => {
+          const req = store.getAll()
+          req.onsuccess = ({ target: { result } }) => {
+            if (Array.isArray(result) && result.length > 0) {
+              // Group by platform
+              const accountsByPlatform = result.reduce((acc, i) => {
+                const g = acc[i.platform]
+                if (g) g.push(i)
+                else acc[i.platform] = [i]
+                return acc
+              }, {})
 
-            accountListDiv.innerHTML = ''
-            Object.keys(accountsByPlatform).forEach((platform) => {
-              const div = document.createElement('div')
-              const h3 = document.createElement('h3')
-              h3.appendChild(document.createTextNode(platform))
-              div.appendChild(h3)
-              const ul = document.createElement('ul')
-              ul.addEventListener('click', ({ target }) => {
-                if (target.type === 'button' && target.dataset) {
-                  const { dataset: { address, accountNo, publicKey } } = target
-                  const accountDetail = {
-                    address,
-                    accountNo,
-                    publicKey,
+              accountListDiv.innerHTML = ''
+              Object.keys(accountsByPlatform).forEach(platform => {
+                const div = document.createElement('div')
+                const h3 = document.createElement('h3')
+                h3.appendChild(document.createTextNode(platform))
+                div.appendChild(h3)
+                const ul = document.createElement('ul')
+                ul.addEventListener('click', ({ target }) => {
+                  if (target.type === 'button' && target.dataset) {
+                    const {
+                      dataset: { address, accountNo, publicKey },
+                    } = target
+                    const accountDetail = {
+                      address,
+                      accountNo,
+                      publicKey,
+                    }
+                    configureAccount(platform, address)
+                      .then(() => {
+                        ul.querySelectorAll('button').forEach(
+                          li => li.classList.remove('btn-dark') && li.classList.add('btn-light')
+                        )
+                        target.classList.remove('btn-light')
+                        target.classList.add('btn-dark')
+                        showAccountDetail(accountDetail)
+                      })
+                      .catch(error => {
+                        window.alert(`Error: ${error.message || error}`)
+                      })
                   }
-                  configureAccount(platform, address).then(() => {
-                    ul.querySelectorAll('button').forEach(li => li.classList.remove('btn-dark') && li.classList.add('btn-light'))
-                    target.classList.remove('btn-light')
-                    target.classList.add('btn-dark')
-                    showAccountDetail(accountDetail)
-                  }).catch((error) => {
-                    window.alert(`Error: ${error.message || error}`)
-                  })
-                }
+                })
+
+                const accounts = accountsByPlatform[platform]
+                accounts.forEach(account => {
+                  const li = document.createElement('li')
+                  const button = document.createElement('button') // eslint-disable-line
+                  button.type = 'button'
+                  button.classList.add('btn', 'btn-light')
+                  button.appendChild(document.createTextNode(account.address))
+                  button.dataset.address = account.address
+                  button.dataset.accountNo = account.accountNo
+                  button.dataset.publicKey = account.publicKey
+                  li.appendChild(button)
+                  ul.appendChild(li)
+                })
+
+                div.appendChild(ul)
+                accountListDiv.appendChild(div)
               })
 
-              const accounts = accountsByPlatform[platform]
-              accounts.forEach((account) => {
-                const li = document.createElement('li')
-                const button = document.createElement('button') // eslint-disable-line
-                button.type = 'button'
-                button.classList.add('btn', 'btn-light')
-                button.appendChild(document.createTextNode(account.address))
-                button.dataset.address = account.address
-                button.dataset.accountNo = account.accountNo
-                button.dataset.publicKey = account.publicKey
-                li.appendChild(button)
-                ul.appendChild(li)
-              })
-
-              div.appendChild(ul)
-              accountListDiv.appendChild(div)
-            })
-
-            resolve(true)
-          } else {
-            resolve(false)
+              resolve(true)
+            } else {
+              resolve(false)
+            }
           }
-        }
-      })
-    } catch (err) {
-      reject(err)
-    }
-  })
+        })
+      } catch (err) {
+        reject(err)
+      }
+    })
 
-  const showGenerateKeyScreen = (platform) => {
+  const showGenerateKeyScreen = platform => {
     contentDiv.innerHTML = ''
     contentDiv.appendChild(LoadingScreen(document, `Generating Passphrase for ${platform}`))
 
@@ -152,15 +158,18 @@ export default function loadVault(window, document, mainElement) {
     })
 
     return promise
-      .then(passphrase => new Promise((resolve, reject) => {
-        contentDiv.innerHTML = ''
-        contentDiv.appendChild(
-          DisplayPassphraseScreen(document, passphrase, (err, res) => {
-            if (err) reject(err)
-            else resolve(res)
+      .then(
+        passphrase =>
+          new Promise((resolve, reject) => {
+            contentDiv.innerHTML = ''
+            contentDiv.appendChild(
+              DisplayPassphraseScreen(document, passphrase, (err, res) => {
+                if (err) reject(err)
+                else resolve(res)
+              })
+            )
           })
-        )
-      }))
+      )
       .then(([choice, passphrase]) => {
         if (choice !== 'ok') throw new Error('cancelled by user')
 
@@ -196,15 +205,16 @@ export default function loadVault(window, document, mainElement) {
       })
   }
 
-  const showAddAccountScreen = () => (
+  const showAddAccountScreen = () =>
     new Promise((resolve, reject) => {
       contentDiv.innerHTML = ''
-      contentDiv.appendChild(AddAccountScreen(document, (err, res) => {
-        if (err) reject(err)
-        else resolve(res)
-      }))
+      contentDiv.appendChild(
+        AddAccountScreen(document, (err, res) => {
+          if (err) reject(err)
+          else resolve(res)
+        })
+      )
     }).then(platform => showGenerateKeyScreen(platform))
-  )
 
   const signMessage = (platform, address, pin, message) => {
     // Lazy-Load Webworker
@@ -236,65 +246,83 @@ export default function loadVault(window, document, mainElement) {
       worker.onmessage = resolve
       worker.onerror = reject
       worker.postMessage(['getKeyPair', address])
-    }).then(({ data: { error, accountNo } }) => {
-      if (error) throw new Error(error)
-      return accountNo
-    }).then((accountNo) => {
-      if (!accountNo) {
-        return new Promise((resolve, reject) => {
-          const message = 'You do not seem to have the private key stored in this browser. Please use your other browser or computer. To restore a key from backup, click the "Add Key" button.'
-          contentDiv.appendChild(ErrorScreen(document, 'Key Missing', message, (err) => {
-            if (err) reject(err)
-            else reject(new Error('key missing'))
-          }))
-        })
-      }
-
-      return new Promise((resolve, reject) => {
-        worker.onmessage = resolve
-        worker.onerror = reject
-        worker.postMessage(['configure', { address }])
-      }).then(({ data: { error, config } }) => {
-        if (error) throw Error(error)
-        return config
-      }).then(() => new Promise((resolve, reject) => {
-        const txDetailDiv = TxDetailScreen(document, platform,
-          accountNo, address, tx, (err, res) => {
-            if (err) {
-              reject(err)
-            } else {
-              txDetailDiv.classList.add('d-none')
-              loadingDiv.classList.remove('d-none')
-              resolve(res)
-            }
+    })
+      .then(({ data: { error, accountNo } }) => {
+        if (error) throw new Error(error)
+        return accountNo
+      })
+      .then(accountNo => {
+        if (!accountNo) {
+          return new Promise((resolve, reject) => {
+            const message =
+              'You do not seem to have the private key stored in this browser. Please use your other browser or computer. To restore a key from backup, click the "Add Key" button.'
+            contentDiv.appendChild(
+              ErrorScreen(document, 'Key Missing', message, err => {
+                if (err) reject(err)
+                else reject(new Error('key missing'))
+              })
+            )
           })
-        contentDiv.appendChild(txDetailDiv)
-      })).then(([choice, pin]) => {
-        if (choice !== 'ok') throw new Error('cancelled by user')
+        }
 
-        // call signTransaction on background webworker
         return new Promise((resolve, reject) => {
           worker.onmessage = resolve
           worker.onerror = reject
-          worker.postMessage(['signTransaction', address, pin, tx.type, tx.data])
-        }).then(({ data: { error, transactionJSON, transactionBytes, transactionFullHash } }) => {
-          if (error) throw new Error(error)
-          return { transactionJSON, transactionBytes, transactionFullHash }
+          worker.postMessage(['configure', { address }])
         })
+          .then(({ data: { error, config } }) => {
+            if (error) throw Error(error)
+            return config
+          })
+          .then(
+            () =>
+              new Promise((resolve, reject) => {
+                const txDetailDiv = TxDetailScreen(
+                  document,
+                  platform,
+                  accountNo,
+                  address,
+                  tx,
+                  (err, res) => {
+                    if (err) {
+                      reject(err)
+                    } else {
+                      txDetailDiv.classList.add('d-none')
+                      loadingDiv.classList.remove('d-none')
+                      resolve(res)
+                    }
+                  }
+                )
+                contentDiv.appendChild(txDetailDiv)
+              })
+          )
+          .then(([choice, pin]) => {
+            if (choice !== 'ok') throw new Error('cancelled by user')
+
+            // call signTransaction on background webworker
+            return new Promise((resolve, reject) => {
+              worker.onmessage = resolve
+              worker.onerror = reject
+              worker.postMessage(['signTransaction', address, pin, tx.type, tx.data])
+            }).then(
+              ({ data: { error, transactionJSON, transactionBytes, transactionFullHash } }) => {
+                if (error) throw new Error(error)
+                return { transactionJSON, transactionBytes, transactionFullHash }
+              }
+            )
+          })
       })
-    })
   }
 
   // Trigger A: User Click "Add Key" Button
   document.getElementById('goto-add-account-btn').addEventListener('click', () => {
     showAddAccountScreen()
-      .then(() => (
-        updateAccountListDiv()
-      )).then(() => {
+      .then(() => updateAccountListDiv())
+      .then(() => {
         contentDiv.innerHTML = ''
         contentDiv.appendChild(welcomeDiv)
       })
-      .catch((error) => {
+      .catch(error => {
         if (error.message !== 'cancelled by user') {
           window.alert(`Error: ${error.message || error}`)
         }
@@ -303,112 +331,137 @@ export default function loadVault(window, document, mainElement) {
       })
   })
 
-  updateAccountListDiv().then((hasAccounts) => {
-    // Create the welcome screen
-    welcomeDiv = WelcomeScreen(document, hasAccounts)
+  updateAccountListDiv()
+    .then(hasAccounts => {
+      // Create the welcome screen
+      welcomeDiv = WelcomeScreen(document, hasAccounts)
 
-    if (!window.opener) {
-      // Show welcome screen on startup
-      contentDiv.appendChild(welcomeDiv)
-    } else {
-      // Tell parent window vault is ready
-      postRobot.send(window.opener, 'vaultReady', { version: '1.0' }).then((event) => {
-        // console.log(event.source, event.origin)
-        // TODO: security checks on source/origin
-        const { data: { action, params, callback } } = event
+      if (!window.opener) {
+        // Show welcome screen on startup
+        contentDiv.appendChild(welcomeDiv)
+      } else {
+        // Tell parent window vault is ready
+        postRobot
+          .send(window.opener, 'vaultReady', { version: '1.0' })
+          .then(event => {
+            // console.log(event.source, event.origin)
+            // TODO: security checks on source/origin
+            const {
+              data: { action, params, callback },
+            } = event
 
-        // Trigger B: App wants to create new key for user
-        // Input: { action: 'newKeyAndSign', params: [ 'EQH', messageToSign ] }
-        // Output: { publicKey, signature }
-        if (action === 'newKeyAndSign' && params) {
-          const [platform, messageToSign] = params
+            // Trigger B: App wants to create new key for user
+            // Input: { action: 'newKeyAndSign', params: [ 'EQH', messageHex ] }
+            // Output: { publicKey, signature }
+            if (action === 'newKeyAndSign' && params) {
+              const [platform, messageHex] = params
 
-          return showGenerateKeyScreen(platform)
-            .then(({ address, publicKey, pin }) => (
-              signMessage(platform, address, pin, messageToSign).then(signature => (
-                updateAccountListDiv().then(() => callback(null, {
-                  publicKey,
-                  signature,
-                }))
-              ))
-            ))
-            .then(() => new Promise((resolve, reject) => {
-              const message = 'Key Generated. Thank you for using Keyhub soft wallet. You will be returned to the main application.'
-              contentDiv.innerHTML = ''
-              contentDiv.appendChild(SuccessScreen(document, 'Thank You', message, (err, res) => {
-                if (err) reject(err)
-                else resolve(res)
-              }))
+              return showGenerateKeyScreen(platform)
+                .then(({ address, publicKey, pin }) =>
+                  signMessage(platform, address, pin, messageHex).then(signature =>
+                    updateAccountListDiv().then(() =>
+                      callback(null, {
+                        publicKey,
+                        signature,
+                      })
+                    )
+                  )
+                )
+                .then(
+                  () =>
+                    new Promise((resolve, reject) => {
+                      const message =
+                        'Key Generated. Thank you for using Keyhub soft wallet. You will be returned to the main application.'
+                      contentDiv.innerHTML = ''
+                      contentDiv.appendChild(
+                        SuccessScreen(document, 'Thank You', message, (err, res) => {
+                          if (err) reject(err)
+                          else resolve(res)
+                        })
+                      )
 
-              // Close the window after 5 seconds if no response from user
-              window.setTimeout(() => {
-                resolve('timeout')
-              }, 5000)
-            }))
-            .then(() => self.close()) // eslint-disable-line
-            .catch((error) => {
-              if (error.message !== 'cancelled by user') {
-                window.alert(`Error: ${error.message || error}`)
-              }
+                      // Close the window after 5 seconds if no response from user
+                      window.setTimeout(() => {
+                        resolve('timeout')
+                      }, 5000)
+                    })
+                )
+                .then(() => self.close()) // eslint-disable-line
+                .catch(error => {
+                  if (error.message !== 'cancelled by user') {
+                    window.alert(`Error: ${error.message || error}`)
+                  }
 
-              // callback to the parent window on error
-              callback(error).then(() => {
-                self.close() // eslint-disable-line
-              }).catch((err) => {
-                window.alert(`Could not return error to parent window: ${err.message || err}`)
-                self.close() // eslint-disable-line
-              })
-            })
-        }
+                  // callback to the parent window on error
+                  callback(error)
+                    .then(() => {
+                      self.close() // eslint-disable-line
+                    })
+                    .catch(err => {
+                      window.alert(`Could not return error to parent window: ${err.message || err}`)
+                      self.close() // eslint-disable-line
+                    })
+                })
+            }
 
-        // Trigger C: App wants to sign transaction
-        // Input: { action: 'signTx', params: [ 'EQH', 'EQH-xxx-xxx-xxx-xxx', tx ] }
-        // Output: { transactionBytes, transactionJSON, transactionFullHash }
-        if (action === 'signTx' && params) {
-          const [platform, address, tx] = params
+            // Trigger C: App wants to sign transaction
+            // Input: { action: 'signTx', params: [ 'EQH', 'EQH-xxx-xxx-xxx-xxx', tx ] }
+            // Output: { transactionBytes, transactionJSON, transactionFullHash }
+            if (action === 'signTx' && params) {
+              const [platform, address, tx] = params
 
-          return showTxDetailScreen(tx, platform, address)
-            .then(({ transactionBytes, transactionJSON, transactionFullHash }) => (
-              // callback to the parent window once signed data is available
-              callback(null, { transactionBytes, transactionJSON, transactionFullHash })
-            ))
-            .then(() => new Promise((resolve, reject) => {
-              const message = 'Transaction Signed. Thank you for using Keyhub soft wallet. You will be returned to the main application.'
-              contentDiv.innerHTML = ''
-              contentDiv.appendChild(SuccessScreen(document, 'Thank You', message, (err, res) => {
-                if (err) reject(err)
-                else resolve(res)
-              }))
+              return showTxDetailScreen(tx, platform, address)
+                .then(({ transactionBytes, transactionJSON, transactionFullHash }) =>
+                  // callback to the parent window once signed data is available
+                  callback(null, { transactionBytes, transactionJSON, transactionFullHash })
+                )
+                .then(
+                  () =>
+                    new Promise((resolve, reject) => {
+                      const message =
+                        'Transaction Signed. Thank you for using Keyhub soft wallet. You will be returned to the main application.'
+                      contentDiv.innerHTML = ''
+                      contentDiv.appendChild(
+                        SuccessScreen(document, 'Thank You', message, (err, res) => {
+                          if (err) reject(err)
+                          else resolve(res)
+                        })
+                      )
 
-              // Close the window after 5 seconds if no response from user
-              window.setTimeout(() => {
-                resolve('timeout')
-              }, 5000)
-            }))
-            .then(() => self.close()) // eslint-disable-line
-            .catch((error) => {
-              if (error.message !== 'cancelled by user' || error.message !== 'key missing') {
-                window.alert(`Error: ${error.message || error}`) // eslint-disable-line
-              }
+                      // Close the window after 5 seconds if no response from user
+                      window.setTimeout(() => {
+                        resolve('timeout')
+                      }, 5000)
+                    })
+                )
+                .then(() => self.close()) // eslint-disable-line
+                .catch(error => {
+                  if (error.message !== 'cancelled by user' || error.message !== 'key missing') {
+                    window.alert(`Error: ${error.message || error}`) // eslint-disable-line
+                  }
 
-              // callback to the parent window on error
-              callback(error).then(() => {
-                self.close() // eslint-disable-line
-              }).catch((err) => {
-                window.alert(`Could not return error to parent window: ${err.message || err}`)
-                self.close() // eslint-disable-line
-              })
-            })
-        }
+                  // callback to the parent window on error
+                  callback(error)
+                    .then(() => {
+                      self.close() // eslint-disable-line
+                    })
+                    .catch(err => {
+                      window.alert(`Could not return error to parent window: ${err.message || err}`)
+                      self.close() // eslint-disable-line
+                    })
+                })
+            }
 
-        return Promise.reject(new Error('Received unknown action from parent window.'))
-      }).catch((error) => {
-        // Handle any errors that stopped our call from going through
-        console.error(error) // eslint-disable-line no-console
-        window.alert(error.message || error)
-      })
-    }
-  }).catch((error) => {
-    window.alert(`Fatal Error: ${error.message || error}. Please try again.`)
-  })
+            return Promise.reject(new Error('Received unknown action from parent window.'))
+          })
+          .catch(error => {
+            // Handle any errors that stopped our call from going through
+            console.error(error) // eslint-disable-line no-console
+            window.alert(error.message || error)
+          })
+      }
+    })
+    .catch(error => {
+      window.alert(`Fatal Error: ${error.message || error}. Please try again.`)
+    })
 }

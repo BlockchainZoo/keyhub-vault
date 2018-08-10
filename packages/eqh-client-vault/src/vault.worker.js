@@ -237,15 +237,15 @@ bridge.load(NRS => {
         }
       })
     },
-    signMessage: (address, secretPin, message, callback) => {
+    signMessage: (address, secretPin, messageHex, callback) => {
       if (typeof address !== 'string') throw new Error('address is not a string')
       if (typeof secretPin !== 'string') throw new Error('secretPin is not a string')
-      if (typeof message !== 'string') throw new Error('message is not a string')
+      if (typeof messageHex !== 'string') throw new Error('message is not a hex string')
 
       const secretPinBytes = converters.stringToByteArray(secretPin)
       const secretPinUint8 = Uint8Array.from(secretPinBytes)
 
-      const messageHex = converters.stringToHexString(message)
+      // const messageHex = converters.stringToHexString(message)
 
       // Get account from  browser's indexedDB
       const dbKey = address
