@@ -1,8 +1,15 @@
+'use strict'
 
 const wordlistEnEff = require('diceware-wordlist-en-eff')
-const dicewareGen = require('./diceware-generator')
+const dicewareGen = require('./util/diceware')
 const { callOnStore } = require('./util/indexeddb')
-const { secureRandom, subtle, safeObj, wrapSecretPhrase, unwrapSecretPhrase } = require('./util/crypto')
+const {
+  secureRandom,
+  subtle,
+  safeObj,
+  wrapSecretPhrase,
+  unwrapSecretPhrase,
+} = require('./util/crypto')
 
 const { NrsBridge } = require('./js/nrs.cheerio.bridge')
 
@@ -15,7 +22,7 @@ console.log('Loading NRS-bridge...') // eslint-disable-line no-console
 
 const bridge = new NrsBridge(nxtConfig)
 
-bridge.load((NRS) => {
+bridge.load(NRS => {
   console.log('Loaded NRS-bridge.') // eslint-disable-line no-console
 
   const fixTxNumberFormat = ({
@@ -70,19 +77,14 @@ bridge.load((NRS) => {
     getKeyPair: (address, callback) => {
       // Get account from browser's indexedDB
       const dbKey = address
-      callOnStore('accounts', (store) => {
+      callOnStore('accounts', store => {
         const req = store.get(dbKey)
         req.onerror = err => callback(err)
         req.onsuccess = () => {
           if (!req.result) {
             callback(null, {})
           } else {
-            const {
-              accountNo,
-              address: addr,
-              publicKey,
-              createdAt,
-            } = req.result
+            const { accountNo, address: addr, publicKey, createdAt } = req.result
             callback(null, {
               address: addr,
               accountNo,
@@ -127,52 +129,56 @@ bridge.load((NRS) => {
       })
 
       // Hash the user's passphrase to get the secretPhrase
-      subtle.digest({ name: 'SHA-384' }, passphraseUint8).then((secretPhraseBuffer) => {
-        // Note: Non-truncated SHA is vulnerable to length extension attack (e.g. sha256 & sha512)
-        // We use a longer hash here and truncate to desired AES keySize
-        const secretPhraseUint8 = new Uint8Array(secretPhraseBuffer, 0, keyAlgo.length / 8)
-        return wrapSecretPhrase(secretPinUint8, secretPhraseUint8, opts)
-      }).then(([secretPhraseCryptoKey, secretPhraseObj]) => (
-        // Retrieve the secretPhrase as a HexString
-        subtle.exportKey('raw', secretPhraseCryptoKey)
-          .then((secretPhraseBuffer) => {
+      subtle
+        .digest({ name: 'SHA-384' }, passphraseUint8)
+        .then(secretPhraseBuffer => {
+          // Note: Non-truncated SHA is vulnerable to length extension attack (e.g. sha256 & sha512)
+          // We use a longer hash here and truncate to desired AES keySize
+          const secretPhraseUint8 = new Uint8Array(secretPhraseBuffer, 0, keyAlgo.length / 8)
+          return wrapSecretPhrase(secretPinUint8, secretPhraseUint8, opts)
+        })
+        .then(([secretPhraseCryptoKey, secretPhraseObj]) =>
+          // Retrieve the secretPhrase as a HexString
+          subtle.exportKey('raw', secretPhraseCryptoKey).then(secretPhraseBuffer => {
             const secretPhraseHex = converters.byteArrayToHexString(
               Array.from(new Uint8Array(secretPhraseBuffer))
             )
             return [secretPhraseHex, secretPhraseObj]
           })
-      )).then(([secretPhraseHex, secretPhraseObj]) => {
-        // secretPhraseHex is the real secretPhrase used to sign transactions
-        // secretPhraseJwk is the encrypted secretPhrase in 'jwk' format
-        // const publicKey = NRS.generatePublicKey(secretPhraseHex)
-        const publicKey = NRS.getPublicKey(secretPhraseHex)
-        const accountId = NRS.getAccountIdFromPublicKey(publicKey)
-        const accountRS = NRS.convertNumericToRSAccountFormat(accountId)
+        )
+        .then(([secretPhraseHex, secretPhraseObj]) => {
+          // secretPhraseHex is the real secretPhrase used to sign transactions
+          // secretPhraseJwk is the encrypted secretPhrase in 'jwk' format
+          // const publicKey = NRS.generatePublicKey(secretPhraseHex)
+          const publicKey = NRS.getPublicKey(secretPhraseHex)
+          const accountId = NRS.getAccountIdFromPublicKey(publicKey)
+          const accountRS = NRS.convertNumericToRSAccountFormat(accountId)
 
-        // Store account in browser's indexedDB
-        const accountNo = accountId
-        const address = accountRS
-        const dbKey = address
-        const createdAt = new Date()
-        callOnStore('accounts', (store) => {
-          store.put({
-            id: dbKey,
-            platform,
-            accountNo,
+          // Store account in browser's indexedDB
+          const accountNo = accountId
+          const address = accountRS
+          const dbKey = address
+          const createdAt = new Date()
+          callOnStore('accounts', store => {
+            store.put({
+              id: dbKey,
+              platform,
+              accountNo,
+              address,
+              publicKey,
+              secretPhrase: secretPhraseObj,
+              createdAt,
+              lastUsedAt: null,
+            })
+          })
+          callback(null, {
             address,
+            accountNo,
             publicKey,
-            secretPhrase: secretPhraseObj,
             createdAt,
-            lastUsedAt: null,
           })
         })
-        callback(null, {
-          address,
-          accountNo,
-          publicKey,
-          createdAt,
-        })
-      }).catch(error => callback(error)) // eslint-disable-line newline-per-chained-call
+        .catch(error => callback(error)) // eslint-disable-line newline-per-chained-call
     },
     signTransaction: (address, secretPin, txType, txData, callback) => {
       if (typeof address !== 'string') throw new Error('address is not a string')
@@ -185,12 +191,13 @@ bridge.load((NRS) => {
 
       // Get account from  browser's indexedDB
       const dbKey = address
-      callOnStore('accounts', (store) => {
+      callOnStore('accounts', store => {
         const req = store.get(dbKey)
         req.onerror = err => callback(err)
         req.onsuccess = () => {
           if (!req.result) callback(new Error('account dbKey is not found in this browser'))
-          if (!req.result.secretPhrase) callback(new Error('account secretPhrase is not stored in this browser'))
+          if (!req.result.secretPhrase)
+            callback(new Error('account secretPhrase is not stored in this browser'))
           // const { format, key, keyAlgo, unwrapParams, deriveParams } = req.result.secretPhrase
           const secretPhraseObj = req.result.secretPhrase
 
@@ -198,10 +205,10 @@ bridge.load((NRS) => {
 
           // Unwrap the wrapped secretPhrase object
           unwrapSecretPhrase(secretPinUint8, secretPhraseObj)
-            .then(secretPhraseUint8 => converters.byteArrayToHexString(
-              Array.from(secretPhraseUint8)
-            ))
-            .then((secretPhraseHex) => {
+            .then(secretPhraseUint8 =>
+              converters.byteArrayToHexString(Array.from(secretPhraseUint8))
+            )
+            .then(secretPhraseHex => {
               // secretPhraseHex is the sha256 hash of the user's passphrase
               const data = safeObj({
                 ...fixTxNumberFormat(txData),
@@ -210,7 +217,7 @@ bridge.load((NRS) => {
                 ...NRS.getMandatoryParams(),
               })
               // Use NRS bridge to sign the transaction data
-              NRS.sendRequest(txType, data, (res) => {
+              NRS.sendRequest(txType, data, res => {
                 const {
                   errorCode,
                   errorDescription,
@@ -242,12 +249,13 @@ bridge.load((NRS) => {
 
       // Get account from  browser's indexedDB
       const dbKey = address
-      callOnStore('accounts', (store) => {
+      callOnStore('accounts', store => {
         const req = store.get(dbKey)
         req.onerror = err => callback(err)
         req.onsuccess = () => {
           if (!req.result) callback(new Error('account dbKey is not found in this browser'))
-          if (!req.result.secretPhrase) callback(new Error('account secretPhrase is not stored in this browser'))
+          if (!req.result.secretPhrase)
+            callback(new Error('account secretPhrase is not stored in this browser'))
           // const { format, key, keyAlgo, unwrapParams, deriveParams } = req.result.secretPhrase
           const secretPhraseObj = req.result.secretPhrase
 
@@ -255,14 +263,11 @@ bridge.load((NRS) => {
 
           // Unwrap the wrapped secretPhrase object
           unwrapSecretPhrase(secretPinUint8, secretPhraseObj)
-            .then(secretPhraseUint8 => converters.byteArrayToHexString(
-              Array.from(secretPhraseUint8)
-            ))
-            .then((secretPhraseHex) => {
-              const signature = NRS.signBytes(
-                messageHex,
-                secretPhraseHex,
-              )
+            .then(secretPhraseUint8 =>
+              converters.byteArrayToHexString(Array.from(secretPhraseUint8))
+            )
+            .then(secretPhraseHex => {
+              const signature = NRS.signBytes(messageHex, secretPhraseHex)
               callback(null, { signature })
             })
             .catch(error => callback(error))
@@ -271,10 +276,16 @@ bridge.load((NRS) => {
     },
   })
 
-  if (typeof self !== 'undefined') { // eslint-disable-line no-restricted-globals
-    self.onmessage = (event) => { // eslint-disable-line no-undef, no-restricted-globals
-      const { data: [name, ...params] } = event
-      const safeParams = params.filter(p => ['number', 'string', 'boolean', 'object'].includes(typeof p))
+  // eslint-disable-next-line no-restricted-globals
+  if (typeof self !== 'undefined') {
+    // eslint-disable-next-line no-restricted-globals, no-undef
+    self.onmessage = event => {
+      const {
+        data: [name, ...params],
+      } = event
+      const safeParams = params.filter(p =>
+        ['number', 'string', 'boolean', 'object'].includes(typeof p)
+      )
       if (name in methods) {
         try {
           methods[name](...safeParams, (err, res) => {

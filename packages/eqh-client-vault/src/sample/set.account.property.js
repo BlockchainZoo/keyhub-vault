@@ -1,8 +1,10 @@
+'use strict'
+
 const loader = require('./loader')
 
 const { config } = loader
 
-loader.load((NRS) => {
+loader.load(NRS => {
   const property = '$$Admin'
 
   const data = {
@@ -13,7 +15,7 @@ loader.load((NRS) => {
     ...NRS.getMandatoryParams(),
   }
 
-  NRS.sendRequest('setAccountProperty', data, (response) => {
+  NRS.sendRequest('setAccountProperty', data, response => {
     NRS.logConsole(JSON.stringify(response))
   })
 })

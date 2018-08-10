@@ -1,8 +1,10 @@
+'use strict'
+
 const loader = require('./loader')
 
 const { config } = loader
 
-loader.load((NRS) => {
+loader.load(NRS => {
   const decimals = 2
   const quantity = 2.5
   const price = 1.3
@@ -15,7 +17,7 @@ loader.load((NRS) => {
     ...NRS.getMandatoryParams(),
   }
 
-  NRS.sendRequest('placeAskOrder', data, (response) => {
+  NRS.sendRequest('placeAskOrder', data, response => {
     NRS.logConsole(JSON.stringify(response))
   })
 })

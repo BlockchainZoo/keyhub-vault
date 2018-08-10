@@ -16,12 +16,12 @@ const validatePin = (pinInput, pinAlert) => {
   return false
 }
 
-const splitNumber = (accountNo) => {
+const splitNumber = accountNo => {
   const str = accountNo.toString()
   const result = [str[0]]
 
   for (let x = 1; x < str.length; x += 1) {
-    if ((x % 5 === 0)) {
+    if (x % 5 === 0) {
       result.push('.', str[x])
     } else {
       result.push(str[x])
@@ -58,7 +58,7 @@ const displayTransaction = (document, detailDiv, { type, data }) => {
   divTxTypeRow.appendChild(divTxType)
   domFragment.appendChild(divTxTypeRow)
 
-  Object.keys(data).forEach((key) => {
+  Object.keys(data).forEach(key => {
     const divRow = document.createElement('div')
     divRow.classList.add('row', 'my-2', 'border-bottom', 'py-3')
 
@@ -74,7 +74,7 @@ const displayTransaction = (document, detailDiv, { type, data }) => {
     const divVal = document.createElement('div')
     divVal.classList.add('col-sm-8', 'text-grey')
 
-    txData = (key === 'recipient') ? splitNumber(data[key]) : data[key]
+    txData = key === 'recipient' ? splitNumber(data[key]) : data[key]
 
     divVal.appendChild(document.createTextNode(txData))
 
@@ -91,17 +91,15 @@ const displayTransaction = (document, detailDiv, { type, data }) => {
 export default function createElement(document, platform, accountNo, address, tx, callback) {
   const div = document.createElement('div')
 
-  const pinForm = (safeHtml`
-    <div class="col">
-      <div class="form-group">
-        <label for="text-pin"><b>Security Pin</b></label></br>
-        <input type="password" class="form-control" id="pin-input" />
-      </div>
-      <div id="pin-alert" class="d-hide"></div>
+  const pinForm = safeHtml`
+    <div class="form-group">
+      <label for="text-pin">Security Pin: </label><br>
+      <input type="password" class="form-control" id="pin-input" />
     </div>
-  `)
+    <div id="pin-alert" class="d-hide form-group"></div>
+  `
 
-  div.innerHTML = (html`
+  div.innerHTML = html`
   <div class="card-header text-center bg-secondary text-white">
     <h4 class="mb-2"><i class="fas fa-lock"></i> ${platform} Transaction Detail</h4>
     <p class="mb-0">Your Account No. ${splitNumber(accountNo)}</p>
@@ -126,14 +124,14 @@ export default function createElement(document, platform, accountNo, address, tx
       </div>
     </div>
     </div>
-  </div>`)
+  </div>`
 
   const pinInput = div.querySelector('#pin-input')
   const pinAlert = div.querySelector('#pin-alert')
   const transactionDetailDiv = div.querySelector('#transaction-detail')
   displayTransaction(document, transactionDetailDiv, tx)
 
-  const verifyChoice = (choice) => {
+  const verifyChoice = choice => {
     if (choice === 'ok') {
       const isValid = validatePin(pinInput, pinAlert)
       if (!isValid) return
@@ -143,9 +141,11 @@ export default function createElement(document, platform, accountNo, address, tx
   }
 
   if (callback) {
-    div.querySelectorAll('button').forEach(b => (
-      b.addEventListener('click', ev => verifyChoice(ev.currentTarget.dataset.choice))
-    ))
+    div
+      .querySelectorAll('button')
+      .forEach(b =>
+        b.addEventListener('click', ev => verifyChoice(ev.currentTarget.dataset.choice))
+      )
   }
 
   return div

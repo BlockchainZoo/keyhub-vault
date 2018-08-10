@@ -2,7 +2,7 @@ import { safeHtml } from 'common-tags'
 
 export default function createElement(document, message) {
   const div = document.createElement('div')
-  div.innerHTML = (safeHtml`
+  div.innerHTML = safeHtml`
   <div class="card-header text-center bg-secondary text-white">
     <h4><i class="fas fa-broadcast-tower"></i> ${message}...</h4>
   </div>
@@ -10,6 +10,6 @@ export default function createElement(document, message) {
     <div class="lds-roller">
       <div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div>
     </div>
-  </div>`)
+  </div>`
   return div
 }
