@@ -14,6 +14,7 @@ import {
   TxDetailScreen,
   SuccessScreen,
   ErrorScreen,
+  AccountDetail,
 } from './screen'
 
 const { callOnStore } = require('./util/indexeddb')
@@ -24,12 +25,12 @@ export default function loadVault(window, document, mainElement) {
 
   const vaultLayoutHTML = (safeHtml`<div class="container fade-in">
     <div class="row shadow-on">
-      <div class="sidebar col-md-3 bg-grey py-3" id="sidebar">
+      <div class="sidebar col-md-4 bg-grey py-3" id="sidebar">
         <div class="block-title">Private Keys (in this browser)</div>
         <div id="account-list" class="account-list"></div>
         <button class="btn btn-secondary btn-sm ml-1" id="goto-add-account-btn">Add Key</button>
       </div>
-      <div class="col-md-9 bg-white">
+      <div class="col-md-8 bg-white main-content">
         <div class="entry-page py-3" id="content"></div>
       </div>
     </div>
@@ -58,6 +59,11 @@ export default function loadVault(window, document, mainElement) {
     })
   }
 
+  const showAccountDetail = (accountDetail) => {
+    contentDiv.innerHTML = ''
+    contentDiv.appendChild(AccountDetail(document, accountDetail))
+  }
+
   const updateAccountListDiv = () => new Promise((resolve, reject) => {
     try {
       callOnStore('accounts', (store) => {
@@ -78,15 +84,20 @@ export default function loadVault(window, document, mainElement) {
               const h3 = document.createElement('h3')
               h3.appendChild(document.createTextNode(platform))
               div.appendChild(h3)
-
               const ul = document.createElement('ul')
               ul.addEventListener('click', ({ target }) => {
                 if (target.type === 'button' && target.dataset) {
-                  const { dataset: { address } } = target
+                  const { dataset: { address, accountNo, publicKey } } = target
+                  const accountDetail = {
+                    address,
+                    accountNo,
+                    publicKey,
+                  }
                   configureAccount(platform, address).then(() => {
                     ul.querySelectorAll('button').forEach(li => li.classList.remove('btn-dark') && li.classList.add('btn-light'))
                     target.classList.remove('btn-light')
                     target.classList.add('btn-dark')
+                    showAccountDetail(accountDetail)
                   }).catch((error) => {
                     window.alert(`Error: ${error.message || error}`)
                   })
@@ -101,6 +112,8 @@ export default function loadVault(window, document, mainElement) {
                 button.classList.add('btn', 'btn-light')
                 button.appendChild(document.createTextNode(account.address))
                 button.dataset.address = account.address
+                button.dataset.accountNo = account.accountNo
+                button.dataset.publicKey = account.publicKey
                 li.appendChild(button)
                 ul.appendChild(li)
               })
@@ -245,15 +258,16 @@ export default function loadVault(window, document, mainElement) {
         if (error) throw Error(error)
         return config
       }).then(() => new Promise((resolve, reject) => {
-        const txDetailDiv = TxDetailScreen(document, platform, accountNo, tx, (err, res) => {
-          if (err) {
-            reject(err)
-          } else {
-            txDetailDiv.classList.add('d-none')
-            loadingDiv.classList.remove('d-none')
-            resolve(res)
-          }
-        })
+        const txDetailDiv = TxDetailScreen(document, platform,
+          accountNo, address, tx, (err, res) => {
+            if (err) {
+              reject(err)
+            } else {
+              txDetailDiv.classList.add('d-none')
+              loadingDiv.classList.remove('d-none')
+              resolve(res)
+            }
+          })
         contentDiv.appendChild(txDetailDiv)
       })).then(([choice, pin]) => {
         if (choice !== 'ok') throw new Error('cancelled by user')
