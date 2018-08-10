@@ -1,9 +1,8 @@
+/* eslint-disable no-undef */
+
 import { safeHtml } from 'common-tags'
 
 import loadVault from './vault'
-
-const window = window // eslint-disable-line
-const document = document // eslint-disable-line
 
 const mainDivId = 'main'
 
