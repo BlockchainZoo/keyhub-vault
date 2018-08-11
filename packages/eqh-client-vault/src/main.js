@@ -12,7 +12,7 @@ const htmlTemplate = safeHtml`
 <header>
     <nav class="navbar navbar-expand-lg navbar-dark justify-content-center">
 
-      <a class="navbar-brand flex-grow-0 order-1" href="/">Keyhub</a>
+      <a class="navbar-brand flex-grow-0 order-1" href="/">KeyHub</a>
 
     </nav>
 
@@ -29,12 +29,13 @@ const htmlTemplate = safeHtml`
 
 const isLocalhost =
   window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-document.title = isLocalhost ? 'Keyhub Offline Vault' : 'Keyhub Web Vault'
+document.title = isLocalhost ? 'Local Offline Vault' : 'KeyHub Web Vault'
 
 const link = document.createElement('link')
 link.type = 'text/css'
 link.rel = 'stylesheet'
 link.href = './css/main.css'
+// link.integrity = 'sha384-REn7tgv5BkCT3pj5IurmMaMGlCiIKBLX9MwoXrtsMbokaFxx9SsQJw5glyFzI5Yx'
 document.head.appendChild(link)
 
 document.getElementById('body').innerHTML = htmlTemplate

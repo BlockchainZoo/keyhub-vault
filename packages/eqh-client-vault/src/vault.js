@@ -379,7 +379,7 @@ export default function loadVault(window, document, mainElement) {
                   () =>
                     new Promise((resolve, reject) => {
                       const message =
-                        'Key Added. Thank you for using our Open-source Vault. You will be returned to the main application.'
+                        'Key Added. Thank you for using our Open-source Vault. You will be returned to the main app.'
                       contentDiv.innerHTML = ''
                       contentDiv.appendChild(
                         SuccessScreen(document, 'Thank You', message, (err, res) => {
@@ -427,7 +427,7 @@ export default function loadVault(window, document, mainElement) {
                   () =>
                     new Promise((resolve, reject) => {
                       const message =
-                        'Transaction Signed. Thank you for using Keyhub soft wallet. You will be returned to the main application.'
+                        'Transaction Signed. Thank you for using our Open-source Vault. You will be returned to the main app.'
                       contentDiv.innerHTML = ''
                       contentDiv.appendChild(
                         SuccessScreen(document, 'Thank You', message, (err, res) => {
