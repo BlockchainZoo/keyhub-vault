@@ -47,7 +47,7 @@ const validatePin = (pinInput, pinConfirmInput, pinAlert) => {
     pinAlert.classList.add('invalid-feedback', 'd-block')
   } else {
     pinInput.classList.add('is-invalid')
-    pinAlert.innerHTML = "Pin can't be empty!"
+    pinAlert.innerHTML = "PIN can't be empty!"
     pinAlert.classList.add('invalid-feedback', 'd-block')
   }
 
@@ -59,11 +59,11 @@ export default function createElement(document, passphrase, withPin, callback) {
 
   const pinForm = safeHtml`
     <div class="form-group">
-      <label for="text-pin">Please input a new Security Pin: (alphanumeric - used for key encryption)</label><br>
+      <label for="text-pin">Please input a new Security PIN: (any letter or number)</label><br>
       <input type="password" class="form-control" id="pin-input" />
     </div>
     <div class="form-group">
-      <label for="text-pin-confirm">Please re-input your Security Pin:</label><br>
+      <label for="text-pin-confirm">Please re-confirm your Security PIN:</label><br>
       <input type="password" class="form-control" id="pin-confirm-input" />
     </div>
     <div id="pin-alert" class="d-hide form-group"></div>

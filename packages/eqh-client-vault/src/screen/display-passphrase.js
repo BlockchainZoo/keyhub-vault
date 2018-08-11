@@ -2,9 +2,9 @@ import { safeHtml } from 'common-tags'
 
 export default function createElement(document, passphrase, callback) {
   const div = document.createElement('div')
-  div.innerHTML = safeHtml`<h2 class="page-title">Secret Passhphrase</h2>
+  div.innerHTML = safeHtml`<h2 class="page-title">Add Blockchain Key</h2>
   <div class="form-group">
-    <label for="text-passphrase">Your automatically generated passphrase is:</label><br>
+    <label for="text-passphrase">Your automatically generated secret passphrase is:</label><br>
     <textarea class="form-control" id="passphrase-input">${passphrase}</textarea>
   </div>
   <p>Please write down on paper or memorize these 10 words (their order and capitalization matters - always lowercase).</p>

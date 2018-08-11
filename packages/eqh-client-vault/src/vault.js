@@ -25,9 +25,9 @@ export default function loadVault(window, document, mainElement) {
   const vaultLayoutHTML = safeHtml`<div class="container fade-in">
     <div class="row shadow-on">
       <div class="sidebar col-md-4 bg-grey py-3" id="sidebar">
-        <div class="block-title">Private Keys (in this browser)</div>
+        <div class="block-title">Keys in this browser's wallet</div>
         <div id="account-list" class="account-list"></div>
-        <button class="btn btn-secondary btn-sm ml-1" id="goto-add-account-btn">Add Key</button>
+        <button class="btn btn-secondary btn-sm ml-1" id="goto-add-account-btn">Add / Restore Key</button>
       </div>
       <div class="col-md-8 bg-white main-content">
         <div class="entry-page py-3" id="content"></div>
@@ -38,6 +38,7 @@ export default function loadVault(window, document, mainElement) {
   mainElement.innerHTML = vaultLayoutHTML // eslint-disable-line no-param-reassign
 
   const contentDiv = document.getElementById('content')
+  const sidebarDiv = document.getElementById('sidebar')
   const accountListDiv = document.getElementById('account-list')
 
   let welcomeDiv = null
@@ -185,7 +186,9 @@ export default function loadVault(window, document, mainElement) {
           if (choice2 !== 'ok') throw new Error('cancelled by user')
 
           contentDiv.innerHTML = ''
-          contentDiv.appendChild(LoadingScreen(document, 'Encrypting your hashed Passphrase'))
+          contentDiv.appendChild(
+            LoadingScreen(document, 'Securely Storing your Key in this Browser')
+          )
 
           // call createKeyPair on background webworker
           return new Promise((resolve, reject) => {
@@ -220,6 +223,9 @@ export default function loadVault(window, document, mainElement) {
     // Lazy-Load Webworker
     if (!workers[platform]) workers[platform] = new VaultWorker()
     const worker = workers[platform]
+
+    contentDiv.innerHTML = ''
+    contentDiv.appendChild(LoadingScreen(document, 'Verifying your Key'))
 
     // call signMessage on background worker
     return new Promise((resolve, reject) => {
@@ -350,6 +356,9 @@ export default function loadVault(window, document, mainElement) {
               data: { action, params, callback },
             } = event
 
+            // Hide the sidebar
+            sidebarDiv.classList.add('d-none')
+
             // Trigger B: App wants to create new key for user
             // Input: { action: 'newKeyAndSign', params: [ 'EQH', messageHex ] }
             // Output: { publicKey, signature }
@@ -357,21 +366,20 @@ export default function loadVault(window, document, mainElement) {
               const [platform, messageHex] = params
 
               return showGenerateKeyScreen(platform)
+                .then(res => updateAccountListDiv().then(() => res))
                 .then(({ address, publicKey, pin }) =>
                   signMessage(platform, address, pin, messageHex).then(signature =>
-                    updateAccountListDiv().then(() =>
-                      callback(null, {
-                        publicKey,
-                        signature,
-                      })
-                    )
+                    callback(null, {
+                      publicKey,
+                      signature,
+                    })
                   )
                 )
                 .then(
                   () =>
                     new Promise((resolve, reject) => {
                       const message =
-                        'Key Generated. Thank you for using Keyhub soft wallet. You will be returned to the main application.'
+                        'Key Added. Thank you for using our Open-source Vault. You will be returned to the main application.'
                       contentDiv.innerHTML = ''
                       contentDiv.appendChild(
                         SuccessScreen(document, 'Thank You', message, (err, res) => {
