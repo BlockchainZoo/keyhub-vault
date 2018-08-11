@@ -6,8 +6,7 @@ const openpgpSRI = 'sha384-FOhMU3wjaE3eT5B6TIzi1LyTEdGWVmndJuxyQfMqEBpqYQYByN6C0
 const scriptURL = './js/main.bundle.js'
 const scriptSignatureURL = './js/main.bundle.js.sig.asc'
 
-const pubkey = (`
------BEGIN PGP PUBLIC KEY BLOCK-----
+const pubkey = `-----BEGIN PGP PUBLIC KEY BLOCK-----
 Version: OpenPGP.js v3.0.12
 Comment: https://openpgpjs.org
 
@@ -20,14 +19,28 @@ W01ssxLS3VyiYiJW16m9c7ubg4p+HwMBCAfCYQQYFggAEwUCW1GeVQkQZK/9
 1p/FSmkCGwwAAH0cAQCQdWgExzXATzF/LCwqb54NLKPL2vrFQY0V/ryyi6mP
 fQEA/HmvD8QGC18EuOAmk3UXaWyZMnFT3Fs08dcjqKr3uAg=
 =NzpF
------END PGP PUBLIC KEY BLOCK-----`)
+-----END PGP PUBLIC KEY BLOCK-----`
 
+const pubkeyText = pubkey
+  .split(/[\n\r]/g)
+  .map(l => l.trim())
+  .join('\n')
+
+// This works on all devices/browsers, and uses IndexedDBShim as a final fallback
+const indexedDB =
+  window.indexedDB ||
+  window.mozIndexedDB ||
+  window.webkitIndexedDB ||
+  window.msIndexedDB ||
+  window.shimIndexedDB
 
 const documentBody = document.getElementById('body') // eslint-disable-line no-undef
 documentBody.innerHTML = ''
-const printLog = (msg) => {
-  documentBody.innerHTML += `<div>${msg}</div>`
-  console.info(msg) // eslint-disable-line no-console
+const printLog = (msg, obj) => {
+  /* eslint-disable no-console */
+  documentBody.innerHTML += `<pre>${msg}</pre>`
+  if (obj) console.info(msg, obj)
+  else console.info(msg)
 }
 
 printLog('Loading OpenPGP library...')
@@ -44,46 +57,150 @@ const loadOpenpgp = new Promise((resolve, reject) => {
   document.body.appendChild(openpgpScript)
 })
 
-loadOpenpgp.then((openpgp) => {
-  printLog('Loading OpenPGP webworker...')
-  fetch(openpgpURL, { integrity: openpgpSRI })
-    .then(res => res.ok && res.blob()).then(blob => URL.createObjectURL(blob)).then(url => (
-      openpgp.initWorker({ path: url })
-    ))
-    .then(() => {
-      printLog('Downloading main script and PGP signature...')
-      return Promise.all([
-        fetch(scriptURL).then(res1 => res1.ok && res1.arrayBuffer().then(b => [b, res1])),
-        fetch(scriptSignatureURL).then(res2 => res2.ok && res2.text().then(t => [t, res2])),
-      ])
-    })
-    .then(([[msgBuffer, msgRes], [detachedSig, detachedSigRes]]) => {
-      printLog(`Verifying signature of main script at ${msgRes.url} using signature at ${detachedSigRes.url} ...`)
+loadOpenpgp
+  .catch(event => {
+    const error = event.error || event.target.src
+    const errorMessage = `Could not download OpenPGP library: ${error} . \nYour internet connection might be broken or faulty. Please try again later.`
+    printLog(errorMessage)
+    window.alert(errorMessage) // eslint-disable-line no-alert
+    setTimeout(() => self.close(), 5000) // eslint-disable-line no-restricted-globals
+  })
+  .then(openpgp => {
+    printLog('Loading OpenPGP webworker...')
+    return fetch(openpgpURL, { integrity: openpgpSRI })
+      .then(res => res.ok && res.blob())
+      .then(blob => URL.createObjectURL(blob))
+      .then(url => openpgp.initWorker({ path: url }))
+      .then(() => {
+        printLog(`Downloading main script at ${scriptURL} and its PGP signature...`)
+        return Promise.all([
+          fetch(scriptURL).then(res1 => res1.ok && res1.arrayBuffer().then(buf => [buf, res1])),
+          fetch(scriptSignatureURL).then(
+            res2 => res2.ok && res2.text().then(t => [t.trim(), res2])
+          ),
+        ])
+      })
+      .then(([[msgBuffer, msgRes], [detachedSig, detachedSigRes]]) => {
+        printLog(`Verifying signature of main script using signature at ${detachedSigRes.url} :`)
+        printLog(detachedSig)
 
-      const data = new Uint8Array(msgBuffer)
-      const params = {
-        message: openpgp.message.fromBinary(data), // input as Message object
-        signature: openpgp.signature.readArmored(detachedSig), // parse detached signature
-        publicKeys: openpgp.key.readArmored(pubkey.split(/[\n\r]/g).map(l => l.trim()).join('\n')).keys, // for verification
-      }
+        const contentType = msgRes.headers.get('content-type')
 
-      return openpgp.verify(params).then((verified) => {
-        const validity = verified.signatures[0].valid // true
-        if (validity) {
-          const okMessage = `Security Check Passed! Main script signed by PGP key id ${verified.signatures[0].keyid.toHex()}`
-          printLog(okMessage)
-
-          const blob = new Blob([data], { type: msgRes.headers.get('content-type') })
-          return URL.createObjectURL(blob)
+        const data = new Uint8Array(msgBuffer)
+        const params = {
+          message: openpgp.message.fromBinary(data), // input as Message object
+          signature: openpgp.signature.readArmored(detachedSig), // parse detached signature
+          publicKeys: openpgp.key.readArmored(pubkeyText).keys, // for verification
         }
 
-        const errorMessage = 'Security Breach! Javascript has been tampered with! Please contact Keyhub Support immediately.'
-        printLog(`<h3>${errorMessage}</h3>`)
-        throw new Error(errorMessage)
+        return openpgp.verify(params).then(({ signatures }) => {
+          const { keyid, valid: isValid } = signatures[0]
+
+          if (isValid) {
+            const okMessage = `Security Check Passed! Main script signed by PGP key id ${keyid.toHex()}`
+            printLog(okMessage)
+          }
+
+          const dbName = 'pgpdb'
+          const storeName = 'codeSign'
+          return new Promise((resolve, reject) => {
+            const open = indexedDB.open(dbName, 1)
+            open.onupgradeneeded = () => {
+              open.result.createObjectStore(storeName, { keyPath: 'id' })
+            }
+            open.onerror = error => reject(error)
+            open.onsuccess = () => {
+              const db = open.result
+              const tx = db.transaction([storeName], 'readwrite')
+              tx.onerror = error => reject(error)
+              tx.oncomplete = () => db.close()
+
+              const store = tx.objectStore(storeName)
+              const get = store.get('lastSeen')
+              get.onsuccess = () => {
+                if (!get.result) {
+                  if (!isValid) {
+                    const errorMessage =
+                      'Security Breach! Javascript has been tampered with! Please contact KeyHub Support immediately.'
+                    printLog(`<h3>${errorMessage}</h3>`)
+                    throw new Error(errorMessage)
+                  }
+
+                  store.put({
+                    id: 'lastSeen',
+                    signature: detachedSig,
+                    code: msgBuffer,
+                    type: contentType,
+                  })
+
+                  const blob = new Blob([data], { type: contentType })
+                  resolve(URL.createObjectURL(blob))
+                  return
+                }
+
+                const { signature: lastSignature, code: lastCode, type: lastType } = get.result
+
+                if (isValid) {
+                  if (detachedSig === lastSignature) {
+                    const blob = new Blob([data], { type: contentType })
+                    resolve(URL.createObjectURL(blob))
+                    return
+                  }
+
+                  // eslint-disable-next-line no-alert
+                  const isYes = window.confirm(
+                    'This app has a new software update. Would you like to download & install the new version?'
+                  )
+                  if (isYes) {
+                    store.put({
+                      id: 'lastSeen',
+                      signature: detachedSig,
+                      code: msgBuffer,
+                      type: contentType,
+                    })
+                    const blob = new Blob([data], { type: contentType })
+                    resolve(URL.createObjectURL(blob))
+                    return
+                  }
+                }
+
+                // Fallback to last seen code
+                const lastData = new Uint8Array(lastCode)
+                const lastParams = {
+                  message: openpgp.message.fromBinary(lastData), // input as Message object
+                  signature: openpgp.signature.readArmored(lastSignature), // parse detached signature
+                  publicKeys: openpgp.key.readArmored(pubkeyText).keys, // for verification
+                }
+
+                openpgp
+                  .verify(lastParams)
+                  .then(({ signatures: sigs }) => {
+                    const { keyid: lastKeyid, valid: isLastValid } = sigs[0]
+
+                    if (!isLastValid) {
+                      const errorMessage =
+                        'Local Security Breach! Javascript has been tampered with! Please contact KeyHub Support immediately.'
+                      printLog(`<h3>${errorMessage}</h3>`)
+                      throw new Error(errorMessage)
+                    }
+
+                    printLog(
+                      `Local Security Check Passed! Main script signed by PGP key id ${lastKeyid.toHex()}`
+                    )
+
+                    const blob = new Blob([lastData], { type: lastType })
+                    resolve(URL.createObjectURL(blob))
+                  })
+                  .catch(error => reject(error))
+              }
+            }
+          })
+        })
       })
-    })
-    .then(localBlobURL => new Promise((resolve, reject) => {
-      printLog('Adding main script to the page...')
+  })
+  .then(localBlobURL => {
+    printLog('Loading main script into the page...')
+    return new Promise((resolve, reject) => {
       const payloadScript = document.createElement('script')
       payloadScript.type = 'text/javascript'
       payloadScript.src = localBlobURL
@@ -92,17 +209,12 @@ loadOpenpgp.then((openpgp) => {
       payloadScript.onload = resolve
       payloadScript.onerror = reject
       document.head.appendChild(payloadScript)
-      printLog('Starting up...')
-    }))
-    .catch((error) => {
-      const errorMessage = `Fatal Error: ${error.message || error}. Please try again.`
-      printLog(errorMessage)
-      window.alert(errorMessage) // eslint-disable-line no-alert
-      setTimeout(() => self.close(), 5000) // eslint-disable-line no-restricted-globals
+      printLog('Starting...')
     })
-}).catch((event) => {
-  const errorMessage = `Could not load OpenPGP library: ${event.error || event.target.src} . \nYour connection might be broken or insecure. Please try again.`
-  printLog(errorMessage)
-  window.alert(errorMessage) // eslint-disable-line no-alert
-  setTimeout(() => self.close(), 5000) // eslint-disable-line no-restricted-globals
-})
+  })
+  .catch(error => {
+    const errorMessage = `Fatal Error: ${error.message || error}. Please try again.`
+    printLog(errorMessage)
+    window.alert(errorMessage) // eslint-disable-line no-alert
+    setTimeout(() => self.close(), 5000) // eslint-disable-line no-restricted-globals
+  })
