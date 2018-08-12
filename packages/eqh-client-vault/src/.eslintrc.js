@@ -10,5 +10,11 @@ module.exports = {
         sourceType: 'module',
       },
     },
+    {
+      files: ['main.js', 'util/*.js'],
+      env: {
+        browser: true,
+      },
+    },
   ],
 }

@@ -1,5 +1,3 @@
-/* eslint-disable no-undef */
-
 import { safeHtml } from 'common-tags'
 
 import loadVault from './vault'
