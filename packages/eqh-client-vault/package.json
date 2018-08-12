@@ -32,6 +32,7 @@
     "jsdom": "^11.11.0",
     "node-fetch": "^2.1.2",
     "openpgp": "github:heri16/openpgpjs#v3.1.0",
+    "p-retry": "^2.0.0",
     "pako": "^1.0.6",
     "post-robot": "^8.0.28",
     "qs": "^6.5.2",

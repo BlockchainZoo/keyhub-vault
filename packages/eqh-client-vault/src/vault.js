@@ -2,6 +2,8 @@ import { safeHtml } from 'common-tags'
 
 import postRobot from 'post-robot'
 
+import pRetry from 'p-retry'
+
 import VaultWorker from './vault.worker'
 
 import {
@@ -225,7 +227,7 @@ export default function loadVault(window, document, mainElement) {
     const worker = workers[platform]
 
     contentDiv.innerHTML = ''
-    contentDiv.appendChild(LoadingScreen(document, 'Verifying your Key'))
+    contentDiv.appendChild(LoadingScreen(document, 'Signing Document'))
 
     // call signMessage on background worker
     return new Promise((resolve, reject) => {
@@ -240,7 +242,7 @@ export default function loadVault(window, document, mainElement) {
 
   const showTxDetailScreen = (tx, platform, address) => {
     contentDiv.innerHTML = ''
-    const loadingDiv = LoadingScreen(document, `Signing Transaction for ${platform}`)
+    const loadingDiv = LoadingScreen(document, `Signing Transaction`)
     loadingDiv.classList.add('d-none')
     contentDiv.appendChild(loadingDiv)
 
@@ -368,12 +370,20 @@ export default function loadVault(window, document, mainElement) {
               return showGenerateKeyScreen(platform)
                 .then(res => updateAccountListDiv().then(() => res))
                 .then(({ address, publicKey, pin }) =>
-                  signMessage(platform, address, pin, messageHex).then(signature =>
-                    callback(null, {
-                      publicKey,
-                      signature,
-                    })
-                  )
+                  signMessage(platform, address, pin, messageHex).then(signature => {
+                    contentDiv.innerHTML = ''
+                    contentDiv.appendChild(LoadingScreen(document, 'Verifying your Key'))
+                    // callback to the parent window with result
+                    const run = () =>
+                      callback(null, {
+                        publicKey,
+                        signature,
+                      }).catch(error => {
+                        window.alert(`Error in Main App: ${error.message || error}`) // eslint-disable-line
+                        throw error
+                      })
+                    return pRetry(run, { retries: 10, factor: 1.71 })
+                  })
                 )
                 .then(
                   () =>
@@ -419,10 +429,21 @@ export default function loadVault(window, document, mainElement) {
               const [platform, address, tx] = params
 
               return showTxDetailScreen(tx, platform, address)
-                .then(({ transactionBytes, transactionJSON, transactionFullHash }) =>
-                  // callback to the parent window once signed data is available
-                  callback(null, { transactionBytes, transactionJSON, transactionFullHash })
-                )
+                .then(({ transactionBytes, transactionJSON, transactionFullHash }) => {
+                  contentDiv.innerHTML = ''
+                  contentDiv.appendChild(LoadingScreen(document, 'Verifying your Transaction'))
+                  // callback to the parent window with result
+                  const run = () =>
+                    callback(null, {
+                      transactionBytes,
+                      transactionJSON,
+                      transactionFullHash,
+                    }).catch(error => {
+                      window.alert(`Error in Main App: ${error.message || error}`) // eslint-disable-line
+                      throw error
+                    })
+                  return pRetry(run, { retries: 10, factor: 1.71 })
+                })
                 .then(
                   () =>
                     new Promise((resolve, reject) => {
