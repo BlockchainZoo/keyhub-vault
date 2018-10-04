@@ -11,13 +11,18 @@ const callOnStore = (storeName, fn, window = window || self) => {
     window.shimIndexedDB
 
   // Open (or create) the database
-  const open = indexedDB.open('vaultdb', 1)
+  const open = indexedDB.open('vaultdb', 2)
 
   // Create the schema
-  open.onupgradeneeded = () => {
+  open.onupgradeneeded = event => {
     const db = open.result
-    const store = db.createObjectStore(storeName, { keyPath: 'id' })
-    store.createIndex('addressIndex', ['platform', 'address'])
+    if (event.oldVersion < 1) {
+      const accounts = db.createObjectStore('accounts', { keyPath: 'id' })
+      accounts.createIndex('addressIndex', ['address'])
+    }
+    if (event.oldVersion < 2) {
+      db.createObjectStore('prefs', {})
+    }
   }
 
   open.onsuccess = () => {
