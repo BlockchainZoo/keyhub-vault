@@ -16,6 +16,12 @@ On MacOS or Ubuntu you may try the installation command below in a terminal:
 sudo apt install caddy || sudo yum install caddy || brew install caddy
 ```
 
+### Build the project
+
+```bash
+npx lerna bootstrap --scope=eqh-client-vault
+```
+
 ### Start the Caddy HTTP server
 
 ```bash
@@ -23,4 +29,40 @@ cd ./eqh-client-vault
 caddy
 ```
 
+**Note:** If "can not download /js/openpgp.worker.js" error appears, perform shift+refresh to ignore the cache
+
+**Note:** after every change, run
+
+```bash
+npx lerna bootstrap --scope=eqh-client-vault
+```
+
 You are now ready to use the offline wallet/vault.
+
+## Deployment
+
+1. Go to project directory
+2. Run this command to run "prepare" script and build the project
+
+```bash
+npx lerna bootstrap --scope=eqh-client-vault
+```
+
+/dist folder will appear inside the eqh-client-vault directory
+
+3. configure the AWS configure twith the key and secret key
+4. Deploy /dist to S3 by deploying the files to S3, this action will produce /cloudfront/stack.ap-southeast-1.yaml which will be used by cloudfront to point to this specific S3
+
+```bash
+sls deploy
+```
+
+5. Check whether the files has been uploaded through aws S3 terminal
+6. Check whether index.html can be accessed (no access denied)
+7. Deploy cloudfront by going to /cloudfront then run
+
+```bash
+sls deploy
+```
+
+8. go to vault.keyhub.app to check the deployment
