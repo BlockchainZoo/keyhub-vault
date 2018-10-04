@@ -43,7 +43,7 @@ export default function loadVault(window, document, mainElement) {
   const sidebarDiv = document.getElementById('sidebar')
   const accountListDiv = document.getElementById('account-list')
 
-  let welcomeDiv = null
+  let welcomeDiv
 
   const configureAccount = (platform, address) => {
     // Lazy-Load Webworker
@@ -69,8 +69,8 @@ export default function loadVault(window, document, mainElement) {
   const updateAccountListDiv = () =>
     new Promise((resolve, reject) => {
       try {
-        callOnStore('accounts', store => {
-          const req = store.getAll()
+        callOnStore('accounts', accounts => {
+          const req = accounts.getAll()
           req.onsuccess = ({ target: { result } }) => {
             if (Array.isArray(result) && result.length > 0) {
               // Group by platform
@@ -113,8 +113,8 @@ export default function loadVault(window, document, mainElement) {
                   }
                 })
 
-                const accounts = accountsByPlatform[platform]
-                accounts.forEach(account => {
+                const plaformAccounts = accountsByPlatform[platform]
+                plaformAccounts.forEach(account => {
                   const li = document.createElement('li')
                   const button = document.createElement('button') // eslint-disable-line
                   button.type = 'button'
@@ -142,6 +142,44 @@ export default function loadVault(window, document, mainElement) {
       }
     })
 
+  const showGenerateUnprotectedKeyScreen = platform => {
+    contentDiv.innerHTML = ''
+    contentDiv.appendChild(LoadingScreen(document, `Generating ${platform} Key`))
+
+    // Lazy-Load Webworker
+    if (!workers[platform]) workers[platform] = new VaultWorker()
+    const worker = workers[platform]
+
+    // call generatePassphrase on background webworker
+    const p = new Promise((resolve, reject) => {
+      worker.onmessage = resolve
+      worker.onerror = reject
+      worker.postMessage(['generatePassphrase', 10])
+    }).then(({ data: { error, passphrase } }) => {
+      if (error) throw new Error(error)
+      return passphrase
+    })
+
+    return p.then(passphrase => {
+      contentDiv.innerHTML = ''
+      contentDiv.appendChild(LoadingScreen(document, 'Storing Key in Browser'))
+
+      // call createUnprotectedKeyPair on background webworker
+      return new Promise((resolve, reject) => {
+        worker.onmessage = resolve
+        worker.onerror = reject
+        worker.postMessage(['createUnprotectedKeyPair', `${platform.toLowerCase()}${passphrase}`])
+      }).then(({ data: { error, address, accountNo, publicKey } }) => {
+        if (error) throw new Error(error)
+        return {
+          address,
+          accountNo,
+          publicKey,
+        }
+      })
+    })
+  }
+
   const showGenerateKeyScreen = platform => {
     contentDiv.innerHTML = ''
     contentDiv.appendChild(LoadingScreen(document, `Generating Passphrase for ${platform}`))
@@ -151,7 +189,7 @@ export default function loadVault(window, document, mainElement) {
     const worker = workers[platform]
 
     // call generatePassphrase on background webworker
-    const promise = new Promise((resolve, reject) => {
+    const p = new Promise((resolve, reject) => {
       worker.onmessage = resolve
       worker.onerror = reject
       worker.postMessage(['generatePassphrase', 10])
@@ -160,7 +198,7 @@ export default function loadVault(window, document, mainElement) {
       return passphrase
     })
 
-    return promise
+    return p
       .then(
         passphrase =>
           new Promise((resolve, reject) => {
@@ -196,7 +234,11 @@ export default function loadVault(window, document, mainElement) {
           return new Promise((resolve, reject) => {
             worker.onmessage = resolve
             worker.onerror = reject
-            worker.postMessage(['createKeyPair', `${platform.toLowerCase()}${passphrase}`, pin])
+            worker.postMessage([
+              'createProtectedKeyPair',
+              `${platform.toLowerCase()}${passphrase}`,
+              pin,
+            ])
           }).then(({ data: { error, address, accountNo, publicKey } }) => {
             if (error) throw new Error(error)
             return {
@@ -221,7 +263,7 @@ export default function loadVault(window, document, mainElement) {
       )
     }).then(platform => showGenerateKeyScreen(platform))
 
-  const signMessage = (platform, address, pin, message) => {
+  const signMessage = (platform, address, message, optionalPin = null) => {
     // Lazy-Load Webworker
     if (!workers[platform]) workers[platform] = new VaultWorker()
     const worker = workers[platform]
@@ -233,7 +275,7 @@ export default function loadVault(window, document, mainElement) {
     return new Promise((resolve, reject) => {
       worker.onmessage = resolve
       worker.onerror = reject
-      worker.postMessage(['signMessage', address, pin, message])
+      worker.postMessage(['signMessage', address, message, optionalPin])
     }).then(({ data: { error, signature } }) => {
       if (error) throw new Error(error)
       return signature
@@ -361,6 +403,67 @@ export default function loadVault(window, document, mainElement) {
             // Hide the sidebar
             sidebarDiv.classList.add('d-none')
 
+            // Trigger A: App wants to create new unprotected key for user
+            // Input: { action: 'newUnprotectedKeyAndSign', params: [ 'EQH', messageHex, phoneNumber ] }
+            // Output: { publicKey, signature }
+            if (action === 'newUnprotectedKeyAndSign' && params) {
+              const [platform, messageHex] = params
+
+              return showGenerateUnprotectedKeyScreen(platform)
+                .then(res => updateAccountListDiv().then(() => res))
+                .then(({ address, publicKey }) =>
+                  signMessage(platform, address, messageHex).then(signature => {
+                    contentDiv.innerHTML = ''
+                    contentDiv.appendChild(LoadingScreen(document, 'Registering Key'))
+                    // callback to the parent window with result
+                    const run = () =>
+                      callback(null, {
+                        publicKey,
+                        signature,
+                      }).catch(error => {
+                        window.alert(`Error in Main App: ${error.message || error}`) // eslint-disable-line
+                        throw error
+                      })
+                    return pRetry(run, { retries: 10, factor: 1.71 })
+                  })
+                )
+                .then(
+                  () =>
+                    new Promise((resolve, reject) => {
+                      const message =
+                        'We will text the secret key to your phone for backup purpose. SMS might be intercepted by an unknown third-party.'
+                      contentDiv.innerHTML = ''
+                      contentDiv.appendChild(
+                        SuccessScreen(document, 'Confirm Phone Number', message, (err, res) => {
+                          if (err) reject(err)
+                          else resolve(res)
+                        })
+                      )
+
+                      // Close the window after 5 seconds if no response from user
+                      window.setTimeout(() => {
+                        resolve('timeout')
+                      }, 5000)
+                    })
+                )
+                .then(() => self.close()) // eslint-disable-line
+                .catch(error => {
+                  if (error.message !== 'cancelled by user') {
+                    window.alert(`Error: ${error.message || error}`)
+                  }
+
+                  // callback to the parent window on error
+                  callback(error)
+                    .then(() => {
+                      self.close() // eslint-disable-line
+                    })
+                    .catch(err => {
+                      window.alert(`Could not return error to parent window: ${err.message || err}`)
+                      self.close() // eslint-disable-line
+                    })
+                })
+            }
+
             // Trigger B: App wants to create new key for user
             // Input: { action: 'newKeyAndSign', params: [ 'EQH', messageHex ] }
             // Output: { publicKey, signature }
@@ -370,7 +473,7 @@ export default function loadVault(window, document, mainElement) {
               return showGenerateKeyScreen(platform)
                 .then(res => updateAccountListDiv().then(() => res))
                 .then(({ address, publicKey, pin }) =>
-                  signMessage(platform, address, pin, messageHex).then(signature => {
+                  signMessage(platform, address, messageHex, pin).then(signature => {
                     contentDiv.innerHTML = ''
                     contentDiv.appendChild(LoadingScreen(document, 'Verifying your Key'))
                     // callback to the parent window with result
