@@ -6,6 +6,7 @@ const { callOnStore } = require('./util/indexeddb')
 const {
   safeObj,
   encrypt,
+  decrypt,
   digest,
   wrapKey,
   wrapKeyWithPin,
@@ -65,25 +66,27 @@ bridge.load(NRS => {
         // We use a longer hash here and truncate to desired AES keySize
         const secretPhraseUint8 = new Uint8Array(secretPhraseBuffer, 0, opts.keyAlgo.length / 8)
         return cryptoKeyOrPin instanceof Uint8Array
-          ? wrapKeyWithPin(cryptoKeyOrPin, secretPhraseUint8, opts)
-          : wrapKey(cryptoKeyOrPin, secretPhraseUint8, opts)
+          ? wrapKeyWithPin(secretPhraseUint8, cryptoKeyOrPin, opts)
+          : wrapKey(secretPhraseUint8, cryptoKeyOrPin, opts)
       })
       .then(exportKeys) // Ensure key can be exported / extracted
-      .then(([secretPhraseObj, secretPhraseUint8]) => {
+      .then(([secretPhraseObj, secretPhraseBuffer]) => {
         // secretPhraseHex is the real secretPhrase used to sign transactions
         // secretPhraseJwk is the encrypted secretPhrase in 'jwk' format
+        const secretPhraseUint8 = new Uint8Array(secretPhraseBuffer)
         const secretPhraseHex = converters.byteArrayToHexString(Array.from(secretPhraseUint8))
         const publicKey = NRS.getPublicKey(secretPhraseHex)
         const accountId = NRS.getAccountIdFromPublicKey(publicKey)
         const accountRS = NRS.convertNumericToRSAccountFormat(accountId)
+        const address = accountRS
 
         // Store account in browser's indexedDB
         return new Promise((resolve, reject) => {
           const entry = {
-            id: accountRS,
+            id: address,
             platform: 'EquineHub',
             accountNo: accountId,
-            address: accountRS,
+            address,
             publicKey,
             secretPhrase: secretPhraseObj,
             createdAt: new Date(),
@@ -94,41 +97,70 @@ bridge.load(NRS => {
             req.onerror = err => reject(err)
             req.onsuccess = () => {
               resolve({
+                id: entry.id,
                 address: entry.address,
                 accountNo: entry.accountNo,
                 publicKey: entry.publicKey,
-                createdAt: entry.createdAt,
               })
             }
           })
         })
       })
 
-  const storePassphrase = (passphraseUint8, cryptoKey, accountInfo) =>
+  const storePassphrase = (entryId, passphraseUint8, cryptoKey) => {
     // Encrypt the plaintext passphrase
-    encrypt(cryptoKey, passphraseUint8, { name: 'AES-GCM', iv: genInitVector() }).then(
+    const encryptAlgo = { name: 'AES-GCM', iv: genInitVector() }
+    return encrypt(passphraseUint8, cryptoKey, encryptAlgo).then(
       ciphertextBuffer =>
-        // Store encrypted passphrase in browser's indexedDB
         new Promise((resolve, reject) => {
-          const { address: dbKey } = accountInfo
+          // Store encrypted passphrase in browser's indexedDB
           callOnStore('accounts', accounts => {
-            const req = accounts.get(dbKey)
+            const req = accounts.get(entryId)
             req.onerror = err => reject(err)
             req.onsuccess = ({ target: { result: entry } }) => {
               if (!entry) {
-                reject(new Error('account dbKey is not found in this browser'))
+                reject(new Error('account is not found in this browser'))
                 return
               }
-              entry.encryptedPassphrase = ciphertextBuffer
+              entry.passphrase = {
+                ciphertext: ciphertextBuffer,
+                encryptAlgo,
+              }
               const req2 = accounts.put(entry)
               req2.onerror = err => reject(err)
               req2.onsuccess = () => {
-                resolve(accountInfo)
+                resolve(ciphertextBuffer)
               }
             }
           })
         })
     )
+  }
+
+  const retrievePassphrase = (entryId, cryptoKey) =>
+    new Promise((resolve, reject) => {
+      // Retrieve encrypted passphrase in browser's indexedDB
+      callOnStore('accounts', accounts => {
+        const req = accounts.get(entryId)
+        req.onerror = err => reject(err)
+        req.onsuccess = ({ target: { result: entry } }) => {
+          if (!entry) {
+            reject(new Error('account is not found in this browser'))
+            return
+          }
+
+          if (entry.passphrase) {
+            // Decrypt the plaintext passphrase
+            const { ciphertext, encryptAlgo } = entry.passphrase
+            decrypt(ciphertext, cryptoKey, encryptAlgo)
+              .then(plaintextBuffer => resolve(new Uint8Array(plaintextBuffer)))
+              .catch(reject)
+          } else {
+            reject(new Error('account passphrase is not available'))
+          }
+        }
+      })
+    })
 
   const methods = safeObj({
     configure: (config, callback) => {
@@ -157,14 +189,13 @@ bridge.load(NRS => {
         passphrase,
       })
     },
-    getKeyPair: (address, callback) => {
-      if (typeof address !== 'string') throw new Error('address is not a string')
+    getKeyPair: (entryId, callback) => {
+      if (typeof entryId !== 'string') throw new Error('address / entryId is not a string')
       if (!callback) throw new Error('incorrect number of parameters')
 
       // Get account from browser's indexedDB
-      const dbKey = address
       callOnStore('accounts', accounts => {
-        const req = accounts.get(dbKey)
+        const req = accounts.get(entryId)
         req.onerror = err => callback(err)
         req.onsuccess = ({ target: { result: entry } }) => {
           if (!entry) {
@@ -175,8 +206,32 @@ bridge.load(NRS => {
               accountNo: entry.accountNo,
               publicKey: entry.publicKey,
               createdAt: entry.createdAt,
+              hasPassphrase: !!entry.passphrase,
             })
           }
+        }
+      })
+    },
+    getKeyPairPassphrase: (entryId, callback) => {
+      if (typeof entryId !== 'string') throw new Error('address / entryId is not a string')
+      if (!callback) throw new Error('incorrect number of parameters')
+
+      // Get masterkey from browser's indexedDB
+      callOnStore('prefs', prefs => {
+        const req = prefs.get('masterkey')
+        req.onerror = err => callback(err)
+        req.onsuccess = ({ target: { result: masterCryptoKey } }) => {
+          if (!masterCryptoKey) {
+            callback(new Error('vault masterKey is not found in this browser'))
+            return
+          }
+
+          retrievePassphrase(entryId, masterCryptoKey)
+            .then(plaintextUint8 => {
+              const passphrase = converters.byteArrayToString(Array.from(plaintextUint8))
+              callback(null, { passphrase })
+            })
+            .catch(callback)
         }
       })
     },
@@ -208,9 +263,12 @@ bridge.load(NRS => {
           if (entry) {
             const masterCryptoKey = entry
             createKeyPair(passphraseUint8, masterCryptoKey, opts)
-              .then(accountInfo => storePassphrase(passphraseUint8, masterCryptoKey, accountInfo))
-              .then(accountInfo => callback(null, accountInfo))
-              .catch(error => callback(error))
+              .then(accountInfo =>
+                storePassphrase(accountInfo.id, passphraseUint8, masterCryptoKey).then(() =>
+                  callback(null, accountInfo)
+                )
+              )
+              .catch(callback)
           } else {
             // masterkey should be non-extractable (i.e. cannot be used in exportKey)
             const masterKeyExtractable = false
@@ -221,13 +279,13 @@ bridge.load(NRS => {
                 callOnStore('prefs', p => {
                   p.put(masterCryptoKey, 'masterkey')
                 })
-                return createKeyPair(passphraseUint8, masterCryptoKey, opts)
-                  .then(accountInfo =>
-                    storePassphrase(passphraseUint8, masterCryptoKey, accountInfo)
+                return createKeyPair(passphraseUint8, masterCryptoKey, opts).then(accountInfo =>
+                  storePassphrase(accountInfo.id, passphraseUint8, masterCryptoKey).then(() =>
+                    callback(null, accountInfo)
                   )
-                  .then(accountInfo => callback(null, accountInfo))
+                )
               })
-              .catch(error => callback(error))
+              .catch(callback)
           }
         }
       })
@@ -257,10 +315,10 @@ bridge.load(NRS => {
 
       createKeyPair(passphraseUint8, secretPinUint8, opts)
         .then(accountInfo => callback(null, accountInfo))
-        .catch(error => callback(error))
+        .catch(callback)
     },
-    signTransaction: (address, secretPin, txType, txData, callback) => {
-      if (typeof address !== 'string') throw new Error('address is not a string')
+    signTransaction: (entryId, secretPin, txType, txData, callback) => {
+      if (typeof entryId !== 'string') throw new Error('address / entryId is not a string')
       if (typeof secretPin !== 'string') throw new Error('secretPin is not a string')
       if (typeof txType !== 'string') throw new Error('txType is not a string')
       if (typeof txData !== 'object') throw new Error('txData is not an object')
@@ -270,13 +328,12 @@ bridge.load(NRS => {
       const secretPinUint8 = Uint8Array.from(secretPinBytes)
 
       // Get account from  browser's indexedDB
-      const dbKey = address
       callOnStore('accounts', accounts => {
-        const req = accounts.get(dbKey)
+        const req = accounts.get(entryId)
         req.onerror = err => callback(err)
         req.onsuccess = ({ target: { result: entry } }) => {
           if (!entry) {
-            callback(new Error('account dbKey is not found in this browser'))
+            callback(new Error('account is not found in this browser'))
             return
           }
           if (!entry.secretPhrase) {
@@ -291,9 +348,10 @@ bridge.load(NRS => {
 
           // Unwrap the wrapped secretPhrase object
           unwrapKeyWithPin(secretPinUint8, secretPhraseObj)
-            .then(secretPhraseUint8 =>
-              converters.byteArrayToHexString(Array.from(secretPhraseUint8))
-            )
+            .then(secretPhraseBuffer => {
+              const secretPhraseUint8 = new Uint8Array(secretPhraseBuffer)
+              return converters.byteArrayToHexString(Array.from(secretPhraseUint8))
+            })
             .then(secretPhraseHex => {
               // secretPhraseHex is the sha256 hash of the user's passphrase
               const data = safeObj({
@@ -319,25 +377,24 @@ bridge.load(NRS => {
                 })
               })
             })
-            .catch(error => callback(error))
+            .catch(callback)
         }
       })
     },
-    signMessage: (address, messageHex, secretPin, callback) => {
-      if (typeof address !== 'string') throw new Error('address is not a string')
+    signMessage: (entryId, messageHex, secretPin, callback) => {
+      if (typeof entryId !== 'string') throw new Error('address / entryId is not a string')
       if (typeof messageHex !== 'string') throw new Error('message is not a hex string')
       if (!callback) throw new Error('incorrect number of parameters')
 
       // const messageHex = converters.stringToHexString(message)
 
       // Get account from  browser's indexedDB
-      const dbKey = address
       callOnStore('accounts', accounts => {
-        const req = accounts.get(dbKey)
+        const req = accounts.get(entryId)
         req.onerror = err => callback(err)
         req.onsuccess = ({ target: { result: entry } }) => {
           if (!entry) {
-            callback(new Error('account dbKey is not found in this browser'))
+            callback(new Error('account is not found in this browser'))
             return
           }
           if (!entry.secretPhrase) {
@@ -358,14 +415,15 @@ bridge.load(NRS => {
 
             // Unwrap the wrapped secretPhrase object
             unwrapKeyWithPin(secretPinUint8, secretPhraseObj)
-              .then(secretPhraseUint8 =>
-                converters.byteArrayToHexString(Array.from(secretPhraseUint8))
-              )
+              .then(secretPhraseBuffer => {
+                const secretPhraseUint8 = new Uint8Array(secretPhraseBuffer)
+                return converters.byteArrayToHexString(Array.from(secretPhraseUint8))
+              })
               .then(secretPhraseHex => {
                 const signature = NRS.signBytes(messageHex, secretPhraseHex)
                 callback(null, { signature })
               })
-              .catch(error => callback(error))
+              .catch(callback)
           } else {
             // Get masterkey from browser's indexedDB
             callOnStore('prefs', prefs => {
@@ -378,16 +436,15 @@ bridge.load(NRS => {
                 }
 
                 unwrapKey(masterCryptoKey, secretPhraseObj)
-                  .then(secretPhraseUint8 =>
-                    converters.byteArrayToHexString(Array.from(secretPhraseUint8))
-                  )
+                  .then(secretPhraseBuffer => {
+                    const secretPhraseUint8 = new Uint8Array(secretPhraseBuffer)
+                    return converters.byteArrayToHexString(Array.from(secretPhraseUint8))
+                  })
                   .then(secretPhraseHex => {
                     const signature = NRS.signBytes(messageHex, secretPhraseHex)
                     callback(null, { signature })
                   })
-                  .catch(error => {
-                    callback(error)
-                  })
+                  .catch(callback)
               }
             })
           }
@@ -426,14 +483,14 @@ bridge.load(NRS => {
   }
 
   // // Generate New KeyPair
-  // console.log('Generating a new account...')
+  // log('Generating a new account...')
   // methods.generateKeyPair((err, res) => {
   //   if (err) throw err
-  //   console.log(res)
+  //   log(res)
   // })
 
   // // Send Transaction
-  // console.log('Sending a setAccountProperty transaction...')
+  // log('Sending a setAccountProperty transaction...')
   // const property = '$$Trader'
   // const recipient = 'EQH-4226-5SWH-A9CM-8W7P6'
   // const recipientPublicKey = 'd6b0716dce96a33d224100c15437013d3e550f025119918e86859075ae730133'
@@ -454,11 +511,11 @@ bridge.load(NRS => {
 
   // methods.signTransaction('setAccountProperty', txData, (err, response) => {
   //   if (err) throw err
-  //   console.log(JSON.stringify(response, null, 2))
+  //   log(JSON.stringify(response, null, 2))
   // })
 
   // // Send Transaction
-  // console.log('Sending a placeBidOrder transaction...')
+  // log('Sending a placeBidOrder transaction...')
   // const decimals = 2
   // const quantity = 2.5
   // const price = 1.3
@@ -471,10 +528,10 @@ bridge.load(NRS => {
 
   // methods.signTransaction('placeBidOrder', txData, (err, response) => {
   //   if (err) throw err
-  //   console.log(JSON.stringify(response, null, 2))
+  //   log(JSON.stringify(response, null, 2))
   // })
 
   // methods.createKeyPair('secret here', 'pin123456', (err, res) => {
-  //   console.log(err, res)
+  //   log(err, res)
   // })
 })

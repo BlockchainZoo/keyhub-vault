@@ -99,8 +99,8 @@ const getRandomInt = (min, max) => {
 const safeObj = obj => Object.assign(Object.create(null), obj)
 
 const exportKey = (cryptoKey, subtle = getCryptoSubtle()) =>
-  // Retrieve the keyMaterial as a Uint8Array
-  subtle.exportKey('raw', cryptoKey).then(arrayBuffer => new Uint8Array(arrayBuffer))
+  // Retrieve the keyMaterial as a ArrayBuffer
+  subtle.exportKey('raw', cryptoKey)
 
 const exportKeys = arr => {
   const subtle = getCryptoSubtle()
@@ -114,22 +114,27 @@ const exportKeys = arr => {
   )
 }
 
-const digest = (messageUint8, algo = { name: 'SHA-384' }) => {
+const digest = (messageArrayBuf, algo = { name: 'SHA-384' }) => {
   const subtle = getCryptoSubtle()
-  return subtle.digest(safeObj(algo), messageUint8)
+  return subtle.digest(safeObj(algo), messageArrayBuf)
 }
 
-const encrypt = (strongCryptoKey, secretDataUint8, algo) => {
+const encrypt = (plaintextArrayBuf, strongCryptoKey, algo) => {
   const subtle = getCryptoSubtle()
-  return subtle.encrypt(safeObj(algo), strongCryptoKey, secretDataUint8)
+  return subtle.encrypt(safeObj(algo), strongCryptoKey, plaintextArrayBuf)
 }
 
-const wrapKey = (strongCryptoKey, secretKeyUint8, { format, keyAlgo, wrapAlgo, deriveAlgo }) => {
+const decrypt = (ciphertextArrayBuf, strongCryptoKey, algo) => {
+  const subtle = getCryptoSubtle()
+  return subtle.decrypt(safeObj(algo), strongCryptoKey, ciphertextArrayBuf)
+}
+
+const wrapKey = (plainkeyArrayBuf, strongCryptoKey, { format, keyAlgo, wrapAlgo, deriveAlgo }) => {
   const subtle = getCryptoSubtle()
 
   // Convert the secretKey into a native CryptoKey
   return subtle
-    .importKey('raw', secretKeyUint8, safeObj(keyAlgo), true, ['encrypt', 'decrypt'])
+    .importKey('raw', plainkeyArrayBuf, safeObj(keyAlgo), true, ['encrypt', 'decrypt'])
     .then(cryptoKey =>
       // Use the Strengthened/Strong CryptoKey to wrap / encrypt the main CryptoKey
       subtle
@@ -147,14 +152,14 @@ const wrapKey = (strongCryptoKey, secretKeyUint8, { format, keyAlgo, wrapAlgo, d
     )
 }
 
-const wrapKeyWithPin = (secretPinUint8, secretKeyUint8, opts) => {
+const wrapKeyWithPin = (plainkeyArrayBuf, secretPinArrayBuf, opts) => {
   const subtle = getCryptoSubtle()
 
   const { keyAlgo, deriveAlgo } = opts
 
   // Convert the Pin into a native CryptoKey
   return subtle
-    .importKey('raw', secretPinUint8, deriveAlgo.name, false, ['deriveKey'])
+    .importKey('raw', secretPinArrayBuf, deriveAlgo.name, false, ['deriveKey'])
     .then(weakKey =>
       // Strengthen the Pin CryptoKey by using PBKDF2
       subtle.deriveKey(safeObj(deriveAlgo), weakKey, safeObj(keyAlgo), false, [
@@ -164,7 +169,7 @@ const wrapKeyWithPin = (secretPinUint8, secretKeyUint8, opts) => {
     )
     .then(strongKey =>
       // Use the Strengthened CryptoKey to wrap the main CryptoKey
-      wrapKey(strongKey, secretKeyUint8, opts)
+      wrapKey(strongKey, plainkeyArrayBuf, opts)
     )
 }
 
@@ -181,17 +186,16 @@ const unwrapKey = (strongCryptoKey, { format, key, keyAlgo, wrapAlgo: unwrapAlgo
       // Retrieve the secretKey as an Uint8 ArrayBuffer
       subtle.exportKey('raw', cryptoKey)
     )
-    .then(secretKeyArrayBuffer => new Uint8Array(secretKeyArrayBuffer))
 }
 
-const unwrapKeyWithPin = (secretPinUint8, wrappedKeyWithOpts) => {
+const unwrapKeyWithPin = (secretPinArrayBuf, wrappedKeyWithOpts) => {
   const subtle = getCryptoSubtle()
 
   const { keyAlgo, deriveAlgo } = wrappedKeyWithOpts
 
   // Convert the Pin into a native CryptoKey
   return subtle
-    .importKey('raw', secretPinUint8, deriveAlgo.name, false, ['deriveKey'])
+    .importKey('raw', secretPinArrayBuf, deriveAlgo.name, false, ['deriveKey'])
     .then(weakKey =>
       // Strengthen the Pin CryptoKey by using PBKDF2
       subtle.deriveKey(safeObj(deriveAlgo), weakKey, safeObj(keyAlgo), false, [
@@ -229,6 +233,7 @@ module.exports = {
   exportKeys,
   digest,
   encrypt,
+  decrypt,
   wrapKey,
   wrapKeyWithPin,
   unwrapKey,
