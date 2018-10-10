@@ -169,7 +169,7 @@ const wrapKeyWithPin = (plainkeyArrayBuf, secretPinArrayBuf, opts) => {
     )
     .then(strongKey =>
       // Use the Strengthened CryptoKey to wrap the main CryptoKey
-      wrapKey(strongKey, plainkeyArrayBuf, opts)
+      wrapKey(plainkeyArrayBuf, strongKey, opts)
     )
 }
 
