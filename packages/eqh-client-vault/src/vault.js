@@ -61,87 +61,6 @@ export default function loadVault(window, document, mainElement) {
     })
   }
 
-  const showAccountDetail = accountDetail => {
-    contentDiv.innerHTML = ''
-    contentDiv.appendChild(AccountDetail(document, accountDetail))
-  }
-
-  const updateAccountListDiv = () =>
-    new Promise((resolve, reject) => {
-      try {
-        callOnStore('accounts', accounts => {
-          const req = accounts.getAll()
-          req.onsuccess = ({ target: { result } }) => {
-            if (Array.isArray(result) && result.length > 0) {
-              // Group by platform
-              const accountsByPlatform = result.reduce((acc, i) => {
-                const g = acc[i.platform]
-                if (g) g.push(i)
-                else acc[i.platform] = [i]
-                return acc
-              }, {})
-
-              accountListDiv.innerHTML = ''
-              Object.keys(accountsByPlatform).forEach(platform => {
-                const div = document.createElement('div')
-                const h3 = document.createElement('h3')
-                h3.appendChild(document.createTextNode(platform))
-                div.appendChild(h3)
-                const ul = document.createElement('ul')
-                ul.addEventListener('click', ({ target }) => {
-                  if (target.type === 'button' && target.dataset) {
-                    const {
-                      dataset: { address, accountNo, publicKey },
-                    } = target
-                    const accountDetail = {
-                      address,
-                      accountNo,
-                      publicKey,
-                    }
-                    configureAccount(platform, address)
-                      .then(() => {
-                        ul.querySelectorAll('button').forEach(
-                          li => li.classList.remove('btn-dark') && li.classList.add('btn-light')
-                        )
-                        target.classList.remove('btn-light')
-                        target.classList.add('btn-dark')
-                        showAccountDetail(accountDetail)
-                      })
-                      .catch(error => {
-                        window.alert(`Error: ${error.message || error}`)
-                      })
-                  }
-                })
-
-                const plaformAccounts = accountsByPlatform[platform]
-                plaformAccounts.forEach(account => {
-                  const li = document.createElement('li')
-                  const button = document.createElement('button') // eslint-disable-line
-                  button.type = 'button'
-                  button.classList.add('btn', 'btn-light')
-                  button.appendChild(document.createTextNode(account.address))
-                  button.dataset.address = account.address
-                  button.dataset.accountNo = account.accountNo
-                  button.dataset.publicKey = account.publicKey
-                  li.appendChild(button)
-                  ul.appendChild(li)
-                })
-
-                div.appendChild(ul)
-                accountListDiv.appendChild(div)
-              })
-
-              resolve(true)
-            } else {
-              resolve(false)
-            }
-          }
-        })
-      } catch (err) {
-        reject(err)
-      }
-    })
-
   const showGenerateUnprotectedKeyScreen = platform => {
     contentDiv.innerHTML = ''
     contentDiv.appendChild(LoadingScreen(document, `Generating ${platform} Key`))
@@ -168,10 +87,11 @@ export default function loadVault(window, document, mainElement) {
       return new Promise((resolve, reject) => {
         worker.onmessage = resolve
         worker.onerror = reject
-        worker.postMessage(['createUnprotectedKeyPair', `${platform.toLowerCase()}${passphrase}`])
-      }).then(({ data: { error, address, accountNo, publicKey } }) => {
+        worker.postMessage(['createUnprotectedKeyPair', `${platform.toLowerCase()} ${passphrase}`])
+      }).then(({ data: { error, id, address, accountNo, publicKey } }) => {
         if (error) throw new Error(error)
         return {
+          id,
           address,
           accountNo,
           publicKey,
@@ -236,12 +156,13 @@ export default function loadVault(window, document, mainElement) {
             worker.onerror = reject
             worker.postMessage([
               'createProtectedKeyPair',
-              `${platform.toLowerCase()}${passphrase}`,
+              `${platform.toLowerCase()} ${passphrase}`,
               pin,
             ])
-          }).then(({ data: { error, address, accountNo, publicKey } }) => {
+          }).then(({ data: { error, id, address, accountNo, publicKey } }) => {
             if (error) throw new Error(error)
             return {
+              id,
               address,
               accountNo,
               publicKey,
@@ -263,22 +184,59 @@ export default function loadVault(window, document, mainElement) {
       )
     }).then(platform => showGenerateKeyScreen(platform))
 
-  const signMessage = (platform, address, message, optionalPin = null) => {
+  const showRestoreAccountScreen = (platform, address) =>
+    new Promise((resolve, reject) => {
+      const message = `You do not seem to have the private key for ${address} stored in this browser. Please restore the ${platform} key from backup.`
+      contentDiv.appendChild(
+        ErrorScreen(document, 'Key Missing', message, err => {
+          if (err) reject(err)
+          else reject(new Error('key missing'))
+        })
+      )
+    })
+
+  const showAccountDetailScreen = (platform, entryId) => {
     // Lazy-Load Webworker
     if (!workers[platform]) workers[platform] = new VaultWorker()
     const worker = workers[platform]
 
-    contentDiv.innerHTML = ''
-    contentDiv.appendChild(LoadingScreen(document, 'Signing Document'))
-
-    // call signMessage on background worker
+    // call configure on background webworker
     return new Promise((resolve, reject) => {
       worker.onmessage = resolve
       worker.onerror = reject
-      worker.postMessage(['signMessage', address, message, optionalPin])
-    }).then(({ data: { error, signature } }) => {
+      worker.postMessage(['getKeyPair', entryId])
+    }).then(({ data: { error, address, accountNo, publicKey, hasPassphrase } = {} }) => {
       if (error) throw new Error(error)
-      return signature
+      if (!address) return showRestoreAccountScreen(platform, entryId)
+      if (!hasPassphrase) {
+        const accountDetail = {
+          address,
+          accountNo,
+          publicKey,
+        }
+        contentDiv.innerHTML = ''
+        contentDiv.appendChild(AccountDetail(document, accountDetail))
+
+        return Promise.resolve(accountDetail)
+      }
+
+      return new Promise((resolve, reject) => {
+        worker.onmessage = resolve
+        worker.onerror = reject
+        worker.postMessage(['getKeyPairPassphrase', entryId])
+      }).then(({ data: { error2, passphrase } }) => {
+        if (error2) throw Error(error2)
+        const accountDetail = {
+          address,
+          accountNo,
+          publicKey,
+          passphrase,
+        }
+        contentDiv.innerHTML = ''
+        contentDiv.appendChild(AccountDetail(document, accountDetail))
+
+        return accountDetail
+      })
     })
   }
 
@@ -303,16 +261,7 @@ export default function loadVault(window, document, mainElement) {
       })
       .then(accountNo => {
         if (!accountNo) {
-          return new Promise((resolve, reject) => {
-            const message =
-              'You do not seem to have the private key stored in this browser. Please use your other browser or computer. To restore a key from backup, click the "Add Key" button.'
-            contentDiv.appendChild(
-              ErrorScreen(document, 'Key Missing', message, err => {
-                if (err) reject(err)
-                else reject(new Error('key missing'))
-              })
-            )
-          })
+          return showRestoreAccountScreen(platform, address)
         }
 
         return new Promise((resolve, reject) => {
@@ -364,7 +313,99 @@ export default function loadVault(window, document, mainElement) {
       })
   }
 
-  // Trigger A: User Click "Add Key" Button
+  const signMessage = (platform, address, message, optionalPin = null) => {
+    // Lazy-Load Webworker
+    if (!workers[platform]) workers[platform] = new VaultWorker()
+    const worker = workers[platform]
+
+    contentDiv.innerHTML = ''
+    contentDiv.appendChild(LoadingScreen(document, 'Signing Document'))
+
+    // call signMessage on background worker
+    return new Promise((resolve, reject) => {
+      worker.onmessage = resolve
+      worker.onerror = reject
+      worker.postMessage(['signMessage', address, message, optionalPin])
+    }).then(({ data: { error, signature } }) => {
+      if (error) throw new Error(error)
+      return signature
+    })
+  }
+
+  const updateAccountListDiv = () =>
+    new Promise((resolve, reject) => {
+      try {
+        callOnStore('accounts', accounts => {
+          const req = accounts.getAll()
+          req.onsuccess = ({ target: { result: entries } }) => {
+            if (Array.isArray(entries) && entries.length > 0) {
+              // Group by platform
+              const accountsByPlatform = entries.reduce((acc, entry) => {
+                const g = acc[entry.platform]
+                if (g) g.push(entry)
+                else acc[entry.platform] = [entry]
+                return acc
+              }, {})
+
+              // onClick handler for <ul/>
+              const onClick = ul => ({ target: { type, dataset, classList } }) => {
+                if (type === 'button' && dataset) {
+                  const { platform, address, entryId } = dataset
+                  // const entry = entries.find(e => e.platform === platform && e.address === address)
+                  configureAccount(platform, address)
+                    .then(() => {
+                      ul.querySelectorAll('button').forEach(
+                        li => li.classList.remove('btn-dark') && li.classList.add('btn-light')
+                      )
+                      classList.remove('btn-light')
+                      classList.add('btn-dark')
+                      showAccountDetailScreen(platform, entryId)
+                    })
+                    .catch(error => {
+                      window.alert(`Error: ${error.message || error}`)
+                    })
+                }
+              }
+
+              accountListDiv.innerHTML = ''
+              Object.keys(accountsByPlatform).forEach(platform => {
+                const div = document.createElement('div')
+                const h3 = document.createElement('h3')
+                h3.appendChild(document.createTextNode(platform))
+                div.appendChild(h3)
+                const ul = document.createElement('ul')
+                ul.addEventListener('click', onClick(ul))
+
+                const plaformAccounts = accountsByPlatform[platform]
+                plaformAccounts.forEach(entry => {
+                  const li = document.createElement('li')
+                  const button = document.createElement('button') // eslint-disable-line
+                  button.type = 'button'
+                  button.classList.add('btn', 'btn-light')
+                  button.appendChild(document.createTextNode(entry.address))
+                  button.dataset.platform = entry.platform
+                  button.dataset.address = entry.address
+                  button.dataset.entryId = entry.id
+                  li.appendChild(button)
+                  ul.appendChild(li)
+                })
+
+                div.appendChild(ul)
+                accountListDiv.appendChild(div)
+              })
+
+              resolve(true)
+            } else {
+              resolve(false)
+            }
+          }
+        })
+      } catch (err) {
+        reject(err)
+      }
+    })
+
+  // Add Event Listener: User clicks "Add Key" Button
   document.getElementById('goto-add-account-btn').addEventListener('click', () => {
     showAddAccountScreen()
       .then(() => updateAccountListDiv())
@@ -381,6 +422,7 @@ export default function loadVault(window, document, mainElement) {
       })
   })
 
+  // On Load: Update Account List
   updateAccountListDiv()
     .then(hasAccounts => {
       // Create the welcome screen
@@ -420,11 +462,21 @@ export default function loadVault(window, document, mainElement) {
                       callback(null, {
                         publicKey,
                         signature,
-                      }).catch(error => {
-                        window.alert(`Error in Main App: ${error.message || error}`) // eslint-disable-line
-                        throw error
                       })
-                    return pRetry(run, { retries: 10, factor: 1.71 })
+                    return pRetry(run, {
+                      retries: 10,
+                      factor: 1.71,
+                      onFailedAttempt: error => {
+                        contentDiv.innerHTML = ''
+                        contentDiv.appendChild(
+                          LoadingScreen(
+                            document,
+                            `Registering Key (attempt: ${error.attemptNumber})`,
+                            `Error in Main App: ${error.message || error}`
+                          )
+                        )
+                      },
+                    })
                   })
                 )
                 .then(
@@ -475,17 +527,27 @@ export default function loadVault(window, document, mainElement) {
                 .then(({ address, publicKey, pin }) =>
                   signMessage(platform, address, messageHex, pin).then(signature => {
                     contentDiv.innerHTML = ''
-                    contentDiv.appendChild(LoadingScreen(document, 'Verifying your Key'))
+                    contentDiv.appendChild(LoadingScreen(document, 'Registering Key'))
                     // callback to the parent window with result
                     const run = () =>
                       callback(null, {
                         publicKey,
                         signature,
-                      }).catch(error => {
-                        window.alert(`Error in Main App: ${error.message || error}`) // eslint-disable-line
-                        throw error
                       })
-                    return pRetry(run, { retries: 10, factor: 1.71 })
+                    return pRetry(run, {
+                      retries: 10,
+                      factor: 1.71,
+                      onFailedAttempt: error => {
+                        contentDiv.innerHTML = ''
+                        contentDiv.appendChild(
+                          LoadingScreen(
+                            document,
+                            `Registering Key (attempt: ${error.attemptNumber})`,
+                            `Error in Main App: ${error.message || error}`
+                          )
+                        )
+                      },
+                    })
                   })
                 )
                 .then(
@@ -525,7 +587,34 @@ export default function loadVault(window, document, mainElement) {
                 })
             }
 
-            // Trigger C: App wants to sign transaction
+            // Trigger C: App wants to display account detail screen
+            // Input: { action: 'showKeyDetail', params: [ 'EQH', 'EQH-xxx-xxx-xxx-xxx' ] }
+            // Output: { hasKeyPair: true, hasPassphrase: false }
+            if (action === 'showKeyDetail' && params) {
+              const [platform, address] = params
+
+              return showAccountDetailScreen(platform, address)
+                .then(({ publicKey, passphrase }) => {
+                  // callback to the parent window with result
+                  callback(null, {
+                    hasKeyPair: !!publicKey,
+                    hasPassphrase: !!passphrase,
+                  })
+                })
+                .catch(error => {
+                  if (error.message !== 'key missing') {
+                    window.alert(`Error: ${error.message || error}`) // eslint-disable-line
+                  }
+
+                  // callback to the parent window on error
+                  callback(error).catch(err => {
+                    window.alert(`Could not return error to parent window: ${err.message || err}`)
+                    self.close() // eslint-disable-line
+                  })
+                })
+            }
+
+            // Trigger D: App wants to sign transaction
             // Input: { action: 'signTx', params: [ 'EQH', 'EQH-xxx-xxx-xxx-xxx', tx ] }
             // Output: { transactionBytes, transactionJSON, transactionFullHash }
             if (action === 'signTx' && params) {
@@ -534,18 +623,28 @@ export default function loadVault(window, document, mainElement) {
               return showTxDetailScreen(tx, platform, address)
                 .then(({ transactionBytes, transactionJSON, transactionFullHash }) => {
                   contentDiv.innerHTML = ''
-                  contentDiv.appendChild(LoadingScreen(document, 'Verifying your Transaction'))
+                  contentDiv.appendChild(LoadingScreen(document, 'Verifying Transaction'))
                   // callback to the parent window with result
                   const run = () =>
                     callback(null, {
                       transactionBytes,
                       transactionJSON,
                       transactionFullHash,
-                    }).catch(error => {
-                      window.alert(`Error in Main App: ${error.message || error}`) // eslint-disable-line
-                      throw error
                     })
-                  return pRetry(run, { retries: 10, factor: 1.71 })
+                  return pRetry(run, {
+                    retries: 10,
+                    factor: 1.71,
+                    onFailedAttempt: error => {
+                      contentDiv.innerHTML = ''
+                      contentDiv.appendChild(
+                        LoadingScreen(
+                          document,
+                          `Verifying Transaction (attempt: ${error.attemptNumber})`,
+                          `Error in Main App: ${error.message || error}`
+                        )
+                      )
+                    },
+                  })
                 })
                 .then(
                   () =>
