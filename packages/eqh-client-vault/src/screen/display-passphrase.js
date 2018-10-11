@@ -2,6 +2,8 @@ import { safeHtml } from 'common-tags'
 
 export default function createElement(document, passphrase, callback) {
   const div = document.createElement('div')
+  div.classList.add('generate-key-page')
+
   div.innerHTML = safeHtml`<h2 class="page-title">Add Blockchain Key</h2>
   <div class="form-group">
     <label for="text-passphrase">Your automatically generated secret passphrase is:</label><br>

@@ -5,9 +5,10 @@ import loadVault from './vault'
 const mainDivId = 'main'
 
 const htmlTemplate = safeHtml`
-<div class="free-background">&nbsp;</div>
+<div class="app">
+  <div class="free-background">&nbsp;</div>
 
-<header>
+  <header>
     <nav class="navbar navbar-expand-lg navbar-dark justify-content-center">
 
       <a class="navbar-brand flex-grow-0 order-1" href="/">KeyHub</a>
@@ -23,6 +24,7 @@ const htmlTemplate = safeHtml`
       &copy; Blockchainzoo 2018
     </div>
   </footer>
+</div>
 `
 
 const isLocalhost =

@@ -1,0 +1,43 @@
+.kh-container {
+  @media (min-width: 1200px) {
+    width: 1170px;
+  }
+
+  @media (min-width: 992px) {
+    width: 960px;
+  }
+
+  @media (min-width: 768px) {
+    width: 740px;
+  }
+
+  width: 100%;
+  margin: 0 auto;
+}
+
+.kh-row {
+  margin-right: -15px;
+  margin-left: -15px;
+}
+
+.kh-col {
+  padding: 0 15px;
+  box-sizing: border-box;
+}
+
+.kh-p-5 {
+  padding: 3rem;
+}
+.kh-p-4 {
+  padding: 2rem;
+}
+.kh-p-3 {
+  padding: 1rem;
+}
+.kh-text-center {
+  text-align: center;
+}
+#progressInfo {
+  white-space: pre-wrap;
+}
+@import './libs/loading';

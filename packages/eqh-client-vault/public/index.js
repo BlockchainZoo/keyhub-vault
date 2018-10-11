@@ -34,13 +34,13 @@ const indexedDB =
   window.msIndexedDB ||
   window.shimIndexedDB
 
-const documentBody = document.getElementById('body') // eslint-disable-line no-undef
-documentBody.innerHTML = ''
+const progressInfoDiv = document.getElementById('progressInfo') // eslint-disable-line no-undef
+progressInfoDiv.innerHTML = ''
 const printLog = (msg, obj) => {
   /* eslint-disable no-console */
-  documentBody.innerHTML += `<pre>${msg}</pre>`
   if (obj) console.info(msg, obj)
   else console.info(msg)
+  progressInfoDiv.innerHTML = msg
 }
 
 printLog('Loading OpenPGP library...')
@@ -81,8 +81,8 @@ loadOpenpgp
         ])
       })
       .then(([[msgBuffer, msgRes], [detachedSig, detachedSigRes]]) => {
-        printLog(`Verifying signature of main script using signature at ${detachedSigRes.url} :`)
-        printLog(detachedSig)
+        printLog(`Verifying signature of main script using signature at ${detachedSigRes.url}`)
+        // printLog(detachedSig)
 
         const contentType = msgRes.headers.get('content-type')
 
@@ -209,8 +209,11 @@ loadOpenpgp
       payloadScript.onload = resolve
       payloadScript.onerror = reject
       document.head.appendChild(payloadScript)
-      printLog('Starting...')
     })
+  })
+  .then(() => {
+    printLog('Starting...')
+    document.getElementById('loader').style.display = 'none' // eslint-disable-line no-undef
   })
   .catch(error => {
     const errorMessage = `Fatal Error: ${error.message || error}. Please try again.`
