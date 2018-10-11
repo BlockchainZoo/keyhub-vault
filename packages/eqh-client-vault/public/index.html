@@ -1,22 +1,46 @@
 <html>
 
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="X-UA-Compatible" content="ie=edge" />
   <title>KeyHub</title>
-  <!-- <link rel="preload" href="index.js" as="script"> -->
+  <!-- <link rel="preload" href="index.js" as="script" /> -->
+  <link rel="stylesheet" href="css/styles.css" crossorigin="anonymous" integrity="sha384-dmA6sNzEoVUbe/c3iwUeeGdPTDRGLpTj0/Gi8thuQV7xXWLhnJ6v4/9SJS5f+z7v" />
 </head>
 
 <body>
-  <div id="body">
-    <h2>Loading the Vault for the first-time...</h2>
-    <br/>You should only see this page once for the first-time only.
-    <br/>If you frequently see this, your browser is not secure. Please contact KeyHub Support for remediation.
+  <div id="body"></div>
+
+  <div id="loader">
+    <div class="kh-container">
+      <div class="kh-row">
+        <div class="kh-col kh-text-center">
+          <div class="lds-roller kh-p-5">
+            <div></div>
+            <div></div>
+            <div></div>
+            <div></div>
+            <div></div>
+            <div></div>
+            <div></div>
+            <div></div>
+          </div>
+          <div id="progressInfo">
+            <h2>Loading the Vault for the first-time...</h2>
+            <p>
+              You should only see this page once for the first-time only.
+              <br />If you frequently see this, your browser is not secure. Please contact KeyHub Support for
+              remediation.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- <script src="js/main.bundle.js" crossorigin="anonymous" async></script> -->
-  <script src="index.js" crossorigin="anonymous" integrity="sha384-1lZozj5r9w/X039F/JxPr0I2TPQci6p1bf1rTxFzM4jFWfLCYe8nKe4BhystwZY7"
+  <script src="index.js" crossorigin="anonymous" integrity="sha384-gz+/z5BD5YWpdGTb9+aAs6eUQECJLFxnF/wRKjibRnttshQ3OXrdmQ3UuyQVSYqx"
     async></script>
 
 </body>

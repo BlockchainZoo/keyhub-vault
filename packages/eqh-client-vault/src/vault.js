@@ -24,14 +24,14 @@ export default function loadVault(window, document, mainElement) {
   // workers from multiple platforms
   const workers = Object.create(null)
 
-  const vaultLayoutHTML = safeHtml`<div class="container fade-in">
-    <div class="row shadow-on">
-      <div class="sidebar col-md-4 bg-grey py-3" id="sidebar">
+  const vaultLayoutHTML = safeHtml`<div class="container fade-in" id="mainWrapper">
+    <div class="row" >
+      <div class="sidebar col-md-4 bg-grey py-3 d-none" id="sidebar">
         <div class="block-title">Keys in this browser's wallet</div>
         <div id="account-list" class="account-list"></div>
         <button class="btn btn-secondary btn-sm ml-1" id="goto-add-account-btn">Add / Restore Key</button>
       </div>
-      <div class="col-md-8 bg-white main-content">
+      <div class="col-md-8 offset-md-2 bg-white main-content" id="mainContent">
         <div class="entry-page py-3" id="content"></div>
       </div>
     </div>
@@ -42,6 +42,8 @@ export default function loadVault(window, document, mainElement) {
   const contentDiv = document.getElementById('content')
   const sidebarDiv = document.getElementById('sidebar')
   const accountListDiv = document.getElementById('account-list')
+  const mainWrapper = document.getElementById('mainWrapper')
+  const mainContent = document.getElementById('mainContent')
 
   let welcomeDiv
 
@@ -422,6 +424,260 @@ export default function loadVault(window, document, mainElement) {
       })
   })
 
+  // Handle Cross-Tab Actions from postRobot
+  const triggerAction = (action, params, callback) => {
+    // Trigger A: App wants to create new unprotected key for user
+    // Input: { action: 'newUnprotectedKeyAndSign', params: [ 'EQH', messageHex, phoneNumber ] }
+    // Output: { publicKey, signature }
+    if (action === 'newUnprotectedKeyAndSign' && params) {
+      const [platform, messageHex] = params
+
+      return showGenerateUnprotectedKeyScreen(platform)
+        .then(res => updateAccountListDiv().then(() => res))
+        .then(({ address, publicKey }) =>
+          signMessage(platform, address, messageHex).then(signature => {
+            contentDiv.innerHTML = ''
+            contentDiv.appendChild(LoadingScreen(document, 'Registering Key'))
+            // callback to the parent window with result
+            const run = () =>
+              callback(null, {
+                publicKey,
+                signature,
+              })
+            return pRetry(run, {
+              retries: 10,
+              factor: 1.71,
+              onFailedAttempt: error => {
+                contentDiv.innerHTML = ''
+                contentDiv.appendChild(
+                  LoadingScreen(
+                    document,
+                    `Registering Key (attempt: ${error.attemptNumber})`,
+                    `Error in Main App: ${error.message || error}`
+                  )
+                )
+              },
+            })
+          })
+        )
+        .then(
+          () =>
+            new Promise((resolve, reject) => {
+              const message =
+                'We will text the secret key to your phone for backup purpose. SMS might be intercepted by an unknown third-party.'
+              contentDiv.innerHTML = ''
+              contentDiv.appendChild(
+                SuccessScreen(document, 'Confirm Phone Number', message, (err, res) => {
+                  if (err) reject(err)
+                  else resolve(res)
+                })
+              )
+
+              // Close the window after 5 seconds if no response from user
+              window.setTimeout(() => {
+                resolve('timeout')
+              }, 5000)
+            })
+        )
+        .then(() => self.close()) // eslint-disable-line
+        .catch(error => {
+          if (error.message !== 'cancelled by user') {
+            window.alert(`Error: ${error.message || error}`)
+          }
+
+          // callback to the parent window on error
+          callback(error)
+            .then(() => {
+              self.close() // eslint-disable-line
+            })
+            .catch(err => {
+              window.alert(`Could not return error to parent window: ${err.message || err}`)
+              self.close() // eslint-disable-line
+            })
+        })
+    }
+
+    // Trigger B: App wants to create new key for user
+    // Input: { action: 'newKeyAndSign', params: [ 'EQH', messageHex ] }
+    // Output: { publicKey, signature }
+    if (action === 'newKeyAndSign' && params) {
+      const [platform, messageHex] = params
+
+      return showGenerateKeyScreen(platform)
+        .then(res => updateAccountListDiv().then(() => res))
+        .then(({ address, publicKey, pin }) =>
+          signMessage(platform, address, messageHex, pin).then(signature => {
+            contentDiv.innerHTML = ''
+            contentDiv.appendChild(LoadingScreen(document, 'Registering Key'))
+            // callback to the parent window with result
+            const run = () =>
+              callback(null, {
+                publicKey,
+                signature,
+              })
+            return pRetry(run, {
+              retries: 10,
+              factor: 1.71,
+              onFailedAttempt: error => {
+                contentDiv.innerHTML = ''
+                contentDiv.appendChild(
+                  LoadingScreen(
+                    document,
+                    `Registering Key (attempt: ${error.attemptNumber})`,
+                    `Error in Main App: ${error.message || error}`
+                  )
+                )
+              },
+            })
+          })
+        )
+        .then(
+          () =>
+            new Promise((resolve, reject) => {
+              const message =
+                'Key Added. Thank you for using our Open-source Vault. You will be returned to the main app.'
+              contentDiv.innerHTML = ''
+              contentDiv.appendChild(
+                SuccessScreen(document, 'Thank You', message, (err, res) => {
+                  if (err) reject(err)
+                  else resolve(res)
+                })
+              )
+
+              // Close the window after 5 seconds if no response from user
+              window.setTimeout(() => {
+                resolve('timeout')
+              }, 5000)
+            })
+        )
+        .then(() => self.close()) // eslint-disable-line
+        .catch(error => {
+          if (error.message !== 'cancelled by user') {
+            window.alert(`Error: ${error.message || error}`)
+          }
+
+          // callback to the parent window on error
+          callback(error)
+            .then(() => {
+              self.close() // eslint-disable-line
+            })
+            .catch(err => {
+              window.alert(`Could not return error to parent window: ${err.message || err}`)
+              self.close() // eslint-disable-line
+            })
+        })
+    }
+
+    // Trigger C: App wants to display account detail screen
+    // Input: { action: 'showKeyDetail', params: [ 'EQH', 'EQH-xxx-xxx-xxx-xxx' ] }
+    // Output: { hasKeyPair: true, hasPassphrase: false }
+    if (action === 'showKeyDetail' && params) {
+      const [platform, address] = params
+
+      return showAccountDetailScreen(platform, address)
+        .then(({ publicKey, passphrase }) => {
+          // callback to the parent window with result
+          callback(null, {
+            hasKeyPair: !!publicKey,
+            hasPassphrase: !!passphrase,
+          })
+        })
+        .catch(error => {
+          if (error.message !== 'key missing') {
+            window.alert(`Error: ${error.message || error}`) // eslint-disable-line
+          }
+
+          // callback to the parent window on error
+          callback(error).catch(err => {
+            window.alert(`Could not return error to parent window: ${err.message || err}`)
+            self.close() // eslint-disable-line
+          })
+        })
+    }
+
+    // Trigger D: App wants to sign transaction
+    // Input: { action: 'signTx', params: [ 'EQH', 'EQH-xxx-xxx-xxx-xxx', tx ] }
+    // Output: { transactionBytes, transactionJSON, transactionFullHash }
+    if (action === 'signTx' && params) {
+      const [platform, address, tx] = params
+
+      return showTxDetailScreen(tx, platform, address)
+        .then(({ transactionBytes, transactionJSON, transactionFullHash }) => {
+          contentDiv.innerHTML = ''
+          contentDiv.appendChild(LoadingScreen(document, 'Verifying Transaction'))
+          // callback to the parent window with result
+          const run = () =>
+            callback(null, {
+              transactionBytes,
+              transactionJSON,
+              transactionFullHash,
+            })
+          return pRetry(run, {
+            retries: 10,
+            factor: 1.71,
+            onFailedAttempt: error => {
+              contentDiv.innerHTML = ''
+              contentDiv.appendChild(
+                LoadingScreen(
+                  document,
+                  `Verifying Transaction (attempt: ${error.attemptNumber})`,
+                  `Error in Main App: ${error.message || error}`
+                )
+              )
+            },
+          })
+        })
+        .then(
+          () =>
+            new Promise((resolve, reject) => {
+              const message =
+                'Transaction Signed. Thank you for using our Open-source Vault. You will be returned to the main app.'
+              contentDiv.innerHTML = ''
+              contentDiv.appendChild(
+                SuccessScreen(document, 'Thank You', message, (err, res) => {
+                  if (err) reject(err)
+                  else resolve(res)
+                })
+              )
+
+              // Close the window after 5 seconds if no response from user
+              window.setTimeout(() => {
+                resolve('timeout')
+              }, 5000)
+            })
+        )
+        .then(() => self.close()) // eslint-disable-line
+        .catch(error => {
+          if (error.message !== 'cancelled by user' || error.message !== 'key missing') {
+            window.alert(`Error: ${error.message || error}`) // eslint-disable-line
+          }
+
+          // callback to the parent window on error
+          callback(error)
+            .then(() => {
+              self.close() // eslint-disable-line
+            })
+            .catch(err => {
+              window.alert(`Could not return error to parent window: ${err.message || err}`)
+              self.close() // eslint-disable-line
+            })
+        })
+    }
+
+    return Promise.reject(new Error('Received unknown action from parent window.'))
+  }
+
+  const appendStylesheet = href =>
+    new Promise((resolve, reject) => {
+      const linkElement = document.createElement('link')
+      linkElement.type = 'text/css'
+      linkElement.rel = 'stylesheet'
+      linkElement.href = href
+      linkElement.onload = resolve
+      linkElement.onerror = reject
+      document.head.appendChild(linkElement)
+    })
+
   // On Load: Update Account List
   updateAccountListDiv()
     .then(hasAccounts => {
@@ -431,6 +687,13 @@ export default function loadVault(window, document, mainElement) {
       if (!window.opener) {
         // Show welcome screen on startup
         contentDiv.appendChild(welcomeDiv)
+
+        appendStylesheet('./css/main.default.css').then(() => {
+          // Show the sidebar
+          mainContent.classList.remove('offset-md-2')
+          sidebarDiv.classList.remove('d-none')
+          mainWrapper.classList.add('shadow-on')
+        })
       } else {
         // Tell parent window vault is ready
         postRobot
@@ -439,251 +702,16 @@ export default function loadVault(window, document, mainElement) {
             // console.log(event.source, event.origin)
             // TODO: security checks on source/origin
             const {
-              data: { action, params, callback },
+              data: { style = 'EQH', action, params, callback },
             } = event
 
-            // Hide the sidebar
-            sidebarDiv.classList.add('d-none')
-
-            // Trigger A: App wants to create new unprotected key for user
-            // Input: { action: 'newUnprotectedKeyAndSign', params: [ 'EQH', messageHex, phoneNumber ] }
-            // Output: { publicKey, signature }
-            if (action === 'newUnprotectedKeyAndSign' && params) {
-              const [platform, messageHex] = params
-
-              return showGenerateUnprotectedKeyScreen(platform)
-                .then(res => updateAccountListDiv().then(() => res))
-                .then(({ address, publicKey }) =>
-                  signMessage(platform, address, messageHex).then(signature => {
-                    contentDiv.innerHTML = ''
-                    contentDiv.appendChild(LoadingScreen(document, 'Registering Key'))
-                    // callback to the parent window with result
-                    const run = () =>
-                      callback(null, {
-                        publicKey,
-                        signature,
-                      })
-                    return pRetry(run, {
-                      retries: 10,
-                      factor: 1.71,
-                      onFailedAttempt: error => {
-                        contentDiv.innerHTML = ''
-                        contentDiv.appendChild(
-                          LoadingScreen(
-                            document,
-                            `Registering Key (attempt: ${error.attemptNumber})`,
-                            `Error in Main App: ${error.message || error}`
-                          )
-                        )
-                      },
-                    })
-                  })
-                )
-                .then(
-                  () =>
-                    new Promise((resolve, reject) => {
-                      const message =
-                        'We will text the secret key to your phone for backup purpose. SMS might be intercepted by an unknown third-party.'
-                      contentDiv.innerHTML = ''
-                      contentDiv.appendChild(
-                        SuccessScreen(document, 'Confirm Phone Number', message, (err, res) => {
-                          if (err) reject(err)
-                          else resolve(res)
-                        })
-                      )
-
-                      // Close the window after 5 seconds if no response from user
-                      window.setTimeout(() => {
-                        resolve('timeout')
-                      }, 5000)
-                    })
-                )
-                .then(() => self.close()) // eslint-disable-line
-                .catch(error => {
-                  if (error.message !== 'cancelled by user') {
-                    window.alert(`Error: ${error.message || error}`)
-                  }
-
-                  // callback to the parent window on error
-                  callback(error)
-                    .then(() => {
-                      self.close() // eslint-disable-line
-                    })
-                    .catch(err => {
-                      window.alert(`Could not return error to parent window: ${err.message || err}`)
-                      self.close() // eslint-disable-line
-                    })
-                })
+            if (style) {
+              return appendStylesheet(`./css/main.${style.toLowerCase()}.css`).then(() =>
+                triggerAction(action, params, callback)
+              )
             }
-
-            // Trigger B: App wants to create new key for user
-            // Input: { action: 'newKeyAndSign', params: [ 'EQH', messageHex ] }
-            // Output: { publicKey, signature }
-            if (action === 'newKeyAndSign' && params) {
-              const [platform, messageHex] = params
-
-              return showGenerateKeyScreen(platform)
-                .then(res => updateAccountListDiv().then(() => res))
-                .then(({ address, publicKey, pin }) =>
-                  signMessage(platform, address, messageHex, pin).then(signature => {
-                    contentDiv.innerHTML = ''
-                    contentDiv.appendChild(LoadingScreen(document, 'Registering Key'))
-                    // callback to the parent window with result
-                    const run = () =>
-                      callback(null, {
-                        publicKey,
-                        signature,
-                      })
-                    return pRetry(run, {
-                      retries: 10,
-                      factor: 1.71,
-                      onFailedAttempt: error => {
-                        contentDiv.innerHTML = ''
-                        contentDiv.appendChild(
-                          LoadingScreen(
-                            document,
-                            `Registering Key (attempt: ${error.attemptNumber})`,
-                            `Error in Main App: ${error.message || error}`
-                          )
-                        )
-                      },
-                    })
-                  })
-                )
-                .then(
-                  () =>
-                    new Promise((resolve, reject) => {
-                      const message =
-                        'Key Added. Thank you for using our Open-source Vault. You will be returned to the main app.'
-                      contentDiv.innerHTML = ''
-                      contentDiv.appendChild(
-                        SuccessScreen(document, 'Thank You', message, (err, res) => {
-                          if (err) reject(err)
-                          else resolve(res)
-                        })
-                      )
-
-                      // Close the window after 5 seconds if no response from user
-                      window.setTimeout(() => {
-                        resolve('timeout')
-                      }, 5000)
-                    })
-                )
-                .then(() => self.close()) // eslint-disable-line
-                .catch(error => {
-                  if (error.message !== 'cancelled by user') {
-                    window.alert(`Error: ${error.message || error}`)
-                  }
-
-                  // callback to the parent window on error
-                  callback(error)
-                    .then(() => {
-                      self.close() // eslint-disable-line
-                    })
-                    .catch(err => {
-                      window.alert(`Could not return error to parent window: ${err.message || err}`)
-                      self.close() // eslint-disable-line
-                    })
-                })
-            }
-
-            // Trigger C: App wants to display account detail screen
-            // Input: { action: 'showKeyDetail', params: [ 'EQH', 'EQH-xxx-xxx-xxx-xxx' ] }
-            // Output: { hasKeyPair: true, hasPassphrase: false }
-            if (action === 'showKeyDetail' && params) {
-              const [platform, address] = params
-
-              return showAccountDetailScreen(platform, address)
-                .then(({ publicKey, passphrase }) => {
-                  // callback to the parent window with result
-                  callback(null, {
-                    hasKeyPair: !!publicKey,
-                    hasPassphrase: !!passphrase,
-                  })
-                })
-                .catch(error => {
-                  if (error.message !== 'key missing') {
-                    window.alert(`Error: ${error.message || error}`) // eslint-disable-line
-                  }
-
-                  // callback to the parent window on error
-                  callback(error).catch(err => {
-                    window.alert(`Could not return error to parent window: ${err.message || err}`)
-                    self.close() // eslint-disable-line
-                  })
-                })
-            }
-
-            // Trigger D: App wants to sign transaction
-            // Input: { action: 'signTx', params: [ 'EQH', 'EQH-xxx-xxx-xxx-xxx', tx ] }
-            // Output: { transactionBytes, transactionJSON, transactionFullHash }
-            if (action === 'signTx' && params) {
-              const [platform, address, tx] = params
-
-              return showTxDetailScreen(tx, platform, address)
-                .then(({ transactionBytes, transactionJSON, transactionFullHash }) => {
-                  contentDiv.innerHTML = ''
-                  contentDiv.appendChild(LoadingScreen(document, 'Verifying Transaction'))
-                  // callback to the parent window with result
-                  const run = () =>
-                    callback(null, {
-                      transactionBytes,
-                      transactionJSON,
-                      transactionFullHash,
-                    })
-                  return pRetry(run, {
-                    retries: 10,
-                    factor: 1.71,
-                    onFailedAttempt: error => {
-                      contentDiv.innerHTML = ''
-                      contentDiv.appendChild(
-                        LoadingScreen(
-                          document,
-                          `Verifying Transaction (attempt: ${error.attemptNumber})`,
-                          `Error in Main App: ${error.message || error}`
-                        )
-                      )
-                    },
-                  })
-                })
-                .then(
-                  () =>
-                    new Promise((resolve, reject) => {
-                      const message =
-                        'Transaction Signed. Thank you for using our Open-source Vault. You will be returned to the main app.'
-                      contentDiv.innerHTML = ''
-                      contentDiv.appendChild(
-                        SuccessScreen(document, 'Thank You', message, (err, res) => {
-                          if (err) reject(err)
-                          else resolve(res)
-                        })
-                      )
-
-                      // Close the window after 5 seconds if no response from user
-                      window.setTimeout(() => {
-                        resolve('timeout')
-                      }, 5000)
-                    })
-                )
-                .then(() => self.close()) // eslint-disable-line
-                .catch(error => {
-                  if (error.message !== 'cancelled by user' || error.message !== 'key missing') {
-                    window.alert(`Error: ${error.message || error}`) // eslint-disable-line
-                  }
-
-                  // callback to the parent window on error
-                  callback(error)
-                    .then(() => {
-                      self.close() // eslint-disable-line
-                    })
-                    .catch(err => {
-                      window.alert(`Could not return error to parent window: ${err.message || err}`)
-                      self.close() // eslint-disable-line
-                    })
-                })
-            }
-
-            return Promise.reject(new Error('Received unknown action from parent window.'))
+            // else
+            return triggerAction(action, params, callback)
           })
           .catch(error => {
             // Handle any errors that stopped our call from going through

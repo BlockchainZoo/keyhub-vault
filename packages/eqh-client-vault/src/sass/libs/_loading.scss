@@ -10,13 +10,13 @@
   transform-origin: 32px 32px;
 }
 .lds-roller div:after {
-  content: " ";
+  content: ' ';
   display: block;
   position: absolute;
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background-color: $primary;
+  background-color: #7ca0b4;
   margin: -3px 0 0 -3px;
 }
 .lds-roller div:nth-child(1) {
@@ -84,7 +84,7 @@
   }
 }
 
-.loader-wrapper{
+.loader-wrapper {
   background: #fff;
   margin-top: 15vh;
 }

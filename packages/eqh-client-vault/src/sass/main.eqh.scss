@@ -1,0 +1,94 @@
+$primary: #3c886e;
+$secondary: #313131;
+
+$grey: #4a4a4a;
+$white: #ffffff;
+$red: #dc3545;
+
+#body {
+  padding: 10px;
+}
+.free-background {
+  background-color: transparent;
+  width: 0;
+}
+
+.app {
+  border: 3px solid $primary;
+
+  footer {
+    display: none;
+  }
+  .shadow-on {
+    box-shadow: none !important;
+  }
+
+  .card {
+    box-shadow: none;
+
+    .card-success,
+    .card-header {
+      border-bottom: none;
+
+      &.bg-success {
+        background-color: $white !important;
+        &.text-white {
+          color: $primary !important;
+          box-shadow: none;
+        }
+      }
+    }
+
+    .card-body {
+      text-align: center;
+    }
+  }
+
+  .card-error-message {
+    .card-header {
+      &.bg-danger {
+        background-color: $white !important;
+        &.text-white {
+          color: $secondary !important;
+          box-shadow: none;
+        }
+      }
+    }
+  }
+  .card-error-message {
+    .card-header {
+      &.bg-danger {
+        background-color: $white !important;
+        &.text-white {
+          color: $red !important;
+          box-shadow: none;
+        }
+      }
+    }
+  }
+  .loading-data {
+    .card-header {
+      &.bg-secondary {
+        background-color: $white !important;
+        color: $secondary !important;
+        box-shadow: none !important;
+        border: none !important;
+      }
+    }
+  }
+}
+.navbar-dark {
+  .navbar-brand {
+    color: $secondary;
+
+    &:hover,
+    &:focus {
+      color: $grey;
+      outline: none;
+    }
+  }
+}
+
+.btn-primary {
+  background-color: $primary;
+}

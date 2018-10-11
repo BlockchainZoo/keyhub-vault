@@ -74,3 +74,9 @@ ssri
   .then(sri => {
     console.log('sri of public/css/main.css:', sri.toString()) // eslint-disable-line no-console
   })
+
+ssri
+  .fromStream(fs.createReadStream('public/css/styles.css'), { algorithms: ['sha384'] })
+  .then(sri => {
+    console.log('sri of public/css/styles.css:', sri.toString()) // eslint-disable-line no-console
+  })

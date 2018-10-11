@@ -2,6 +2,7 @@ import { safeHtml } from 'common-tags'
 
 export default function createElement(document, message, extraText = '') {
   const div = document.createElement('div')
+  div.classList.add('loading-data')
   div.innerHTML = safeHtml`
   <div class="card-header text-center bg-secondary text-white">
     <h4><i class="fas fa-broadcast-tower"></i> ${message}...</h4>
