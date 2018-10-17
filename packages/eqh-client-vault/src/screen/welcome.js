@@ -18,7 +18,7 @@ export default function createElement(document, hasAccounts) {
     <p></p>
     <p>${
       hasAccounts
-        ? 'Please select one of your accounts on the left sidebar to continue.'
+        ? 'Please select one of your keys on the left sidebar to continue.'
         : 'Click "Add Key" on the left sidebar to begin.'
     }</p>
   </div>

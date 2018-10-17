@@ -5,7 +5,7 @@ const validatePin = (pinInput, pinAlert) => {
   const pinInputTrim = pinInput.value.trim()
   if (pinInputTrim) {
     pinAlert.classList.remove('d-block')
-    pinAlert.classList.add('d-hide')
+    pinAlert.classList.add('d-none')
     pinAlert.innerHTML = ''
     return true
   }
@@ -96,7 +96,7 @@ export default function createElement(document, platform, accountNo, address, tx
       <label for="text-pin">Security Pin: </label><br>
       <input type="password" class="form-control" id="pin-input" />
     </div>
-    <div id="pin-alert" class="d-hide form-group"></div>
+    <div id="pin-alert" class="d-none form-group"></div>
   `
 
   div.innerHTML = html`

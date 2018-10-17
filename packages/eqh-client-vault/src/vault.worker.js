@@ -83,7 +83,7 @@ bridge.load(NRS => {
         const accountRS = NRS.convertNumericToRSAccountFormat(accountId)
         const address = accountRS
 
-        // Store account in browser's indexedDB
+        // Store key in browser's indexedDB
         return new Promise((resolve, reject) => {
           const entry = {
             id: address,
@@ -122,7 +122,7 @@ bridge.load(NRS => {
             req.onerror = err => reject(err)
             req.onsuccess = ({ target: { result: entry } }) => {
               if (!entry) {
-                reject(new Error('account is not found in this browser'))
+                reject(new Error('key is missing in this browser'))
                 return
               }
               entry.passphrase = {
@@ -148,7 +148,7 @@ bridge.load(NRS => {
         req.onerror = err => reject(err)
         req.onsuccess = ({ target: { result: entry } }) => {
           if (!entry) {
-            reject(new Error('account is not found in this browser'))
+            reject(new Error('key is missing in this browser'))
             return
           }
 
@@ -159,7 +159,7 @@ bridge.load(NRS => {
               .then(plaintextBuffer => resolve(new Uint8Array(plaintextBuffer)))
               .catch(reject)
           } else {
-            reject(new Error('account passphrase is not available'))
+            reject(new Error('key passphrase is not available'))
           }
         }
       })
@@ -196,13 +196,13 @@ bridge.load(NRS => {
       if (typeof entryId !== 'string') throw new Error('address / entryId is not a string')
       if (!callback) throw new Error('incorrect number of parameters')
 
-      // Get account from browser's indexedDB
+      // Get key from browser's indexedDB
       callOnStore('accounts', accounts => {
         const req = accounts.get(entryId)
         req.onerror = err => callback(err)
         req.onsuccess = ({ target: { result: entry } }) => {
           if (!entry) {
-            callback(null, {})
+            callback(new Error('key is missing in this browser'))
           } else {
             callback(null, {
               address: entry.address,
@@ -225,7 +225,7 @@ bridge.load(NRS => {
         req.onerror = err => callback(err)
         req.onsuccess = ({ target: { result: masterCryptoKey } }) => {
           if (!masterCryptoKey) {
-            callback(new Error('vault masterKey is not found in this browser'))
+            callback(new Error('vault masterKey is missing in this browser'))
             return
           }
 
@@ -266,9 +266,9 @@ bridge.load(NRS => {
           if (entry) {
             const masterCryptoKey = entry
             createKeyPair(passphraseUint8, masterCryptoKey, opts)
-              .then(accountInfo =>
-                storePassphrase(accountInfo.id, passphraseUint8, masterCryptoKey).then(() =>
-                  callback(null, accountInfo)
+              .then(keyInfo =>
+                storePassphrase(keyInfo.id, passphraseUint8, masterCryptoKey).then(() =>
+                  callback(null, keyInfo)
                 )
               )
               .catch(callback)
@@ -282,9 +282,9 @@ bridge.load(NRS => {
                 callOnStore('prefs', p => {
                   p.put(masterCryptoKey, 'masterkey')
                 })
-                return createKeyPair(passphraseUint8, masterCryptoKey, opts).then(accountInfo =>
-                  storePassphrase(accountInfo.id, passphraseUint8, masterCryptoKey).then(() =>
-                    callback(null, accountInfo)
+                return createKeyPair(passphraseUint8, masterCryptoKey, opts).then(keyInfo =>
+                  storePassphrase(keyInfo.id, passphraseUint8, masterCryptoKey).then(() =>
+                    callback(null, keyInfo)
                   )
                 )
               })
@@ -317,7 +317,7 @@ bridge.load(NRS => {
       }
 
       createKeyPair(passphraseUint8, secretPinUint8, opts)
-        .then(accountInfo => callback(null, accountInfo))
+        .then(keyInfo => callback(null, keyInfo))
         .catch(callback)
     },
     signTransaction: (entryId, secretPin, txType, txData, callback) => {
@@ -330,17 +330,17 @@ bridge.load(NRS => {
       const secretPinBytes = converters.stringToByteArray(secretPin)
       const secretPinUint8 = Uint8Array.from(secretPinBytes)
 
-      // Get account from  browser's indexedDB
+      // Get key from  browser's indexedDB
       callOnStore('accounts', accounts => {
         const req = accounts.get(entryId)
         req.onerror = err => callback(err)
         req.onsuccess = ({ target: { result: entry } }) => {
           if (!entry) {
-            callback(new Error('account is not found in this browser'))
+            callback(new Error('key is missing in this browser'))
             return
           }
           if (!entry.secretPhrase) {
-            callback(new Error('account secretPhrase is not stored in this browser'))
+            callback(new Error('key secretPhrase is not stored in this browser'))
             return
           }
 
@@ -391,17 +391,17 @@ bridge.load(NRS => {
 
       // const messageHex = converters.stringToHexString(message)
 
-      // Get account from  browser's indexedDB
+      // Get key from  browser's indexedDB
       callOnStore('accounts', accounts => {
         const req = accounts.get(entryId)
         req.onerror = err => callback(err)
         req.onsuccess = ({ target: { result: entry } }) => {
           if (!entry) {
-            callback(new Error('account is not found in this browser'))
+            callback(new Error('key is missing in this browser'))
             return
           }
           if (!entry.secretPhrase) {
-            callback(new Error('account secretPhrase is not stored in this browser'))
+            callback(new Error('key secretPhrase is not stored in this browser'))
             return
           }
 
@@ -434,7 +434,7 @@ bridge.load(NRS => {
               req2.onerror = err => callback(err)
               req2.onsuccess = ({ target: { result: masterCryptoKey } }) => {
                 if (!masterCryptoKey) {
-                  callback(new Error('vault masterKey is not found in this browser'))
+                  callback(new Error('vault masterKey is missing in this browser'))
                   return
                 }
 
@@ -484,57 +484,4 @@ bridge.load(NRS => {
       }
     }
   }
-
-  // // Generate New KeyPair
-  // log('Generating a new account...')
-  // methods.generateKeyPair((err, res) => {
-  //   if (err) throw err
-  //   log(res)
-  // })
-
-  // // Send Transaction
-  // log('Sending a setAccountProperty transaction...')
-  // const property = '$$Trader'
-  // const recipient = 'EQH-4226-5SWH-A9CM-8W7P6'
-  // const recipientPublicKey = 'd6b0716dce96a33d224100c15437013d3e550f025119918e86859075ae730133'
-  // const recipientId = recipientPublicKey
-  //   ? NRS.getAccountIdFromPublicKey(recipientPublicKey)
-  //   : NRS.convertRSToNumericAccountFormat(recipient)
-  // const recipientRS = NRS.convertNumericToRSAccountFormat(recipientId)
-  // console.info('property:', property)
-  // console.info('recipientId:', recipientId)
-  // console.info('recipientRS:', recipientRS)
-
-  // const txData = {
-  //   recipient: recipientId,
-  //   recipientPublicKey,
-  //   property,
-  //   value: '1',
-  // }
-
-  // methods.signTransaction('setAccountProperty', txData, (err, response) => {
-  //   if (err) throw err
-  //   log(JSON.stringify(response, null, 2))
-  // })
-
-  // // Send Transaction
-  // log('Sending a placeBidOrder transaction...')
-  // const decimals = 2
-  // const quantity = 2.5
-  // const price = 1.3
-
-  // const txData = {
-  //   asset: '6889644787748004524', // testnet Megasset
-  //   quantityQNT: NRS.convertToQNT(quantity, decimals),
-  //   priceNQT: NRS.calculatePricePerWholeQNT(NRS.convertToNQT(price), decimals),
-  // }
-
-  // methods.signTransaction('placeBidOrder', txData, (err, response) => {
-  //   if (err) throw err
-  //   log(JSON.stringify(response, null, 2))
-  // })
-
-  // methods.createKeyPair('secret here', 'pin123456', (err, res) => {
-  //   log(err, res)
-  // })
 })

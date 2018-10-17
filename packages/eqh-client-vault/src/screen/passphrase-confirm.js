@@ -8,7 +8,7 @@ const validatePassphrase = (passphrase, passphraseInput, passphraseAlert) => {
       passphraseInput.classList.remove('is-invalid')
       passphraseInput.classList.add('is-valid')
       passphraseAlert.classList.remove('d-block')
-      passphraseAlert.classList.add('d-hide')
+      passphraseAlert.classList.add('d-none')
       passphraseAlert.innerHTML = ''
 
       return true
@@ -36,7 +36,7 @@ const validatePin = (pinInput, pinConfirmInput, pinAlert) => {
       pinConfirmInput.classList.remove('is-invalid')
       pinConfirmInput.classList.add('is-valid')
       pinAlert.classList.remove('d-block')
-      pinAlert.classList.add('d-hide')
+      pinAlert.classList.add('d-none')
       pinAlert.innerHTML = ''
 
       return true
@@ -66,7 +66,7 @@ export default function createElement(document, passphrase, withPin, callback) {
       <label for="text-pin-confirm">Please re-confirm your Security PIN:</label><br>
       <input type="password" class="form-control" id="pin-confirm-input" />
     </div>
-    <div id="pin-alert" class="d-hide form-group"></div>
+    <div id="pin-alert" class="d-none form-group"></div>
   `
 
   div.innerHTML = html`
@@ -75,7 +75,7 @@ export default function createElement(document, passphrase, withPin, callback) {
       <label for="text-passphrase-copied">Your passphrase is very important! In order to be sure that you have written it to paper, please type your passphrase below:</label><br>
       <textarea class="form-control" id="passphrase-input"></textarea>
     </div>
-    <div id="passphrase-alert" class="d-hide form-group"></div>
+    <div id="passphrase-alert" class="d-none form-group"></div>
     ${withPin ? pinForm : ''}
     <div class="form-group">
       <button type="button" class="btn btn-secondary" data-choice="ok">Finish</button>
