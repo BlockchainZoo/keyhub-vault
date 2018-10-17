@@ -78,7 +78,7 @@ export default function loadVault(window, document, mainElement) {
       worker.postMessage(['generatePassphrase', 10])
     }).then(({ data: { error, passphrase } }) => {
       if (error) throw new Error(error)
-      return passphrase
+      return `${platform.toLowerCase()} ${passphrase}`
     })
 
     return p.then(passphrase => {
@@ -89,7 +89,7 @@ export default function loadVault(window, document, mainElement) {
       return new Promise((resolve, reject) => {
         worker.onmessage = resolve
         worker.onerror = reject
-        worker.postMessage(['createUnprotectedKeyPair', `${platform.toLowerCase()} ${passphrase}`])
+        worker.postMessage(['createUnprotectedKeyPair', passphrase])
       }).then(({ data: { error, id, address, accountNo, publicKey } }) => {
         if (error) throw new Error(error)
         return {
@@ -117,7 +117,7 @@ export default function loadVault(window, document, mainElement) {
       worker.postMessage(['generatePassphrase', 10])
     }).then(({ data: { error, passphrase } }) => {
       if (error) throw new Error(error)
-      return passphrase
+      return `${platform.toLowerCase()} ${passphrase}`
     })
 
     return p
@@ -156,11 +156,7 @@ export default function loadVault(window, document, mainElement) {
           return new Promise((resolve, reject) => {
             worker.onmessage = resolve
             worker.onerror = reject
-            worker.postMessage([
-              'createProtectedKeyPair',
-              `${platform.toLowerCase()} ${passphrase}`,
-              pin,
-            ])
+            worker.postMessage(['createProtectedKeyPair', passphrase, pin])
           }).then(({ data: { error, id, address, accountNo, publicKey } }) => {
             if (error) throw new Error(error)
             return {
