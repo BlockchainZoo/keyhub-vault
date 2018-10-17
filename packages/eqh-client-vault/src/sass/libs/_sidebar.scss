@@ -1,50 +1,50 @@
-.block-title{
+.block-title {
   margin-left: -15px;
   margin-right: -15px;
   padding: 0 1rem 1rem;
   font-weight: bold;
   font-size: 1.125rem;
 }
-.account-list{
-  h3{
+.key-list {
+  h3 {
     font-size: 1.5rem;
   }
-  div>ul {
+  div > ul {
     list-style: none;
     padding: 0 0 0 0.75rem;
     margin: 0 0 0.95rem;
 
-    li{
+    li {
       margin: 0 0 0.556rem;
 
-      button{
+      button {
         &.btn-light,
-        &.btn{
-          font-size: .875rem;
+        &.btn {
+          font-size: 0.875rem;
           font-weight: 400;
           color: $secondary;
           background-color: transparent;
           border-bottom: 1px dotted;
           border-color: transparent transparent $primary;
-          padding: 0 0 .1875rem;
+          padding: 0 0 0.1875rem;
           margin-left: 15px;
 
-          &:before{
+          &:before {
             color: $secondary;
             font-family: 'Font Awesome 5 Free';
             font-weight: 900;
-            content: 	'\f023';
+            content: '\f023';
             display: inline-block;
-            padding-right: .3125rem;
+            padding-right: 0.3125rem;
             margin-left: -15px;
-            font-size: .625rem;
+            font-size: 0.625rem;
             vertical-align: middle;
           }
 
-          &:hover{
+          &:hover {
             text-decoration: none;
             color: $primary;
-            &:before{
+            &:before {
               color: $primary;
             }
           }
@@ -52,54 +52,54 @@
           &:active,
           &:not(:disabled):not(.disabled):active,
           &:focus,
-          &:not(:disabled):not(.disabled):focus{
-            color: $primary;;
+          &:not(:disabled):not(.disabled):focus {
+            color: $primary;
             background-color: transparent;
             border-color: transparent transparent $primary;
           }
           &:not(:disabled):not(.disabled):active:focus,
-          &:not(:disabled):not(.disabled).active:focus{
+          &:not(:disabled):not(.disabled).active:focus {
             box-shadow: none;
           }
         }
 
-        &.btn-dark{
-          font-size: .875rem;
+        &.btn-dark {
+          font-size: 0.875rem;
           font-weight: 400;
           color: $primary;
           background-color: transparent;
           border-bottom: 1px dotted;
           border-color: transparent transparent $primary;
-          padding: 0 0 .1875rem;
+          padding: 0 0 0.1875rem;
           margin-left: 15px;
 
-          &:before{
+          &:before {
             color: $primary;
             font-family: 'Font Awesome 5 Free';
             font-weight: 900;
-            content: 	'\f023';
+            content: '\f023';
             display: inline-block;
-            padding-right: .3125rem;
+            padding-right: 0.3125rem;
             margin-left: -15px;
           }
 
-          &:hover{
+          &:hover {
             text-decoration: none;
             color: $secondary;
-            &:before{
+            &:before {
               color: $secondary;
             }
           }
           &:active,
           &:not(:disabled):not(.disabled):active,
           &:focus,
-          &:not(:disabled):not(.disabled):focus{
-            color: $secondary;;
+          &:not(:disabled):not(.disabled):focus {
+            color: $secondary;
             background-color: transparent;
             border-color: transparent transparent $primary;
           }
           &:not(:disabled):not(.disabled):active:focus,
-          &:not(:disabled):not(.disabled).active:focus{
+          &:not(:disabled):not(.disabled).active:focus {
             box-shadow: none;
           }
         }
@@ -108,15 +108,15 @@
   }
 }
 
-#goto-add-account-btn{
+#goto-add-key-btn {
   padding-left: 1.5rem;
   padding-right: 1.5rem;
-  &:after{
+  &:after {
     color: $white;
     font-family: 'Font Awesome 5 Free';
     font-weight: 900;
-    content: 	'\f084';
+    content: '\f084';
     display: inline-block;
-    padding-left: .3125rem;
+    padding-left: 0.3125rem;
   }
 }

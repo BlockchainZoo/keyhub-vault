@@ -9,14 +9,14 @@ import VaultWorker from './vault.worker'
 import {
   WelcomeScreen,
   LoadingScreen,
-  AddAccountScreen,
-  DisplayPassphraseScreen,
-  ConfirmPassphraseScreen,
-  ConfirmPhonenumScreen,
+  KeyAddScreen,
+  PassphraseDisplayScreen,
+  PassphraseConfirmScreen,
+  PhonenumConfirmScreen,
   TxDetailScreen,
   SuccessScreen,
   ErrorScreen,
-  AccountDetail,
+  KeyDetailScreen,
 } from './screen'
 
 const { callOnStore } = require('./util/indexeddb')
@@ -31,8 +31,8 @@ export default function loadVault(window, document, mainElement) {
     <div class="row" >
       <div class="sidebar col-md-4 bg-grey py-3 d-none" id="sidebar">
         <div class="block-title">Keys in this browser's wallet</div>
-        <div id="account-list" class="account-list"></div>
-        <button class="btn btn-secondary btn-sm ml-1" id="goto-add-account-btn">Add / Restore Key</button>
+        <div id="key-list" class="key-list"></div>
+        <button class="btn btn-secondary btn-sm ml-1" id="goto-add-key-btn">Add / Restore Key</button>
       </div>
       <div class="col-md-8 offset-md-2 bg-white main-content" id="mainContent">
         <div class="entry-page py-3" id="content"></div>
@@ -44,26 +44,19 @@ export default function loadVault(window, document, mainElement) {
 
   const contentDiv = document.getElementById('content')
   const sidebarDiv = document.getElementById('sidebar')
-  const accountListDiv = document.getElementById('account-list')
+  const keyListDiv = document.getElementById('key-list')
   const mainWrapper = document.getElementById('mainWrapper')
   const mainContent = document.getElementById('mainContent')
 
   let welcomeDiv
 
-  const configureAccount = (platform, address) => {
+  const activatePlatformKey = (platform, address) => {
     // Lazy-Load Webworker
     if (!workers[platform]) workers[platform] = new VaultWorker()
     const worker = workers[platform]
 
     // call configure on background webworker
-    return new Promise((resolve, reject) => {
-      worker.onmessage = resolve
-      worker.onerror = reject
-      worker.postMessage(['configure', { address }])
-    }).then(({ data: { error, config } }) => {
-      if (error) throw Error(error)
-      return config
-    })
+    return postMessage(worker, ['configure', { address }]).then(({ config }) => config)
   }
 
   const showGenerateUnprotectedKeyScreen = (platform, phonenum) => {
@@ -93,7 +86,7 @@ export default function loadVault(window, document, mainElement) {
       -----END PGP PUBLIC KEY BLOCK-----
     `
 
-    const [div, promise] = ConfirmPhonenumScreen(document, phonenum, message)
+    const [div, promise] = PhonenumConfirmScreen(document, phonenum, message)
     contentDiv.innerHTML = ''
     contentDiv.appendChild(div)
 
@@ -145,14 +138,9 @@ export default function loadVault(window, document, mainElement) {
     const worker = workers[platform]
 
     // call generatePassphrase on background webworker
-    const p = new Promise((resolve, reject) => {
-      worker.onmessage = resolve
-      worker.onerror = reject
-      worker.postMessage(['generatePassphrase', 10])
-    }).then(({ data: { error, passphrase } }) => {
-      if (error) throw new Error(error)
-      return `${platform.toLowerCase()} ${passphrase}`
-    })
+    const p = postMessage(worker, ['generatePassphrase', 10]).then(
+      ({ passphrase }) => `${platform.toLowerCase()} ${passphrase}`
+    )
 
     return p
       .then(
@@ -160,7 +148,7 @@ export default function loadVault(window, document, mainElement) {
           new Promise((resolve, reject) => {
             contentDiv.innerHTML = ''
             contentDiv.appendChild(
-              DisplayPassphraseScreen(document, passphrase, (err, res) => {
+              PassphraseDisplayScreen(document, passphrase, (err, res) => {
                 if (err) reject(err)
                 else resolve(res)
               })
@@ -173,7 +161,7 @@ export default function loadVault(window, document, mainElement) {
         return new Promise((resolve, reject) => {
           contentDiv.innerHTML = ''
           contentDiv.appendChild(
-            ConfirmPassphraseScreen(document, passphrase, true, (err, res) => {
+            PassphraseConfirmScreen(document, passphrase, true, (err, res) => {
               if (err) reject(err)
               else resolve(res)
             })
@@ -187,36 +175,31 @@ export default function loadVault(window, document, mainElement) {
           )
 
           // call createKeyPair on background webworker
-          return new Promise((resolve, reject) => {
-            worker.onmessage = resolve
-            worker.onerror = reject
-            worker.postMessage(['createProtectedKeyPair', passphrase, pin])
-          }).then(({ data: { error, id, address, accountNo, publicKey } }) => {
-            if (error) throw new Error(error)
-            return {
+          return postMessage(worker, ['createProtectedKeyPair', passphrase, pin]).then(
+            ({ id, address, accountNo, publicKey }) => ({
               id,
               address,
               accountNo,
               publicKey,
               pin,
-            }
-          })
+            })
+          )
         })
       })
   }
 
-  const showAddAccountScreen = () =>
+  const showAddKeyScreen = () =>
     new Promise((resolve, reject) => {
       contentDiv.innerHTML = ''
       contentDiv.appendChild(
-        AddAccountScreen(document, (err, res) => {
+        KeyAddScreen(document, (err, res) => {
           if (err) reject(err)
           else resolve(res)
         })
       )
     }).then(platform => showGenerateKeyScreen(platform))
 
-  const showRestoreAccountScreen = (platform, address) =>
+  const showRestoreMissingKeyScreen = (platform, address) =>
     new Promise((resolve, reject) => {
       const message = `You do not seem to have the private key for ${address} stored in this browser. Please restore the ${platform} key from backup.`
       contentDiv.appendChild(
@@ -227,49 +210,30 @@ export default function loadVault(window, document, mainElement) {
       )
     })
 
-  const showAccountDetailScreen = (platform, entryId) => {
+  const getKeyDetail = (platform, entryId) => {
     // Lazy-Load Webworker
     if (!workers[platform]) workers[platform] = new VaultWorker()
     const worker = workers[platform]
 
-    // call configure on background webworker
-    return new Promise((resolve, reject) => {
-      worker.onmessage = resolve
-      worker.onerror = reject
-      worker.postMessage(['getKeyPair', entryId])
-    }).then(({ data: { error, address, accountNo, publicKey, hasPassphrase } = {} }) => {
-      if (error) throw new Error(error)
-      if (!address) return showRestoreAccountScreen(platform, entryId)
-      if (!hasPassphrase) {
-        const accountDetail = {
-          address,
-          accountNo,
-          publicKey,
+    // call getKeyPair on background webworker
+    return postMessage(worker, ['getKeyPair', entryId]).then(
+      ({ address, accountNo, publicKey, hasPassphrase }) => {
+        if (!hasPassphrase) {
+          return {
+            address,
+            accountNo,
+            publicKey,
+          }
         }
-        contentDiv.innerHTML = ''
-        contentDiv.appendChild(AccountDetail(document, accountDetail))
 
-        return Promise.resolve(accountDetail)
-      }
-
-      return new Promise((resolve, reject) => {
-        worker.onmessage = resolve
-        worker.onerror = reject
-        worker.postMessage(['getKeyPairPassphrase', entryId])
-      }).then(({ data: { error2, passphrase } }) => {
-        if (error2) throw Error(error2)
-        const accountDetail = {
+        return postMessage(worker, ['getKeyPairPassphrase', entryId]).then(({ passphrase }) => ({
           address,
           accountNo,
           publicKey,
           passphrase,
-        }
-        contentDiv.innerHTML = ''
-        contentDiv.appendChild(AccountDetail(document, accountDetail))
-
-        return accountDetail
-      })
-    })
+        }))
+      }
+    )
   }
 
   const showTxDetailScreen = (tx, platform, address) => {
@@ -282,29 +246,15 @@ export default function loadVault(window, document, mainElement) {
     if (!workers[platform]) workers[platform] = new VaultWorker()
     const worker = workers[platform]
 
-    return new Promise((resolve, reject) => {
-      worker.onmessage = resolve
-      worker.onerror = reject
-      worker.postMessage(['getKeyPair', address])
-    })
-      .then(({ data: { error, accountNo } }) => {
-        if (error) throw new Error(error)
-        return accountNo
-      })
-      .then(accountNo => {
-        if (!accountNo) {
-          return showRestoreAccountScreen(platform, address)
+    return postMessage(worker, ['getKeyPair', address])
+      .catch(err => {
+        if (err.message.includes('missing')) {
+          return showRestoreMissingKeyScreen(platform, address)
         }
-
-        return new Promise((resolve, reject) => {
-          worker.onmessage = resolve
-          worker.onerror = reject
-          worker.postMessage(['configure', { address }])
-        })
-          .then(({ data: { error, config } }) => {
-            if (error) throw Error(error)
-            return config
-          })
+        throw err
+      })
+      .then(({ accountNo }) =>
+        postMessage(worker, ['configure', { address }])
           .then(
             () =>
               new Promise((resolve, reject) => {
@@ -331,18 +281,9 @@ export default function loadVault(window, document, mainElement) {
             if (choice !== 'ok') throw new Error('cancelled by user')
 
             // call signTransaction on background webworker
-            return new Promise((resolve, reject) => {
-              worker.onmessage = resolve
-              worker.onerror = reject
-              worker.postMessage(['signTransaction', address, pin, tx.type, tx.data])
-            }).then(
-              ({ data: { error, transactionJSON, transactionBytes, transactionFullHash } }) => {
-                if (error) throw new Error(error)
-                return { transactionJSON, transactionBytes, transactionFullHash }
-              }
-            )
+            return postMessage(worker, ['signTransaction', address, pin, tx.type, tx.data])
           })
-      })
+      )
   }
 
   const signMessage = (platform, address, message, optionalPin = null) => {
@@ -354,17 +295,12 @@ export default function loadVault(window, document, mainElement) {
     contentDiv.appendChild(LoadingScreen(document, 'Signing Document'))
 
     // call signMessage on background worker
-    return new Promise((resolve, reject) => {
-      worker.onmessage = resolve
-      worker.onerror = reject
-      worker.postMessage(['signMessage', address, message, optionalPin])
-    }).then(({ data: { error, signature } }) => {
-      if (error) throw new Error(error)
-      return signature
-    })
+    return postMessage(worker, ['signMessage', address, message, optionalPin]).then(
+      ({ signature }) => signature
+    )
   }
 
-  const updateAccountListDiv = () =>
+  const updateKeyListDiv = () =>
     new Promise((resolve, reject) => {
       try {
         callOnStore('accounts', accounts => {
@@ -372,7 +308,7 @@ export default function loadVault(window, document, mainElement) {
           req.onsuccess = ({ target: { result: entries } }) => {
             if (Array.isArray(entries) && entries.length > 0) {
               // Group by platform
-              const accountsByPlatform = entries.reduce((acc, entry) => {
+              const keysByPlatform = entries.reduce((acc, entry) => {
                 const g = acc[entry.platform]
                 if (g) g.push(entry)
                 else acc[entry.platform] = [entry]
@@ -384,14 +320,25 @@ export default function loadVault(window, document, mainElement) {
                 if (type === 'button' && dataset) {
                   const { platform, address, entryId } = dataset
                   // const entry = entries.find(e => e.platform === platform && e.address === address)
-                  configureAccount(platform, address)
+                  activatePlatformKey(platform, address)
                     .then(() => {
                       ul.querySelectorAll('button').forEach(
                         li => li.classList.remove('btn-dark') && li.classList.add('btn-light')
                       )
                       classList.remove('btn-light')
                       classList.add('btn-dark')
-                      showAccountDetailScreen(platform, entryId)
+                      getKeyDetail(platform, entryId)
+                        .catch(err => {
+                          if (err.message.includes('missing')) {
+                            return showRestoreMissingKeyScreen(platform, address)
+                          }
+                          throw err
+                        })
+                        .then(keyDetail => {
+                          const [div] = KeyDetailScreen(document, keyDetail)
+                          contentDiv.innerHTML = ''
+                          contentDiv.appendChild(div)
+                        })
                     })
                     .catch(error => {
                       window.alert(`Error: ${error.message || error}`)
@@ -399,8 +346,8 @@ export default function loadVault(window, document, mainElement) {
                 }
               }
 
-              accountListDiv.innerHTML = ''
-              Object.keys(accountsByPlatform).forEach(platform => {
+              keyListDiv.innerHTML = ''
+              Object.keys(keysByPlatform).forEach(platform => {
                 const div = document.createElement('div')
                 const h3 = document.createElement('h3')
                 h3.appendChild(document.createTextNode(platform))
@@ -408,8 +355,8 @@ export default function loadVault(window, document, mainElement) {
                 const ul = document.createElement('ul')
                 ul.addEventListener('click', onClick(ul))
 
-                const plaformAccounts = accountsByPlatform[platform]
-                plaformAccounts.forEach(entry => {
+                const plaformKeys = keysByPlatform[platform]
+                plaformKeys.forEach(entry => {
                   const li = document.createElement('li')
                   const button = document.createElement('button') // eslint-disable-line
                   button.type = 'button'
@@ -423,7 +370,7 @@ export default function loadVault(window, document, mainElement) {
                 })
 
                 div.appendChild(ul)
-                accountListDiv.appendChild(div)
+                keyListDiv.appendChild(div)
               })
 
               resolve(true)
@@ -438,9 +385,9 @@ export default function loadVault(window, document, mainElement) {
     })
 
   // Add Event Listener: User clicks "Add Key" Button
-  document.getElementById('goto-add-account-btn').addEventListener('click', () => {
-    showAddAccountScreen()
-      .then(() => updateAccountListDiv())
+  document.getElementById('goto-add-key-btn').addEventListener('click', () => {
+    showAddKeyScreen()
+      .then(() => updateKeyListDiv())
       .then(() => {
         contentDiv.innerHTML = ''
         contentDiv.appendChild(welcomeDiv)
@@ -463,7 +410,7 @@ export default function loadVault(window, document, mainElement) {
       const [platform, messageHex, phoneNum] = params
 
       return showGenerateUnprotectedKeyScreen(platform, phoneNum)
-        .then(res => updateAccountListDiv().then(() => res))
+        .then(res => updateKeyListDiv().then(() => res))
         .then(({ address, publicKey, phoneNumber, encPassphrase }) =>
           signMessage(platform, address, messageHex).then(signature => {
             contentDiv.innerHTML = ''
@@ -517,7 +464,7 @@ export default function loadVault(window, document, mainElement) {
       const [platform, messageHex] = params
 
       return showGenerateKeyScreen(platform)
-        .then(res => updateAccountListDiv().then(() => res))
+        .then(res => updateKeyListDiv().then(() => res))
         .then(({ address, publicKey, pin }) =>
           signMessage(platform, address, messageHex, pin).then(signature => {
             contentDiv.innerHTML = ''
@@ -581,18 +528,38 @@ export default function loadVault(window, document, mainElement) {
         })
     }
 
-    // Trigger C: App wants to display account detail screen
+    // Trigger C: App wants to display key detail screen
     // Input: { action: 'showKeyDetail', params: [ 'EQH', 'EQH-xxx-xxx-xxx-xxx' ] }
     // Output: { hasKeyPair: true, hasPassphrase: false }
     if (action === 'showKeyDetail' && params) {
       const [platform, address] = params
 
-      return showAccountDetailScreen(platform, address)
-        .then(({ publicKey, passphrase }) => {
-          // callback to the parent window with result
+      return getKeyDetail(platform, address)
+        .catch(err => {
+          if (err.message.includes('missing')) {
+            // callback to the parent window with key state before restore
+            callback(null, {
+              hasKeyPair: false,
+              hasPassphrase: false,
+            })
+            return showRestoreMissingKeyScreen(platform, address)
+          }
+          throw err
+        })
+        .then(keyDetail => {
+          // callback to the parent window with result after restore
           callback(null, {
-            hasKeyPair: !!publicKey,
-            hasPassphrase: !!passphrase,
+            hasKeyPair: !!keyDetail.publicKey,
+            hasPassphrase: !!keyDetail.passphrase,
+          })
+          return keyDetail
+        })
+        .then(keyDetail => {
+          const [div, promise] = KeyDetailScreen(document, keyDetail)
+          contentDiv.innerHTML = ''
+          contentDiv.appendChild(div)
+          return promise.then(choice => {
+            if (choice === 'ok') self.close() // eslint-disable-line
           })
         })
         .catch(error => {
@@ -691,11 +658,11 @@ export default function loadVault(window, document, mainElement) {
       document.head.appendChild(linkElement)
     })
 
-  // On Load: Update Account List
-  updateAccountListDiv()
-    .then(hasAccounts => {
+  // On Load: Update key List
+  updateKeyListDiv()
+    .then(hasKeys => {
       // Create the welcome screen
-      welcomeDiv = WelcomeScreen(document, hasAccounts)
+      welcomeDiv = WelcomeScreen(document, hasKeys)
 
       if (!window.opener) {
         // Show welcome screen on startup
