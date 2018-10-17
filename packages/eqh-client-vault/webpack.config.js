@@ -34,6 +34,7 @@ module.exports = {
       'process.env': {
         NODE_ENV: JSON.stringify('production'),
         APP_ENV: JSON.stringify('browser'),
+        STAGE: JSON.stringify('sandbox'),
       },
     }),
     {
@@ -54,8 +55,8 @@ module.exports = {
         force: true,
       },
     ], {
-      ignore: ['*.bak', '*.bak.html'],
-    }),
+        ignore: ['*.bak', '*.bak.html'],
+      }),
   ],
   module: {
     rules: [

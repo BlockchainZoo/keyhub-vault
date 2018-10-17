@@ -25,13 +25,16 @@ const { NrsBridge } = require('./js/nrs.cheerio.bridge')
 global.isNode = true
 const converters = require('./js/util/converters')
 
-const nxtConfig = require('./conf/nxt.json')
+const nxtConfig = require('./conf/eqh/nxt')
+const nxtConstants = require('./conf/eqh/constants')
 
 log('Loading NRS-bridge...')
 
 const bridge = new NrsBridge(nxtConfig)
 
 bridge.load(NRS => {
+  NRS.processConstants(nxtConstants)
+
   log('Loaded NRS-bridge.')
 
   const fixTxNumberFormat = ({
