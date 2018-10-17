@@ -4,8 +4,8 @@
 const NRS = typeof global.NRS === 'undefined' ? { constants: {} } : NRS
 
 NRS.constants.SERVER = {
-  epochBeginning: 0,
-  genesisAccountId: '',
+  epochBeginning: (process.env.STAGE === 'sandbox' ? 1385294400000 : 0),
+  genesisAccountId: (process.env.STAGE === 'sandbox' ? '1380548969593842148' : ''),
   // genesisBlockId: "2680262203532249785",
   transactionSubTypes: {
     ReserveClaim: {
