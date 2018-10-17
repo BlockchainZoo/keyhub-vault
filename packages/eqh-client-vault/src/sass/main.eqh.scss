@@ -92,3 +92,39 @@ $red: #dc3545;
 .btn-primary {
   background-color: $primary;
 }
+
+.text-primary {
+  color: $primary;
+}
+
+.text-phone-number {
+  color: $primary;
+  border-top: 0;
+  border-left: 0;
+  border-right: 0;
+  font-size: 2.175rem;
+  text-align: center;
+  border-width: 0 0 1px 0;
+
+  &:focus,
+  &:hover {
+    box-shadow: none;
+    outline: none;
+    color: $primary;
+  }
+
+  @media (max-width: 640px) {
+    width: 75%;
+    margin: 0 auto;
+  }
+  @media (max-width: 480px) {
+    width: 100%;
+    margin: 0 auto;
+  }
+}
+.form-confirm-phone-number {
+  text-align: center;
+}
+.text-primary {
+  color: $primary;
+}

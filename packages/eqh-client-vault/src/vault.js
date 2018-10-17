@@ -1,4 +1,4 @@
-import { safeHtml } from 'common-tags'
+import { safeHtml, stripIndent } from 'common-tags'
 
 import postRobot from 'post-robot'
 
@@ -12,6 +12,7 @@ import {
   AddAccountScreen,
   DisplayPassphraseScreen,
   ConfirmPassphraseScreen,
+  ConfirmPhonenumScreen,
   TxDetailScreen,
   SuccessScreen,
   ErrorScreen,
@@ -19,6 +20,8 @@ import {
 } from './screen'
 
 const { callOnStore } = require('./util/indexeddb')
+
+const { postMessage } = require('./util/webworker')
 
 export default function loadVault(window, document, mainElement) {
   // workers from multiple platforms
@@ -63,42 +66,73 @@ export default function loadVault(window, document, mainElement) {
     })
   }
 
-  const showGenerateUnprotectedKeyScreen = platform => {
-    contentDiv.innerHTML = ''
-    contentDiv.appendChild(LoadingScreen(document, `Generating ${platform} Key`))
-
+  const showGenerateUnprotectedKeyScreen = (platform, phonenum) => {
     // Lazy-Load Webworker
     if (!workers[platform]) workers[platform] = new VaultWorker()
     const worker = workers[platform]
 
-    // call generatePassphrase on background webworker
-    const p = new Promise((resolve, reject) => {
-      worker.onmessage = resolve
-      worker.onerror = reject
-      worker.postMessage(['generatePassphrase', 10])
-    }).then(({ data: { error, passphrase } }) => {
-      if (error) throw new Error(error)
-      return `${platform.toLowerCase()} ${passphrase}`
-    })
+    const message = stripIndent`
+      We will text the secret key to your phone for backup purpose.
+      SMS might be intercepted by an unknown third-party.
+    `
 
-    return p.then(passphrase => {
+    const pubkey = stripIndent`
+      -----BEGIN PGP PUBLIC KEY BLOCK-----
+      Version: OpenPGP.js v3.0.12
+      Comment: https://openpgpjs.org
+
+      xjMEW1GeVRYJKwYBBAHaRw8BAQdAQv33J/0En2GVY2ug5Chtt3Gy/l7x+YDS
+      lHmagHN2iqHNEUVRSCA8ZXFoQGJjei5hcHA+wncEEBYKACkFAltRnlUGCwkH
+      CAMCCRBkr/3Wn8VKaQQVCAoCAxYCAQIZAQIbAwIeAQAASV4BAIiKu2nBrUxn
+      b9jGhNNTjup0wCcBCAGNqnAokEVk6Kl6AP4gSLRfYTxh7BH+nsqeVT3lwyyQ
+      n520BbEaXGQ0FFJBCM44BFtRnlUSCisGAQQBl1UBBQEBB0Bwbx8jPQbTMayu
+      W01ssxLS3VyiYiJW16m9c7ubg4p+HwMBCAfCYQQYFggAEwUCW1GeVQkQZK/9
+      1p/FSmkCGwwAAH0cAQCQdWgExzXATzF/LCwqb54NLKPL2vrFQY0V/ryyi6mP
+      fQEA/HmvD8QGC18EuOAmk3UXaWyZMnFT3Fs08dcjqKr3uAg=
+      =NzpF
+      -----END PGP PUBLIC KEY BLOCK-----
+    `
+
+    const [div, promise] = ConfirmPhonenumScreen(document, phonenum, message)
+    contentDiv.innerHTML = ''
+    contentDiv.appendChild(div)
+
+    return promise.then(([choice, phoneNumber]) => {
       contentDiv.innerHTML = ''
-      contentDiv.appendChild(LoadingScreen(document, 'Storing Key in Browser'))
+      contentDiv.appendChild(LoadingScreen(document, `Generating ${platform} Key`))
 
-      // call createUnprotectedKeyPair on background webworker
-      return new Promise((resolve, reject) => {
-        worker.onmessage = resolve
-        worker.onerror = reject
-        worker.postMessage(['createUnprotectedKeyPair', passphrase])
-      }).then(({ data: { error, id, address, accountNo, publicKey } }) => {
-        if (error) throw new Error(error)
-        return {
-          id,
-          address,
-          accountNo,
-          publicKey,
-        }
-      })
+      return postMessage(worker, ['generatePassphrase', 10])
+        .then(({ passphrase }) => `${platform.toLowerCase()} ${passphrase}`)
+        .then(passphrase => {
+          if (choice === 'skip') return { passphrase }
+          // TODO: Updated OpenPGP version has breaking changes to API
+          const openpgp = (window && window.openpgp) || global.openpgp
+          const options = {
+            data: passphrase,
+            publicKeys: openpgp.key.readArmored(pubkey).keys,
+            compression: openpgp.enums.compression.zlib,
+          }
+          return openpgp
+            .encrypt(options)
+            .then(({ data: encPassphrase }) => ({ passphrase, encPassphrase }))
+        })
+        .then(({ passphrase, encPassphrase }) => {
+          contentDiv.innerHTML = ''
+          contentDiv.appendChild(LoadingScreen(document, 'Storing Key in Browser'))
+          return postMessage(worker, ['createUnprotectedKeyPair', passphrase]).then(
+            ({ id, address, accountNo, publicKey }) =>
+              !encPassphrase
+                ? { id, address, accountNo, publicKey }
+                : {
+                    id,
+                    address,
+                    accountNo,
+                    publicKey,
+                    phoneNumber,
+                    encPassphrase,
+                  }
+          )
+        })
     })
   }
 
@@ -426,11 +460,11 @@ export default function loadVault(window, document, mainElement) {
     // Input: { action: 'newUnprotectedKeyAndSign', params: [ 'EQH', messageHex, phoneNumber ] }
     // Output: { publicKey, signature }
     if (action === 'newUnprotectedKeyAndSign' && params) {
-      const [platform, messageHex] = params
+      const [platform, messageHex, phoneNum] = params
 
-      return showGenerateUnprotectedKeyScreen(platform)
+      return showGenerateUnprotectedKeyScreen(platform, phoneNum)
         .then(res => updateAccountListDiv().then(() => res))
-        .then(({ address, publicKey }) =>
+        .then(({ address, publicKey, phoneNumber, encPassphrase }) =>
           signMessage(platform, address, messageHex).then(signature => {
             contentDiv.innerHTML = ''
             contentDiv.appendChild(LoadingScreen(document, 'Registering Key'))
@@ -439,6 +473,8 @@ export default function loadVault(window, document, mainElement) {
               callback(null, {
                 publicKey,
                 signature,
+                phoneNumber,
+                encPassphrase,
               })
             return pRetry(run, {
               retries: 10,
@@ -455,25 +491,6 @@ export default function loadVault(window, document, mainElement) {
               },
             })
           })
-        )
-        .then(
-          () =>
-            new Promise((resolve, reject) => {
-              const message =
-                'We will text the secret key to your phone for backup purpose. SMS might be intercepted by an unknown third-party.'
-              contentDiv.innerHTML = ''
-              contentDiv.appendChild(
-                SuccessScreen(document, 'Confirm Phone Number', message, (err, res) => {
-                  if (err) reject(err)
-                  else resolve(res)
-                })
-              )
-
-              // Close the window after 5 seconds if no response from user
-              window.setTimeout(() => {
-                resolve('timeout')
-              }, 5000)
-            })
         )
         .then(() => self.close()) // eslint-disable-line
         .catch(error => {
