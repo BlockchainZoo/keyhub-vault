@@ -53,16 +53,32 @@ npx lerna bootstrap --scope=eqh-client-vault
 3. configure the AWS configure twith the key and secret key
 4. Deploy /dist to S3 by deploying the files to S3, this action will produce /cloudfront/stack.ap-southeast-1.yaml which will be used by cloudfront to point to this specific S3
 
+for `sandbox` environment
+
 ```bash
 sls deploy
+```
+
+for `prod` environment
+
+```bash
+sls deploy --stage=prod
 ```
 
 5. Check whether the files has been uploaded through aws S3 terminal
 6. Check whether index.html can be accessed (no access denied)
 7. Deploy cloudfront by going to /cloudfront then run
 
+for `sandbox` environment
+
 ```bash
 sls deploy
+```
+
+for `prod` environment
+
+```bash
+sls deploy --stage=prod
 ```
 
 8. go to vault.keyhub.app to check the deployment
