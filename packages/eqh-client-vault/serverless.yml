@@ -1,6 +1,6 @@
 service: keyhub-vault
 
-frameworkVersion: ">=1.2.0 <2.0.0"
+frameworkVersion: '>=1.2.0 <2.0.0'
 
 plugins:
   - serverless-stack-output
@@ -8,35 +8,38 @@ plugins:
 
 custom:
   # Bucket name that will host the site
-  s3Bucket: keyhub-vault
+  s3Bucket:
+    sandbox: keyhub-vault-sandbox
+    prod: keyhub-vault
   s3Sync:
-    - bucketName: ${self:custom.s3Bucket} # required
+    - bucketName: ${self:custom.s3Bucket.${self:provider.stage}} # required
       localDir: dist # required
       followSymlinks: true # optional
       defaultContentType: text/html # optional
       # acl: public-read # optional
       params: # optional
-        - "index.html":
+        - 'index.html':
             # Store index.html permanently in the user browser
-            CacheControl: "public, max-age=31536000, s-maxage=600, immutable"
-        - "index.js":
+            CacheControl: 'public, max-age=31536000, s-maxage=600, immutable'
+        - 'index.js':
             # Store PGP public key permanently in the user browser
-            CacheControl: "public, max-age=31536000, s-maxage=600, immutable"
-        - "js/openpgp.worker.bundle.js":
+            CacheControl: 'public, max-age=31536000, s-maxage=600, immutable'
+        - 'js/openpgp.worker.bundle.js':
             # Store OpenPGP library permanently in the user browser
-            CacheControl: "public, max-age=31536000, s-maxage=600, immutable"
-        - "js/main.bundle.js":
+            CacheControl: 'public, max-age=31536000, s-maxage=600, immutable'
+        - 'js/main.bundle.js':
             # Cache must revalidate main.bundle.js
-            CacheControl: "no-cache, no-transform"
-        - "js/main.bundle.js.*":
+            CacheControl: 'no-cache, no-transform'
+        - 'js/main.bundle.js.*':
             # Cache must revalidate sourcemap & signature of main.bundle.js
-            CacheControl: "no-cache, no-transform"
+            CacheControl: 'no-cache, no-transform'
   output:
-    file: cloudfront/stack.ap-southeast-1.yaml
+    file: cloudfront/stack.ap-southeast-1-${self:provider.stage}.yaml
 
 provider:
   name: aws
   region: 'ap-southeast-1'
+  stage: ${opt:stage, 'sandbox'}
 
 resources:
   Resources:
@@ -44,7 +47,7 @@ resources:
     WebAppS3Bucket:
       Type: AWS::S3::Bucket
       Properties:
-        BucketName: ${self:custom.s3Bucket}
+        BucketName: ${self:custom.s3Bucket.${self:provider.stage}}
         AccessControl: PublicRead
         WebsiteConfiguration:
           IndexDocument: index.html
@@ -58,12 +61,12 @@ resources:
           Statement:
             - Sid: PublicReadGetObject
               Effect: Allow
-              Principal: "*"
+              Principal: '*'
               Action:
-              - s3:GetObject
-              Resource: arn:aws:s3:::${self:custom.s3Bucket}/*
+                - s3:GetObject
+              Resource: arn:aws:s3:::${self:custom.s3Bucket.${self:provider.stage}}/*
 
   ## In order to print out the hosted domain via `serverless info` we need to define the DomainName output for CloudFormation
   Outputs:
     WebAppS3BucketDomainName:
-      Value: { 'Fn::GetAtt': [ 'WebAppS3Bucket', 'DomainName' ] }
+      Value: { 'Fn::GetAtt': ['WebAppS3Bucket', 'DomainName'] }

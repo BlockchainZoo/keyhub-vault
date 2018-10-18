@@ -1,26 +1,31 @@
 service: keyhub-vault
 
-frameworkVersion: ">=1.2.0 <2.0.0"
+frameworkVersion: '>=1.2.0 <2.0.0'
 
 plugins:
   - serverless-plugin-cloudfront-lambda-edge
 
 custom:
   # DNS hostname that points to the site
-  siteDnsName: vault.keyhub.app
+  siteDnsName:
+    sandbox: vault.sandbox.keyhub.app
+    prod: vault.keyhub.app
   # Please pre-create an ACM certificate in us-east-1 region via AWS-Console, and copy its ARN here (as CF does not yet support DNS validation of ACM requests)
-  httpsCertArn: 'arn:aws:acm:us-east-1:359026654074:certificate/c19a85ed-d1a8-49c5-8583-7cb9c5b70ef4'
+  httpsCertArn:
+    sandbox: 'arn:aws:acm:us-east-1:359026654074:certificate/5b512ec5-a099-4be0-b582-bec88daade19'
+    prod: 'arn:aws:acm:us-east-1:359026654074:certificate/c19a85ed-d1a8-49c5-8583-7cb9c5b70ef4'
   # DomainName of s3Bucket
-  s3BucketDomainName: ${file(./stack.ap-southeast-1.yaml):WebAppS3BucketDomainName, 'keyhub-vault.s3.amazonaws.com'} # ${cf:keyhub-vault-dev.WebAppS3BucketDomainName}
+  s3BucketDomainName: ${file(./stack.ap-southeast-1-${self:provider.stage}.yaml):WebAppS3BucketDomainName, 'keyhub-vault.s3.amazonaws.com'} # ${cf:keyhub-vault-dev.WebAppS3BucketDomainName}
 
 provider:
   name: aws
   region: 'us-east-1'
   runtime: nodejs6.10 # Because this runs on CloudFront (lambda@edge) it must be 6.10
+  stage: ${opt:stage, 'sandbox'}
 
 functions:
-  edgeAddSecurityHeaders1:
-    handler: lambda-edge.addSecurityHeaders
+  edgeAddSecurityHeaders3:
+    handler: lambda-edge-${self:provider.stage}.addSecurityHeaders
     memorySize: 128
     timeout: 5 # See: https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/cloudfront-limits.html#limits-lambda-at-edge
     lambdaAtEdge: # Must be in us-east-1 region
@@ -31,7 +36,7 @@ package:
   exclude:
     - '**'
   include:
-    - lambda-edge.js
+    - lambda-edge-${self:provider.stage}.js
 
 resources:
   Resources:
@@ -47,12 +52,12 @@ resources:
           PriceClass: 'PriceClass_200'
           ## Using a custom domain
           Aliases:
-            - ${self:custom.siteDnsName}
+            - ${self:custom.siteDnsName.${self:provider.stage}}
           ## The certificate to use when viewers use HTTPS to request objects.
           ViewerCertificate:
             SslSupportMethod: sni-only
             MinimumProtocolVersion: TLSv1.2_2018
-            AcmCertificateArn: ${self:custom.httpsCertArn}
+            AcmCertificateArn: ${self:custom.httpsCertArn.${self:provider.stage}}
             # CloudFrontDefaultCertificate: 'true'
           Origins:
             - DomainName: ${self:custom.s3BucketDomainName}
@@ -106,22 +111,20 @@ resources:
     WebAppDnsRecords:
       Type: AWS::Route53::RecordSetGroup
       Properties:
-        HostedZoneName: '${self:custom.siteDnsName}.'
+        HostedZoneName: '${self:custom.siteDnsName.${self:provider.stage}}.'
         RecordSets:
-          -
-            Name: '${self:custom.siteDnsName}.'
+          - Name: '${self:custom.siteDnsName.${self:provider.stage}}.'
             Type: 'A'
             AliasTarget:
-              DNSName: { 'Fn::GetAtt': [ 'WebAppCloudFrontDistribution', 'DomainName' ] }
+              DNSName: { 'Fn::GetAtt': ['WebAppCloudFrontDistribution', 'DomainName'] }
               HostedZoneId: 'Z2FDTNDATAQYW2' # Cloudfront uses Z2FDTNDATAQYW2
-          -
-            Name: '${self:custom.siteDnsName}.'
+          - Name: '${self:custom.siteDnsName.${self:provider.stage}}.'
             Type: 'AAAA'
             AliasTarget:
-              DNSName: { 'Fn::GetAtt': [ 'WebAppCloudFrontDistribution', 'DomainName' ] }
+              DNSName: { 'Fn::GetAtt': ['WebAppCloudFrontDistribution', 'DomainName'] }
               HostedZoneId: 'Z2FDTNDATAQYW2' # Cloudfront uses Z2FDTNDATAQYW2
 
   ## In order to print out the hosted domain via `serverless info` we need to define the DomainName output for CloudFormation
   Outputs:
     WebAppCloudFrontDistributionDomainName:
-      Value: { 'Fn::GetAtt': [ WebAppCloudFrontDistribution, DomainName ] }
+      Value: { 'Fn::GetAtt': [WebAppCloudFrontDistribution, DomainName] }
