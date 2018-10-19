@@ -1,5 +1,5 @@
 {
-  "name": "eqh-client-vault",
+  "name": "keyhub-vault-web",
   "version": "0.1.0",
   "description": "Secure enclave to store private keys and sign messages/transactions.",
   "private": false,
@@ -12,14 +12,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/BlockchainZoo/eqh-client.git"
+    "url": "git+https://github.com/BlockchainZoo/keyhub-vault.git"
   },
   "author": "heri16",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/BlockchainZoo/eqh-client/issues"
+    "url": "https://github.com/BlockchainZoo/keyhub-vault/issues"
   },
-  "homepage": "https://github.com/BlockchainZoo/eqh-client#readme",
+  "homepage": "https://github.com/BlockchainZoo/keyhub-vault#readme",
   "dependencies": {
     "abortcontroller-polyfill": "^1.1.9",
     "async": "^2.6.1",
