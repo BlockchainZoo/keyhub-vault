@@ -1,5 +1,5 @@
 {
-	"name": "eqh-client",
+	"name": "keyhub-vault",
 	"description": "Client frontend monorepo for EquineHub",
 	"scripts": {
 		"postinstall": "lerna bootstrap",

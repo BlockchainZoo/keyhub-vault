@@ -19,13 +19,13 @@ sudo apt install caddy || sudo yum install caddy || brew install caddy
 ### Build the project
 
 ```bash
-npx lerna bootstrap --scope=eqh-client-vault
+npx lerna bootstrap --scope=keyhub-vault-web
 ```
 
 ### Start the Caddy HTTP server
 
 ```bash
-cd ./eqh-client-vault
+cd ./keyhub-vault-web
 caddy
 ```
 
@@ -34,7 +34,7 @@ caddy
 **Note:** after every change, run
 
 ```bash
-npx lerna bootstrap --scope=eqh-client-vault
+npx lerna bootstrap --scope=keyhub-vault-web
 ```
 
 You are now ready to use the offline wallet/vault.
@@ -45,10 +45,10 @@ You are now ready to use the offline wallet/vault.
 2. Run this command to run "prepare" script and build the project
 
 ```bash
-npx lerna bootstrap --scope=eqh-client-vault
+npx lerna bootstrap --scope=keyhub-vault-web
 ```
 
-/dist folder will appear inside the eqh-client-vault directory
+/dist folder will appear inside the keyhub-vault-web directory
 
 3. configure the AWS configure twith the key and secret key
 4. Deploy /dist to S3 by deploying the files to S3, this action will produce /cloudfront/stack.ap-southeast-1.yaml which will be used by cloudfront to point to this specific S3
