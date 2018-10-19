@@ -1,6 +1,6 @@
-# Key Vault
+# Key Vault for Web
 
-This is the offline key vault (a.k.a. "wallet") for the Horse project.
+This is the web-based offline key vault (a.k.a. "wallet").
 
 ## Running the Local Offline Vault
 
