@@ -10,12 +10,12 @@ import {
   WelcomeScreen,
   LoadingScreen,
   KeyAddScreen,
+  KeyRestoreScreen,
   PassphraseDisplayScreen,
   PassphraseConfirmScreen,
   PhonenumConfirmScreen,
   TxDetailScreen,
   SuccessScreen,
-  ErrorScreen,
   KeyDetailScreen,
 } from './screen'
 
@@ -95,7 +95,7 @@ export default function loadVault(window, document, mainElement) {
       contentDiv.appendChild(LoadingScreen(document, `Generating ${platform} Key`))
 
       return postMessage(worker, ['generatePassphrase', 10])
-        .then(({ passphrase }) => `${platform.toLowerCase()} ${passphrase}`)
+        .then(passphrase => `${platform.toLowerCase()} ${passphrase}`)
         .then(passphrase => {
           if (choice === 'skip') return { passphrase }
           // TODO: Updated OpenPGP version has breaking changes to API
@@ -112,7 +112,7 @@ export default function loadVault(window, document, mainElement) {
         .then(({ passphrase, encPassphrase }) => {
           contentDiv.innerHTML = ''
           contentDiv.appendChild(LoadingScreen(document, 'Storing Key in Browser'))
-          return postMessage(worker, ['createUnprotectedKeyPair', passphrase]).then(
+          return postMessage(worker, ['storeUnprotectedKey', passphrase]).then(
             ({ id, address, accountNo, publicKey }) =>
               !encPassphrase
                 ? { id, address, accountNo, publicKey }
@@ -139,7 +139,7 @@ export default function loadVault(window, document, mainElement) {
 
     // call generatePassphrase on background webworker
     const p = postMessage(worker, ['generatePassphrase', 10]).then(
-      ({ passphrase }) => `${platform.toLowerCase()} ${passphrase}`
+      passphrase => `${platform.toLowerCase()} ${passphrase}`
     )
 
     return p
@@ -175,7 +175,7 @@ export default function loadVault(window, document, mainElement) {
           )
 
           // call createKeyPair on background webworker
-          return postMessage(worker, ['createProtectedKeyPair', passphrase, pin]).then(
+          return postMessage(worker, ['storeProtectedKey', passphrase, pin]).then(
             ({ id, address, accountNo, publicKey }) => ({
               id,
               address,
@@ -199,16 +199,33 @@ export default function loadVault(window, document, mainElement) {
       )
     }).then(platform => showGenerateKeyScreen(platform))
 
-  const showRestoreMissingKeyScreen = (platform, address) =>
-    new Promise((resolve, reject) => {
-      const message = `You do not seem to have the private key for ${address} stored in this browser. Please restore the ${platform} key from backup.`
-      contentDiv.appendChild(
-        ErrorScreen(document, 'Key Missing', message, err => {
-          if (err) reject(err)
-          else reject(new Error('key missing'))
-        })
+  const showRestoreMissingKeyScreen = (platform, desiredAddress) => {
+    // Lazy-Load Webworker
+    if (!workers[platform]) workers[platform] = new VaultWorker()
+    const worker = workers[platform]
+
+    const message = `You do not seem to have the key for ${desiredAddress} stored in this browser. Please restore the ${platform} key from backup.`
+
+    const [div, promise] = KeyRestoreScreen(
+      document,
+      'Key Missing',
+      message,
+      platform,
+      desiredAddress,
+      passphrase => postMessage(worker, ['getPassphraseInfo', passphrase])
+    )
+    contentDiv.innerHTML = ''
+    contentDiv.appendChild(div)
+
+    return promise.then(([choice, passphrase]) => {
+      if (choice !== 'ok') throw new Error('cancelled by user')
+      contentDiv.innerHTML = ''
+      contentDiv.appendChild(LoadingScreen(document, 'Storing Key in Browser'))
+      return postMessage(worker, ['storeUnprotectedKey', passphrase]).then(
+        ({ id, address, accountNo, publicKey }) => ({ id, address, accountNo, publicKey })
       )
     })
+  }
 
   const getKeyDetail = (platform, entryId) => {
     // Lazy-Load Webworker
@@ -216,7 +233,7 @@ export default function loadVault(window, document, mainElement) {
     const worker = workers[platform]
 
     // call getKeyPair on background webworker
-    return postMessage(worker, ['getKeyPair', entryId]).then(
+    return postMessage(worker, ['getStoredKeyInfo', entryId]).then(
       ({ address, accountNo, publicKey, hasPassphrase }) => {
         if (!hasPassphrase) {
           return {
@@ -226,7 +243,7 @@ export default function loadVault(window, document, mainElement) {
           }
         }
 
-        return postMessage(worker, ['getKeyPairPassphrase', entryId]).then(({ passphrase }) => ({
+        return postMessage(worker, ['getStoredKeyPassphrase', entryId]).then(({ passphrase }) => ({
           address,
           accountNo,
           publicKey,
@@ -246,7 +263,7 @@ export default function loadVault(window, document, mainElement) {
     if (!workers[platform]) workers[platform] = new VaultWorker()
     const worker = workers[platform]
 
-    return postMessage(worker, ['getKeyPair', address])
+    return postMessage(worker, ['getStoredKeyInfo', address])
       .catch(err => {
         if (err.message.includes('missing')) {
           return showRestoreMissingKeyScreen(platform, address)
@@ -327,18 +344,11 @@ export default function loadVault(window, document, mainElement) {
                       )
                       classList.remove('btn-light')
                       classList.add('btn-dark')
-                      getKeyDetail(platform, entryId)
-                        .catch(err => {
-                          if (err.message.includes('missing')) {
-                            return showRestoreMissingKeyScreen(platform, address)
-                          }
-                          throw err
-                        })
-                        .then(keyDetail => {
-                          const [div] = KeyDetailScreen(document, keyDetail)
-                          contentDiv.innerHTML = ''
-                          contentDiv.appendChild(div)
-                        })
+                      getKeyDetail(platform, entryId).then(keyDetail => {
+                        const [div] = KeyDetailScreen(document, keyDetail)
+                        contentDiv.innerHTML = ''
+                        contentDiv.appendChild(div)
+                      })
                     })
                     .catch(error => {
                       window.alert(`Error: ${error.message || error}`)
@@ -452,7 +462,6 @@ export default function loadVault(window, document, mainElement) {
             })
             .catch(err => {
               window.alert(`Could not return error to parent window: ${err.message || err}`)
-              self.close() // eslint-disable-line
             })
         })
     }
@@ -491,25 +500,21 @@ export default function loadVault(window, document, mainElement) {
             })
           })
         )
-        .then(
-          () =>
-            new Promise((resolve, reject) => {
-              const message =
-                'Key Added. Thank you for using our Open-source Vault. You will be returned to the main app.'
-              contentDiv.innerHTML = ''
-              contentDiv.appendChild(
-                SuccessScreen(document, 'Thank You', message, (err, res) => {
-                  if (err) reject(err)
-                  else resolve(res)
-                })
-              )
+        .then(() => {
+          const message =
+            'Key Added. Thank you for using our Open-source Vault. You will be returned to the main app.'
+          const [div, promise] = SuccessScreen(document, 'Thank You', message)
+          contentDiv.innerHTML = ''
+          contentDiv.appendChild(div)
 
-              // Close the window after 5 seconds if no response from user
-              window.setTimeout(() => {
-                resolve('timeout')
-              }, 5000)
-            })
-        )
+          // Close the window after 5 seconds if no response from user
+          return Promise.race([
+            promise,
+            new Promise(resolve => {
+              window.setTimeout(() => resolve('timeout'), 5000)
+            }),
+          ])
+        })
         .then(() => self.close()) // eslint-disable-line
         .catch(error => {
           if (error.message !== 'cancelled by user') {
@@ -523,7 +528,6 @@ export default function loadVault(window, document, mainElement) {
             })
             .catch(err => {
               window.alert(`Could not return error to parent window: ${err.message || err}`)
-              self.close() // eslint-disable-line
             })
         })
     }
@@ -536,15 +540,15 @@ export default function loadVault(window, document, mainElement) {
 
       return getKeyDetail(platform, address)
         .catch(err => {
-          if (err.message.includes('missing')) {
-            // callback to the parent window with key state before restore
-            callback(null, {
-              hasKeyPair: false,
-              hasPassphrase: false,
-            })
-            return showRestoreMissingKeyScreen(platform, address)
-          }
-          throw err
+          if (!err.message.includes('missing')) throw err
+          // callback to the parent window with key state before restore
+          callback(null, {
+            hasKeyPair: false,
+            hasPassphrase: false,
+          })
+          return showRestoreMissingKeyScreen(platform, address).then(() =>
+            getKeyDetail(platform, address)
+          )
         })
         .then(keyDetail => {
           // callback to the parent window with result after restore
@@ -563,15 +567,18 @@ export default function loadVault(window, document, mainElement) {
           })
         })
         .catch(error => {
-          if (error.message !== 'key missing') {
+          if (error.message !== 'cancelled by user' && error.message !== 'key missing') {
             window.alert(`Error: ${error.message || error}`) // eslint-disable-line
           }
 
           // callback to the parent window on error
-          callback(error).catch(err => {
-            window.alert(`Could not return error to parent window: ${err.message || err}`)
-            self.close() // eslint-disable-line
-          })
+          callback(error)
+            .then(() => {
+              self.close() // eslint-disable-line
+            })
+            .catch(err => {
+              window.alert(`Could not return error to parent window: ${err.message || err}`)
+            })
         })
     }
 
@@ -607,28 +614,24 @@ export default function loadVault(window, document, mainElement) {
             },
           })
         })
-        .then(
-          () =>
-            new Promise((resolve, reject) => {
-              const message =
-                'Transaction Signed. Thank you for using our Open-source Vault. You will be returned to the main app.'
-              contentDiv.innerHTML = ''
-              contentDiv.appendChild(
-                SuccessScreen(document, 'Thank You', message, (err, res) => {
-                  if (err) reject(err)
-                  else resolve(res)
-                })
-              )
+        .then(() => {
+          const message =
+            'Transaction Signed. Thank you for using our Open-source Vault. You will be returned to the main app.'
+          const [div, promise] = SuccessScreen(document, 'Thank You', message)
+          contentDiv.innerHTML = ''
+          contentDiv.appendChild(div)
 
-              // Close the window after 5 seconds if no response from user
-              window.setTimeout(() => {
-                resolve('timeout')
-              }, 5000)
-            })
-        )
+          // Close the window after 5 seconds if no response from user
+          return Promise.race([
+            promise,
+            new Promise(resolve => {
+              window.setTimeout(() => resolve('timeout'), 5000)
+            }),
+          ])
+        })
         .then(() => self.close()) // eslint-disable-line
         .catch(error => {
-          if (error.message !== 'cancelled by user' || error.message !== 'key missing') {
+          if (error.message !== 'cancelled by user' && error.message !== 'key missing') {
             window.alert(`Error: ${error.message || error}`) // eslint-disable-line
           }
 
@@ -639,7 +642,6 @@ export default function loadVault(window, document, mainElement) {
             })
             .catch(err => {
               window.alert(`Could not return error to parent window: ${err.message || err}`)
-              self.close() // eslint-disable-line
             })
         })
     }
@@ -695,12 +697,13 @@ export default function loadVault(window, document, mainElement) {
           })
           .catch(error => {
             // Handle any errors that stopped our call from going through
-            console.error(error) // eslint-disable-line no-console
+            console.error('Trigger', error) // eslint-disable-line no-console
             window.alert(error.message || error)
           })
       }
     })
     .catch(error => {
-      window.alert(`Fatal Error: ${error.message || error}. Please try again.`)
+      console.error('Internal', error) // eslint-disable-line no-console
+      window.alert(`Internal ${error.message || error}. Please try again.`)
     })
 }

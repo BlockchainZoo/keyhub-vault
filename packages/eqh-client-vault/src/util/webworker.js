@@ -6,7 +6,10 @@ const postMessage = (worker, ...rest) =>
     worker.onerror = reject // eslint-disable-line no-param-reassign
     worker.postMessage(...rest)
   }).then(({ data }) => {
-    if (data.error) throw new Error(data.error)
+    if (data.error) {
+      const err = new Error()
+      throw Object.assign(err, data.error)
+    }
     return data
   })
 

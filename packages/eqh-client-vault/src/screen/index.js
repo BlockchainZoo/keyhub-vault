@@ -1,6 +1,7 @@
 export { default as WelcomeScreen } from './welcome'
 export { default as KeyAddScreen } from './key-add'
 export { default as KeyDetailScreen } from './key-detail'
+export { default as KeyRestoreScreen } from './key-restore'
 export { default as LoadingScreen } from './loading'
 export { default as PassphraseDisplayScreen } from './passphrase-display'
 export { default as PassphraseConfirmScreen } from './passphrase-confirm'

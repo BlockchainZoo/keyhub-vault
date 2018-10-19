@@ -49,12 +49,10 @@ export default function createElement(document, phoneNumber, message) {
     </div>
   `
 
-  const phoneNumInput = div.querySelector('#phonenumInput')
-  const phoneNumAlert = div.querySelector('#phonenumAlert')
-
-  // phoneNumInput.addEventListener('paste', event => event.preventDefault())
-
   const promise = new Promise(resolve => {
+    const phoneNumInput = div.querySelector('#phonenumInput')
+    const phoneNumAlert = div.querySelector('#phonenumAlert')
+
     const verifyChoice = choice => {
       if (choice === 'ok') {
         const isValid = validatePhoneNumber(phoneNumInput, phoneNumAlert)
@@ -69,6 +67,8 @@ export default function createElement(document, phoneNumber, message) {
       .forEach(b =>
         b.addEventListener('click', ev => verifyChoice(ev.currentTarget.dataset.choice))
       )
+
+    // phoneNumInput.addEventListener('paste', event => event.preventDefault())
   })
 
   return [div, promise]
