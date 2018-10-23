@@ -1,6 +1,8 @@
+'use strict'
+
 const path = require('path')
 
-const { spawn } = require('child_process')
+const { fork } = require('child_process')
 
 // eslint-disable-next-line import/no-extraneous-dependencies
 const webpack = require('webpack')
@@ -8,7 +10,7 @@ const CopyWebpackPlugin = require('copy-webpack-plugin')
 // eslint-disable-next-line import/no-extraneous-dependencies
 const babelPluginObjectRestSpread = require('@babel/plugin-proposal-object-rest-spread')
 
-module.exports = {
+module.exports = env => ({
   mode: 'production',
   devtool: 'nosources-source-map',
   optimization: {
@@ -39,24 +41,31 @@ module.exports = {
     }),
     {
       // Run a script after compilation
-      apply: compiler => (
-        compiler.hooks.afterEmit.tap('AfterEmitPlugin', (compilation) => {
+      apply: compiler =>
+        compiler.hooks.afterEmit.tap('AfterEmitPlugin', compilation => {
           process.stdout.write(`FullHash: ${compilation.fullHash}\n`)
-          const child = spawn('node', ['src/openpgp.sign.js', './dist/js/main.bundle.js'])
+          const opts = {
+            env: { CODESIGN_PASSPHRASE: env.CODESIGN_PASSPHRASE },
+            silent: true,
+          }
+          const child = fork('src/openpgp.sign.js', ['./dist/js/main.bundle.js'], opts)
+          // const child = spawn('node', ['src/openpgp.sign.js', './dist/js/main.bundle.js'])
           child.stdout.on('data', data => process.stdout.write(data))
           child.stderr.on('data', data => process.stderr.write(data))
-        })
-      ),
+        }),
     },
-    new CopyWebpackPlugin([
+    new CopyWebpackPlugin(
+      [
+        {
+          from: path.resolve(__dirname, 'public/'),
+          to: path.resolve(__dirname, 'dist/'),
+          force: true,
+        },
+      ],
       {
-        from: path.resolve(__dirname, 'public/'),
-        to: path.resolve(__dirname, 'dist/'),
-        force: true,
-      },
-    ], {
         ignore: ['*.bak', '*.bak.html'],
-      }),
+      }
+    ),
   ],
   module: {
     rules: [
@@ -69,9 +78,7 @@ module.exports = {
           options: {
             presets: ['@babel/preset-env'],
             // eslint-disable-next-line global-require
-            plugins: [
-              babelPluginObjectRestSpread,
-            ],
+            plugins: [babelPluginObjectRestSpread],
           },
         },
       },
@@ -103,4 +110,4 @@ module.exports = {
   //   // fs: 'empty',
   //   // child_process: 'empty',
   // },
-}
+})

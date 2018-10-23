@@ -35,7 +35,8 @@ const link = document.createElement('link')
 link.type = 'text/css'
 link.rel = 'stylesheet'
 link.href = './css/main.css'
-// link.integrity = 'sha384-REn7tgv5BkCT3pj5IurmMaMGlCiIKBLX9MwoXrtsMbokaFxx9SsQJw5glyFzI5Yx'
+link.integrity = 'sha384-96Nr6Whb0MNk0zAXBdZnIbkGbZmunb8wy+DFPL1z+YB1OWndkCi8lhR0knxCELGU'
+link.crossOrigin = 'anonymous'
 document.head.appendChild(link)
 
 document.getElementById('body').innerHTML = htmlTemplate

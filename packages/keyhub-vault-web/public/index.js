@@ -7,18 +7,19 @@ const scriptURL = './js/main.bundle.js'
 const scriptSignatureURL = './js/main.bundle.js.sig.asc'
 
 const pubkey = `-----BEGIN PGP PUBLIC KEY BLOCK-----
-Version: OpenPGP.js v3.0.12
+Version: OpenPGP.js v3.1.0
 Comment: https://openpgpjs.org
 
-xjMEW1GeVRYJKwYBBAHaRw8BAQdAQv33J/0En2GVY2ug5Chtt3Gy/l7x+YDS
-lHmagHN2iqHNEUVRSCA8ZXFoQGJjei5hcHA+wncEEBYKACkFAltRnlUGCwkH
-CAMCCRBkr/3Wn8VKaQQVCAoCAxYCAQIZAQIbAwIeAQAASV4BAIiKu2nBrUxn
-b9jGhNNTjup0wCcBCAGNqnAokEVk6Kl6AP4gSLRfYTxh7BH+nsqeVT3lwyyQ
-n520BbEaXGQ0FFJBCM44BFtRnlUSCisGAQQBl1UBBQEBB0Bwbx8jPQbTMayu
-W01ssxLS3VyiYiJW16m9c7ubg4p+HwMBCAfCYQQYFggAEwUCW1GeVQkQZK/9
-1p/FSmkCGwwAAH0cAQCQdWgExzXATzF/LCwqb54NLKPL2vrFQY0V/ryyi6mP
-fQEA/HmvD8QGC18EuOAmk3UXaWyZMnFT3Fs08dcjqKr3uAg=
-=NzpF
+xjMEW872fhYJKwYBBAHaRw8BAQdA0KQaNJnE3I6/f0YzR1gM7KHNWPn9qkBJ
+sa2kLaoC+MfNMUtleUh1YiBWYXVsdCBDb2Rlc2lnbiA8Y29kZXNpZ25AdmF1
+bHQua2V5aHViLmFwcD7CdwQQFgoAKQUCW872fgYLCQcIAwIJEELkBf08jsLz
+BBUICgIDFgIBAhkBAhsDAh4BAAB3zgEAqGsP8/vdLzvgmd6x1eFMRCa3JF55
+thappUowQZWOvqwA/RGUE4QZbT8XlvjjcW+Xu68/UmpiqfgUdM2Nd9GmERoM
+zjgEW872fhIKKwYBBAGXVQEFAQEHQLoFl0m0/4X9oyqFs06M51AJukIIW9KN
+rHut5HrVUqtgAwEIB8JhBBgWCAATBQJbzvZ+CRBC5AX9PI7C8wIbDAAA2wIA
+/i978c1Uj7dBarCXbzbnkrBKrQPFk8sKg/kRVPERJ7JOAQDfQjVfvC4yyoOA
+1YDCzrGOfr93jkYcJuheUFj4HlLiAw==
+=jewd
 -----END PGP PUBLIC KEY BLOCK-----`
 
 const pubkeyText = pubkey
@@ -165,6 +166,9 @@ loadOpenpgp
                 }
 
                 // Fallback to last seen code
+                printLog(
+                  'Warning: Remote Security Check Failed! Will use an older version instead...'
+                )
                 const lastData = new Uint8Array(lastCode)
                 const lastParams = {
                   message: openpgp.message.fromBinary(lastData), // input as Message object
