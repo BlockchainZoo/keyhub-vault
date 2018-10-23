@@ -54,7 +54,7 @@ const validatePin = (pinInput, pinConfirmInput, pinAlert) => {
   return false
 }
 
-export default function createElement(document, passphrase, withPin, callback) {
+export default function createElement(document, passphrase, withPin) {
   const div = document.createElement('div')
 
   const pinForm = safeHtml`
@@ -91,24 +91,24 @@ export default function createElement(document, passphrase, withPin, callback) {
 
   // passphraseInput.addEventListener('paste', event => event.preventDefault())
 
-  const verifyChoice = choice => {
-    if (choice === 'ok') {
-      const isValid =
-        validatePassphrase(passphrase, passphraseInput, passphraseAlert) &&
-        (withPin ? validatePin(pinInput, pinConfirmInput, pinAlert) : true)
-      if (!isValid) return
+  const promise = new Promise(resolve => {
+    const verifyChoice = choice => {
+      if (choice === 'ok') {
+        const isValid =
+          validatePassphrase(passphrase, passphraseInput, passphraseAlert) &&
+          (withPin ? validatePin(pinInput, pinConfirmInput, pinAlert) : true)
+        if (!isValid) return
+      }
+
+      resolve([choice, pinInput.value.trim()])
     }
 
-    callback(null, [choice, pinInput.value.trim()])
-  }
-
-  if (callback) {
     div
       .querySelectorAll('button')
       .forEach(b =>
         b.addEventListener('click', ev => verifyChoice(ev.currentTarget.dataset.choice))
       )
-  }
+  })
 
-  return div
+  return [div, promise]
 }
