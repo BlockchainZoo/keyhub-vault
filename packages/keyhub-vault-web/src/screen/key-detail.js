@@ -1,7 +1,7 @@
 import { safeHtml } from 'common-tags'
 
 export default function createElement(document, keyDetail) {
-  const { accountNo, address, publicKey, passphrase } = keyDetail
+  const { accountNo, address, publicKey, passphraseImage = {} } = keyDetail
   const splitAccNo = `${accountNo.substring(0, 5)}.${accountNo.substring(
     5,
     10
@@ -17,7 +17,9 @@ export default function createElement(document, keyDetail) {
           Passphrase
         </div>
         <div class="col-sm-8 text-grey word-wrap text-field-data">
-          ${passphrase || 'The plaintext passphrase is no longer available'}
+          ${passphraseImage.data ? '' : 'The plaintext passphrase is no longer available'}
+          <canvas id="passphraseCanvas" width="${passphraseImage.width ||
+            0}" height="${passphraseImage.height || 0}"></canvas>
         </div>
     </div>
     <div class="row">
@@ -60,12 +62,23 @@ export default function createElement(document, keyDetail) {
 
   const showMore = div.querySelector('#showMore')
   const clickShowMore = div.querySelector('#clickShowMore')
+  const passphraseCanvas = div.querySelector('#passphraseCanvas')
 
+  // Add click event listener
   clickShowMore.addEventListener('click', () => {
     showMore.classList.remove('d-none')
     clickShowMore.classList.toggle('d-none')
   })
 
+  // Render the passphrase to the transparent canvas
+  if (passphraseImage.data) {
+    const ctx = passphraseCanvas.getContext('2d')
+    const imageData = ctx.createImageData(passphraseImage.width, passphraseImage.height)
+    imageData.data.set(passphraseImage.data)
+    ctx.putImageData(imageData, 0, 0)
+  }
+
+  // Return a promise that resolves on user action
   const promise = new Promise(resolve => {
     div
       .querySelectorAll('button')

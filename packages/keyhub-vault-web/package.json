@@ -44,7 +44,7 @@
     "copy-webpack-plugin": "^4.5.2",
     "normalize-newline-cli": "^1.1.0",
     "serverless-plugin-cloudfront-lambda-edge": "^2.0.0",
-    "serverless-s3-sync": "^1.6.1",
+    "serverless-s3-sync": "^1.7.0",
     "serverless-stack-output": "^0.2.3",
     "ssri": "^6.0.0",
     "worker-loader": "^2.0.0"

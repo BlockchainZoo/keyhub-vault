@@ -116,13 +116,13 @@ bridge.load(NRS => {
         })
       })
 
-  const storePassphrase = (entryId, passphraseUint8, cryptoKey) => {
-    // Encrypt the plaintext passphrase
+  const storePassphrase = (entryId, passphraseImage, cryptoKey) => {
+    // Encrypt the cleardata of the passphraseImage
     const encryptAlgo = { name: 'AES-GCM', iv: genInitVector() }
-    return encrypt(passphraseUint8, cryptoKey, encryptAlgo).then(
-      ciphertextBuffer =>
+    return encrypt(passphraseImage.data, cryptoKey, encryptAlgo).then(
+      cipherdataBuffer =>
         new Promise((resolve, reject) => {
-          // Store encrypted passphrase in browser's indexedDB
+          // Store encrypted passphrase image in browser's indexedDB
           callOnStore('accounts', accounts => {
             const req = accounts.get(entryId)
             req.onerror = err => reject(err)
@@ -131,14 +131,16 @@ bridge.load(NRS => {
                 reject(new Error('key is missing in this browser'))
                 return
               }
-              entry.passphrase = {
-                ciphertext: ciphertextBuffer,
+              entry.passphraseImage = {
+                encryptData: cipherdataBuffer,
                 encryptAlgo,
+                width: passphraseImage.width,
+                height: passphraseImage.height,
               }
               const req2 = accounts.put(entry)
               req2.onerror = err => reject(err)
               req2.onsuccess = () => {
-                resolve(ciphertextBuffer)
+                resolve(entry)
               }
             }
           })
@@ -158,11 +160,17 @@ bridge.load(NRS => {
             return
           }
 
-          if (entry.passphrase) {
+          if (entry.passphraseImage) {
             // Decrypt the plaintext passphrase
-            const { ciphertext, encryptAlgo } = entry.passphrase
-            decrypt(ciphertext, cryptoKey, encryptAlgo)
-              .then(plaintextBuffer => resolve(new Uint8Array(plaintextBuffer)))
+            const { encryptData, encryptAlgo, width, height } = entry.passphraseImage
+            decrypt(encryptData, cryptoKey, encryptAlgo)
+              .then(cleardataBuffer =>
+                resolve({
+                  data: new Uint8ClampedArray(cleardataBuffer),
+                  width,
+                  height,
+                })
+              )
               .catch(reject)
           } else {
             reject(new Error('key passphrase is not available'))
@@ -222,7 +230,7 @@ bridge.load(NRS => {
                 accountNo: entry.accountNo,
                 publicKey: entry.publicKey,
                 createdAt: entry.createdAt,
-                hasPassphrase: !!entry.passphrase,
+                hasPassphrase: !!entry.passphraseImage,
               })
             }
           }
@@ -244,17 +252,16 @@ bridge.load(NRS => {
             }
 
             retrievePassphrase(entryId, masterCryptoKey)
-              .then(plaintextUint8 => {
-                const passphrase = converters.byteArrayToString(Array.from(plaintextUint8))
-                resolve({ passphrase })
-              })
+              .then(resolve)
               .catch(reject)
           }
         })
       })
     },
-    storeUnprotectedKey: passphrase => {
+    storeUnprotectedKey: (passphrase, passphraseImage) => {
       if (typeof passphrase !== 'string') throw new Error('passphrase is not a string')
+      if (passphraseImage && !(typeof passphraseImage !== 'ImageData'))
+        throw new Error('passphraseImage is not an ImageData')
 
       const passphraseUint8 = Uint8Array.from(converters.stringToByteArray(passphrase))
 
@@ -281,11 +288,12 @@ bridge.load(NRS => {
             if (entry) {
               const masterCryptoKey = entry
               createKeyPair(passphraseUint8, masterCryptoKey, opts)
-                .then(keyInfo =>
-                  storePassphrase(keyInfo.id, passphraseUint8, masterCryptoKey).then(() =>
+                .then(keyInfo => {
+                  if (!passphraseImage) return resolve(keyInfo)
+                  storePassphrase(keyInfo.id, passphraseImage, masterCryptoKey).then(() =>
                     resolve(keyInfo)
                   )
-                )
+                })
                 .catch(reject)
             } else {
               // masterkey should be non-extractable (i.e. cannot be used in exportKey)
@@ -297,11 +305,12 @@ bridge.load(NRS => {
                   callOnStore('prefs', p => {
                     p.put(masterCryptoKey, 'masterkey')
                   })
-                  return createKeyPair(passphraseUint8, masterCryptoKey, opts).then(keyInfo =>
-                    storePassphrase(keyInfo.id, passphraseUint8, masterCryptoKey).then(() =>
+                  return createKeyPair(passphraseUint8, masterCryptoKey, opts).then(keyInfo => {
+                    if (!passphraseImage) return resolve(keyInfo)
+                    storePassphrase(keyInfo.id, passphraseImage, masterCryptoKey).then(() =>
                       resolve(keyInfo)
                     )
-                  )
+                  })
                 })
                 .catch(reject)
             }
