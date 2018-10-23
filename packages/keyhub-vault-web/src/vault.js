@@ -23,6 +23,8 @@ const { callOnStore } = require('./util/indexeddb')
 
 const { postMessage } = require('./util/webworker')
 
+const { drawText, getImageData } = require('./util/canvas')
+
 export default function loadVault(window, document, mainElement) {
   // workers from multiple platforms
   const workers = Object.create(null)
@@ -112,10 +114,18 @@ export default function loadVault(window, document, mainElement) {
         .then(({ passphrase, encPassphrase }) => {
           contentDiv.innerHTML = ''
           contentDiv.appendChild(LoadingScreen(document, 'Storing Key in Browser'))
-          return postMessage(worker, ['storeUnprotectedKey', passphrase]).then(
+          const ctx = document.createElement('canvas').getContext('2d')
+          const passphraseImage = getImageData(drawText(ctx, passphrase, 400))
+
+          return postMessage(worker, ['storeUnprotectedKey', passphrase, passphraseImage]).then(
             ({ id, address, accountNo, publicKey }) =>
               !encPassphrase
-                ? { id, address, accountNo, publicKey }
+                ? {
+                    id,
+                    address,
+                    accountNo,
+                    publicKey,
+                  }
                 : {
                     id,
                     address,
@@ -221,8 +231,16 @@ export default function loadVault(window, document, mainElement) {
       if (choice !== 'ok') throw new Error('cancelled by user')
       contentDiv.innerHTML = ''
       contentDiv.appendChild(LoadingScreen(document, 'Storing Key in Browser'))
-      return postMessage(worker, ['storeUnprotectedKey', passphrase]).then(
-        ({ id, address, accountNo, publicKey }) => ({ id, address, accountNo, publicKey })
+      const ctx = document.createElement('canvas').getContext('2d')
+      const passphraseImage = getImageData(drawText(ctx, passphrase, 400))
+
+      return postMessage(worker, ['storeUnprotectedKey', passphrase, passphraseImage]).then(
+        ({ id, address, accountNo, publicKey }) => ({
+          id,
+          address,
+          accountNo,
+          publicKey,
+        })
       )
     })
   }
@@ -243,11 +261,11 @@ export default function loadVault(window, document, mainElement) {
           }
         }
 
-        return postMessage(worker, ['getStoredKeyPassphrase', entryId]).then(({ passphrase }) => ({
+        return postMessage(worker, ['getStoredKeyPassphrase', entryId]).then(passphraseImage => ({
           address,
           accountNo,
           publicKey,
-          passphrase,
+          passphraseImage,
         }))
       }
     )
@@ -554,7 +572,7 @@ export default function loadVault(window, document, mainElement) {
           // callback to the parent window with result after restore
           callback(null, {
             hasKeyPair: !!keyDetail.publicKey,
-            hasPassphrase: !!keyDetail.passphrase,
+            hasPassphrase: !!keyDetail.passphraseImage,
           })
           return keyDetail
         })
