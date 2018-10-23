@@ -8,7 +8,7 @@
     "start": "caddy",
     "test": "echo \"Error: no test specified\" && exit 1",
     "winlf": "(cat ./node_modules/openpgp/src/worker/worker.js | normalize-newline > ./node_modules/openpgp/src/worker/worker.js) && (cat ./node_modules/openpgp/dist/openpgp.min.js | normalize-newline > ./node_modules/openpgp/dist/openpgp.min.js)",
-    "prepare": "([ -e dist/js/openpgp.worker.bundle.js ] || browserify -p browserify-derequire -r openpgp/src/worker/worker -s openpgp -o dist/js/openpgp.worker.bundle.js) && webpack --config webpack.config.js"
+    "prepare": "([ -e dist/js/openpgp.worker.bundle.js ] || browserify -p browserify-derequire -r openpgp/src/worker/worker -s openpgp -o dist/js/openpgp.worker.bundle.js) && webpack --config webpack.config.js --env.CODESIGN_PASSPHRASE=\"${CODESIGN_PASSPHRASE}\" --progress"
   },
   "repository": {
     "type": "git",
