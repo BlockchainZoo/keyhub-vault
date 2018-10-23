@@ -153,30 +153,20 @@ export default function loadVault(window, document, mainElement) {
     )
 
     return p
-      .then(
-        passphrase =>
-          new Promise((resolve, reject) => {
-            contentDiv.innerHTML = ''
-            contentDiv.appendChild(
-              PassphraseDisplayScreen(document, passphrase, (err, res) => {
-                if (err) reject(err)
-                else resolve(res)
-              })
-            )
-          })
-      )
+      .then(passphrase => {
+        const [div, promise] = PassphraseDisplayScreen(document, passphrase)
+        contentDiv.innerHTML = ''
+        contentDiv.appendChild(div)
+        return promise
+      })
       .then(([choice, passphrase]) => {
         if (choice !== 'ok') throw new Error('cancelled by user')
 
-        return new Promise((resolve, reject) => {
-          contentDiv.innerHTML = ''
-          contentDiv.appendChild(
-            PassphraseConfirmScreen(document, passphrase, true, (err, res) => {
-              if (err) reject(err)
-              else resolve(res)
-            })
-          )
-        }).then(([choice2, pin]) => {
+        const [div, promise] = PassphraseConfirmScreen(document, passphrase, true)
+        contentDiv.innerHTML = ''
+        contentDiv.appendChild(div)
+
+        return promise.then(([choice2, pin]) => {
           if (choice2 !== 'ok') throw new Error('cancelled by user')
 
           contentDiv.innerHTML = ''
@@ -198,16 +188,12 @@ export default function loadVault(window, document, mainElement) {
       })
   }
 
-  const showAddKeyScreen = () =>
-    new Promise((resolve, reject) => {
-      contentDiv.innerHTML = ''
-      contentDiv.appendChild(
-        KeyAddScreen(document, (err, res) => {
-          if (err) reject(err)
-          else resolve(res)
-        })
-      )
-    }).then(platform => showGenerateKeyScreen(platform))
+  const showAddKeyScreen = () => {
+    const [div, promise] = KeyAddScreen(document)
+    contentDiv.innerHTML = ''
+    contentDiv.appendChild(div)
+    return promise.then(platform => showGenerateKeyScreen(platform))
+  }
 
   const showRestoreMissingKeyScreen = (platform, desiredAddress) => {
     // Lazy-Load Webworker
@@ -289,35 +275,19 @@ export default function loadVault(window, document, mainElement) {
         throw err
       })
       .then(({ accountNo }) =>
-        postMessage(worker, ['configure', { address }])
-          .then(
-            () =>
-              new Promise((resolve, reject) => {
-                const txDetailDiv = TxDetailScreen(
-                  document,
-                  platform,
-                  accountNo,
-                  address,
-                  tx,
-                  (err, res) => {
-                    if (err) {
-                      reject(err)
-                    } else {
-                      txDetailDiv.classList.add('d-none')
-                      loadingDiv.classList.remove('d-none')
-                      resolve(res)
-                    }
-                  }
-                )
-                contentDiv.appendChild(txDetailDiv)
-              })
-          )
-          .then(([choice, pin]) => {
+        postMessage(worker, ['configure', { address }]).then(() => {
+          const [div, promise] = TxDetailScreen(document, platform, accountNo, address, tx)
+          contentDiv.appendChild(div)
+          return promise.then(([choice, pin]) => {
             if (choice !== 'ok') throw new Error('cancelled by user')
+
+            div.classList.add('d-none')
+            loadingDiv.classList.remove('d-none')
 
             // call signTransaction on background webworker
             return postMessage(worker, ['signTransaction', address, pin, tx.type, tx.data])
           })
+        })
       )
   }
 

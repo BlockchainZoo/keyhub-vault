@@ -1,6 +1,6 @@
 import { safeHtml } from 'common-tags'
 
-export default function createElement(document, passphrase, callback) {
+export default function createElement(document, passphrase) {
   const div = document.createElement('div')
   div.classList.add('generate-key-page')
 
@@ -25,16 +25,16 @@ export default function createElement(document, passphrase, callback) {
   passphraseInput.addEventListener('copy', event => event.preventDefault())
   // passphraseInput.addEventListener('cut', event => event.preventDefault())
 
-  if (callback) {
+  const promise = new Promise(resolve => {
     div.querySelectorAll('button').forEach(b =>
       b.addEventListener('click', ev => {
         const {
           dataset: { choice },
         } = ev.currentTarget
-        callback(null, [choice, passphraseInput.value.trim()])
+        resolve([choice, passphraseInput.value.trim()])
       })
     )
-  }
+  })
 
-  return div
+  return [div, promise]
 }

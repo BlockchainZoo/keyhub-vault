@@ -88,7 +88,7 @@ const displayTransaction = (document, detailDiv, { type, data }) => {
   detailDiv.appendChild(domFragment)
 }
 
-export default function createElement(document, platform, accountNo, address, tx, callback) {
+export default function createElement(document, platform, accountNo, address, tx) {
   const div = document.createElement('div')
 
   const pinForm = safeHtml`
@@ -131,22 +131,22 @@ export default function createElement(document, platform, accountNo, address, tx
   const transactionDetailDiv = div.querySelector('#transaction-detail')
   displayTransaction(document, transactionDetailDiv, tx)
 
-  const verifyChoice = choice => {
-    if (choice === 'ok') {
-      const isValid = validatePin(pinInput, pinAlert)
-      if (!isValid) return
+  const promise = new Promise(resolve => {
+    const verifyChoice = choice => {
+      if (choice === 'ok') {
+        const isValid = validatePin(pinInput, pinAlert)
+        if (!isValid) return
+      }
+
+      resolve([choice, pinInput.value.trim()])
     }
 
-    callback(null, [choice, pinInput.value.trim()])
-  }
-
-  if (callback) {
     div
       .querySelectorAll('button')
       .forEach(b =>
         b.addEventListener('click', ev => verifyChoice(ev.currentTarget.dataset.choice))
       )
-  }
+  })
 
-  return div
+  return [div, promise]
 }
