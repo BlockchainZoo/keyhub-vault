@@ -2,6 +2,10 @@
 
 This is the web-based offline key vault (a.k.a. "wallet").
 
+Some Browser plugins / extensions have full access over all your personal data when you visit any website or webapp.
+Recent attacks like Meltdown and Spectre remind us that security is a chain that depends on every layer of a user device (hardware, firmware, operating system, driver, apps, plugins).
+As all webapps (including this one) depends on the basic safety of your browser, please take precautions by removing all untrustworthy browser plugins.
+
 ## Running the Local Offline Vault
 
 To run the vault/wallet in offline mode on your computer, follow the instructions below:
