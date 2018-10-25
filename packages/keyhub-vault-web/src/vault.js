@@ -417,6 +417,7 @@ export default function loadVault(window, document, mainElement) {
             // callback to the parent window with result
             const run = () =>
               callback(null, {
+                address,
                 publicKey,
                 signature,
                 phoneNumber,
@@ -470,6 +471,7 @@ export default function loadVault(window, document, mainElement) {
             // callback to the parent window with result
             const run = () =>
               callback(null, {
+                address,
                 publicKey,
                 signature,
               })
