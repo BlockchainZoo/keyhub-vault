@@ -73,18 +73,19 @@ export default function loadVault(window, document, mainElement) {
 
     const pubkey = stripIndent`
       -----BEGIN PGP PUBLIC KEY BLOCK-----
-      Version: OpenPGP.js v3.0.12
+      Version: OpenPGP.js v3.1.0
       Comment: https://openpgpjs.org
 
-      xjMEW1GeVRYJKwYBBAHaRw8BAQdAQv33J/0En2GVY2ug5Chtt3Gy/l7x+YDS
-      lHmagHN2iqHNEUVRSCA8ZXFoQGJjei5hcHA+wncEEBYKACkFAltRnlUGCwkH
-      CAMCCRBkr/3Wn8VKaQQVCAoCAxYCAQIZAQIbAwIeAQAASV4BAIiKu2nBrUxn
-      b9jGhNNTjup0wCcBCAGNqnAokEVk6Kl6AP4gSLRfYTxh7BH+nsqeVT3lwyyQ
-      n520BbEaXGQ0FFJBCM44BFtRnlUSCisGAQQBl1UBBQEBB0Bwbx8jPQbTMayu
-      W01ssxLS3VyiYiJW16m9c7ubg4p+HwMBCAfCYQQYFggAEwUCW1GeVQkQZK/9
-      1p/FSmkCGwwAAH0cAQCQdWgExzXATzF/LCwqb54NLKPL2vrFQY0V/ryyi6mP
-      fQEA/HmvD8QGC18EuOAmk3UXaWyZMnFT3Fs08dcjqKr3uAg=
-      =NzpF
+      xjMEW87lXhYJKwYBBAHaRw8BAQdAlIyAn31pcSBfq8JL+OZhxSJqNpce5kMR
+      RT/Em2MvjTLNLGVxaCBLZXlIdWIgU01TIDxlcWguc21zQHBsYXRmb3JtLmtl
+      eWh1Yi5hcHA+wncEEBYKACkFAlvO5V4GCwkHCAMCCRCfbznlpPf4PAQVCAoC
+      AxYCAQIZAQIbAwIeAQAALuEBAOUe2KkUZA8ORr2i8AWOvmD3YYaZNlL2SNKS
+      hDemF6tsAQDNBuQ9kmtK/c617kkqRDJu9PUsVvKUdf9SFqH6v+p/BM44BFvO
+      5V4SCisGAQQBl1UBBQEBB0Dz1rTzNxVIZkybI8Kuc5+X9JZebkY0iSjA2D3N
+      cf7PSQMBCAfCYQQYFggAEwUCW87lXgkQn2855aT3+DwCGwwAAHZSAP920Slk
+      V4q8Z3ZY+trryvESUBpSqoWMhKJlUlhP4pvp4wEAgmTTx5Dl5K4YRvEMeh5O
+      DZazk+YohUxifYrpNHuVjgU=
+      =Qpzm
       -----END PGP PUBLIC KEY BLOCK-----
     `
 
