@@ -45,6 +45,70 @@ const printLog = (msg, obj) => {
   progressInfoDiv.textContent = msg
 }
 
+const freezeProto = function deepFreezeProto(obj) {
+  if (!obj) return
+  try {
+    const proto = Object.getPrototypeOf(obj)
+    if (!proto) return
+    try {
+      Object.freeze(proto)
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      if (!(e instanceof TypeError)) console.warn('Cannot freeze prototype', e, proto)
+    } finally {
+      deepFreezeProto(proto)
+    }
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.warn('Cannot get prototype', err, obj)
+  }
+}
+
+const freezeProps = function deepFreezeProps(obj) {
+  // Attribution: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/freeze
+
+  // Make properties not writable
+  const props = Object.getOwnPropertyDescriptors(obj)
+  const propNames = Object.keys(props)
+  const updateProps = propNames.reduce((acc, key) => {
+    const def = props[key]
+    if (def.configurable && Number.isNaN(+key)) {
+      acc[key] =
+        'get' in def
+          ? { set: undefined, configurable: false }
+          : { writable: false, configurable: false }
+    }
+    return acc
+  }, {})
+  Object.defineProperties(obj, updateProps)
+
+  // Make values of properties frozen (exclude props with getter)
+  propNames.filter(key => !('get' in props[key])).forEach(name => {
+    try {
+      const value = obj[name]
+      if (!Object.isFrozen(value) && value !== window) {
+        try {
+          freezeProto(value)
+          Object.freeze(value)
+        } catch (e) {
+          // eslint-disable-next-line no-console
+          if (!(e instanceof TypeError)) console.warn('Cannot freeze value', e, name, value)
+        } finally {
+          deepFreezeProps(value)
+        }
+      }
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.warn('forEach loop', err, name)
+    }
+  })
+}
+
+// Note: Cannot freeze window / global namespace here as,
+// OpenPGP.js has some built-in polyfills for Promises
+// TODO: Remove ugly polyfills from OpenPGP.js
+// freezeProps(window || global)
+
 printLog('Loading OpenPGP library...')
 const loadOpenpgp = new Promise((resolve, reject) => {
   /* eslint-disable no-undef */
@@ -54,7 +118,16 @@ const loadOpenpgp = new Promise((resolve, reject) => {
   openpgpScript.integrity = openpgpSRI
   openpgpScript.crossOrigin = 'anonymous'
   openpgpScript.async = false
-  openpgpScript.onload = () => resolve((window && window.openpgp) || global.openpgp)
+  openpgpScript.onload = () => {
+    printLog('Freezing objects in global namespace...')
+    try {
+      freezeProps(window || global)
+      printLog('Frozen objects in global namespace')
+    } catch (err) {
+      printLog('Cannot freeze global namespace', err)
+    }
+    resolve((window && window.openpgp) || global.openpgp)
+  }
   openpgpScript.onerror = event => reject(event.error || event.target.src)
   const firstScript = document.getElementsByTagName('script')[0]
   if (firstScript) firstScript.parentNode.insertBefore(openpgpScript, firstScript)
