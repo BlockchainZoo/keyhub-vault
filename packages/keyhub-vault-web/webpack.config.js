@@ -14,11 +14,11 @@ module.exports = env => ({
   mode: 'production',
   devtool: 'nosources-source-map',
   optimization: {
-    minimize: true,
+    minimize: false,
   },
   entry: {
-    'whatwg-fetch': 'whatwg-fetch',
-    'abortcontroller-polyfill': 'abortcontroller-polyfill/dist/polyfill-patch-fetch',
+    // 'whatwg-fetch': 'whatwg-fetch',
+    // 'abortcontroller-polyfill': 'abortcontroller-polyfill/dist/polyfill-patch-fetch',
     main: './src/main.js',
   },
   output: {
@@ -36,7 +36,7 @@ module.exports = env => ({
       'process.env': {
         NODE_ENV: JSON.stringify('production'),
         APP_ENV: JSON.stringify('browser'),
-        STAGE: JSON.stringify('sandbox'),
+        STAGE: JSON.stringify(env.STAGE || 'sandbox'),
       },
     }),
     {
