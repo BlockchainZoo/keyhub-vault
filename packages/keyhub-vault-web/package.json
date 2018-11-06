@@ -14,8 +14,8 @@
     "type": "git",
     "url": "git+https://github.com/BlockchainZoo/keyhub-vault.git"
   },
-  "author": "heri16",
-  "license": "ISC",
+  "author": "heri16 <heri16@users.noreply.github.com> (https://github.com/heri16)",
+  "license": "(ISC OR Apache-2.0)",
   "bugs": {
     "url": "https://github.com/BlockchainZoo/keyhub-vault/issues"
   },
