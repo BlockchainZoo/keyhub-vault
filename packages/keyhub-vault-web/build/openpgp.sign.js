@@ -2,6 +2,7 @@
 
 const fs = require('fs')
 
+// eslint-disable-next-line import/no-extraneous-dependencies
 const openpgp = require('openpgp') // use as CommonJS, AMD, ES6 module or via window.openpgp
 
 const hkp = new openpgp.HKP('https://pgp.mit.edu')
@@ -48,22 +49,54 @@ if (!options.passphrase) {
       return privKeyObj.decrypt(options.passphrase).then(() => privKeyObj)
     })
     .then(privKeyObj => {
-      const opts = {
-        data: fs.readFileSync(FILEPATH_TO_SIGN, 'utf8'),
-        privateKeys: [privKeyObj],
-        detached: true,
-      }
+      const privateKeys = [privKeyObj]
 
       console.info('Code-signing...') // eslint-disable-line no-console
-      return openpgp.sign(opts)
+
+      // const data = fs.readFileSync(FILEPATH_TO_SIGN, 'utf8')
+      // const message = openpgp.message.fromText(data)
+      // return message.signDetached(privateKeys, undefined, new Date(), {}).then(sig => ({
+      //   signature: sig.armor(),
+      // }))
+
+      return openpgp.sign({
+        data: fs.readFileSync(FILEPATH_TO_SIGN),
+        privateKeys,
+        detached: true,
+      })
+    })
+    .catch(err => {
+      console.error('cannot sign:', err) // eslint-disable-line no-console
     })
     .then(signed => {
       console.info('signed:', FILEPATH_TO_SIGN) // eslint-disable-line no-console
       fs.writeFileSync(`${FILEPATH_TO_SIGN}.sig.asc`, signed.signature)
-      return true
+
+      const data = fs.readFileSync(FILEPATH_TO_SIGN, 'utf8')
+      const message = openpgp.message.fromText(data)
+      const signature = openpgp.signature.readArmored(signed.signature)
+      const publicKeys = openpgp.key.readArmored(
+        fs.readFileSync(`${FILEPATH_TO_KEYPAIR}.pub.asc`, 'utf8')
+      ).keys
+
+      // return message.verifyDetached(signature, publicKeys, new Date()).then(console.log)
+      return openpgp.verify({ message, signature, publicKeys })
+    })
+    .then(({ data, signatures }) => {
+      const { valid: isSignatureValid, signature } = signatures[0]
+      const { created: signatureDate } = signature.packets[0]
+      // eslint-disable-next-line no-console
+      console.info(
+        'valid:',
+        isSignatureValid,
+        '| signatureDate:',
+        signatureDate,
+        '| dataLength:',
+        data.length
+      )
     })
     .catch(err => {
-      console.error('cannot sign:', err) // eslint-disable-line no-console
+      console.error('cannot verify:', err) // eslint-disable-line no-console
     })
 }
 
