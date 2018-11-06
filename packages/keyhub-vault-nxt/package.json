@@ -2,7 +2,7 @@
   "name": "keyhub-vault-nxt",
   "version": "0.1.0",
   "description": "NXT library code",
-  "main": "src/index.js",
+  "main": "lib/index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -13,8 +13,8 @@
   "keywords": [
     "nxt"
   ],
-  "author": "heri16",
-  "license": "SEE LICENSE IN src/js/LICENSE.txt",
+  "author": "heri16 <heri16@users.noreply.github.com> (https://github.com/heri16)",
+  "license": "SEE LICENSE IN lib/js/LICENSE.txt",
   "bugs": {
     "url": "https://github.com/BlockchainZoo/keyhub-vault/issues"
   },
