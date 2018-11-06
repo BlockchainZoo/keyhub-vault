@@ -48,8 +48,8 @@ module.exports = env => ({
             env: { CODESIGN_PASSPHRASE: env.CODESIGN_PASSPHRASE },
             silent: true,
           }
-          const child = fork('src/openpgp.sign.js', ['./dist/js/main.bundle.js'], opts)
-          // const child = spawn('node', ['src/openpgp.sign.js', './dist/js/main.bundle.js'])
+          const child = fork('build/openpgp.sign.js', ['./dist/js/main.bundle.js'], opts)
+          // const child = spawn('node', ['build/openpgp.sign.js', './dist/js/main.bundle.js'])
           child.stdout.on('data', data => process.stdout.write(data))
           child.stderr.on('data', data => process.stderr.write(data))
         }),
