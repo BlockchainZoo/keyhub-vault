@@ -1,5 +1,8 @@
 'use strict'
 
+global.isNode = true
+const { NrsBridge, converters } = require('keyhub-vault-nxt')
+
 const wordlistEnEff = require('diceware-wordlist-en-eff')
 const dicewareGen = require('./util/diceware')
 const { callOnStore } = require('./util/indexeddb')
@@ -19,11 +22,6 @@ const {
 } = require('./util/crypto')
 
 const log = (...args) => console.log(JSON.stringify(args, null, '  ')) // eslint-disable-line no-console
-
-const { NrsBridge } = require('./js/nrs.cheerio.bridge')
-
-global.isNode = true
-const converters = require('./js/util/converters')
 
 const nxtConfig = require('./conf/eqh/nxt')
 const nxtConstants = require('./conf/eqh/constants')
@@ -260,7 +258,7 @@ bridge.load(NRS => {
     },
     storeUnprotectedKey: (passphrase, passphraseImage) => {
       if (typeof passphrase !== 'string') throw new Error('passphrase is not a string')
-      if (passphraseImage && !(typeof passphraseImage !== 'ImageData'))
+      if (passphraseImage && !(passphraseImage instanceof 'ImageData'))
         throw new Error('passphraseImage is not an ImageData')
 
       const passphraseUint8 = Uint8Array.from(converters.stringToByteArray(passphrase))
@@ -289,10 +287,13 @@ bridge.load(NRS => {
               const masterCryptoKey = entry
               createKeyPair(passphraseUint8, masterCryptoKey, opts)
                 .then(keyInfo => {
-                  if (!passphraseImage) return resolve(keyInfo)
-                  storePassphrase(keyInfo.id, passphraseImage, masterCryptoKey).then(() =>
+                  if (!passphraseImage) {
                     resolve(keyInfo)
-                  )
+                  } else {
+                    storePassphrase(keyInfo.id, passphraseImage, masterCryptoKey).then(() =>
+                      resolve(keyInfo)
+                    )
+                  }
                 })
                 .catch(reject)
             } else {
@@ -306,10 +307,13 @@ bridge.load(NRS => {
                     p.put(masterCryptoKey, 'masterkey')
                   })
                   return createKeyPair(passphraseUint8, masterCryptoKey, opts).then(keyInfo => {
-                    if (!passphraseImage) return resolve(keyInfo)
-                    storePassphrase(keyInfo.id, passphraseImage, masterCryptoKey).then(() =>
+                    if (!passphraseImage) {
                       resolve(keyInfo)
-                    )
+                    } else {
+                      storePassphrase(keyInfo.id, passphraseImage, masterCryptoKey).then(() =>
+                        resolve(keyInfo)
+                      )
+                    }
                   })
                 })
                 .catch(reject)
