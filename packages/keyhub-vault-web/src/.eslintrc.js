@@ -11,9 +11,17 @@ module.exports = {
       },
     },
     {
-      files: ['main.js', 'util/*.js'],
+      files: ['main.js', 'util/crypto.js', 'util/indexeddb.js'],
       env: {
         browser: true,
+      },
+    },
+    {
+      files: ['vault.worker.js'],
+      parserOptions: {
+        ecmaFeatures: {
+          experimentalObjectRestSpread: true,
+        },
       },
     },
   ],
