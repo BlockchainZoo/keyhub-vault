@@ -18,16 +18,16 @@ module.exports = {
 
     'func-names': 'off',
 
-    'object-curly-newline': [
-      'error', {
-        ObjectExpression: { minProperties: 4, multiline: true, consistent: true },
-        ObjectPattern: { minProperties: 8, multiline: true, consistent: true },
-        ImportDeclaration: { minProperties: 8, multiline: true, consistent: true },
-        ExportDeclaration: { minProperties: 4, multiline: true, consistent: true },
-      }
-    ],
+    // 'object-curly-newline': [
+    //   'error', {
+    //     ObjectExpression: { minProperties: 4, multiline: true, consistent: true },
+    //     ObjectPattern: { minProperties: 8, multiline: true, consistent: true },
+    //     ImportDeclaration: { minProperties: 8, multiline: true, consistent: true },
+    //     ExportDeclaration: { minProperties: 4, multiline: true, consistent: true },
+    //   }
+    // ],
   },
-  'env': {
-    'jest': true,
-  }
-};
+  env: {
+    jest: true,
+  },
+}
