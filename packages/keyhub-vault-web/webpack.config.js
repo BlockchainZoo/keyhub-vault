@@ -7,12 +7,10 @@ const { fork } = require('child_process')
 // eslint-disable-next-line import/no-extraneous-dependencies
 const webpack = require('webpack')
 const CopyWebpackPlugin = require('copy-webpack-plugin')
-// eslint-disable-next-line import/no-extraneous-dependencies
-const babelPluginObjectRestSpread = require('@babel/plugin-proposal-object-rest-spread')
 
 module.exports = env => ({
   mode: 'production',
-  devtool: 'nosources-source-map',
+  devtool: 'cheap-source-map',
   optimization: {
     minimize: false,
   },
@@ -76,18 +74,42 @@ module.exports = env => ({
           // See: https://medium.com/@zural143/basic-webpack-4-and-es5-to-es6-transpiler-using-babel-dc66e72c86c6
           loader: 'babel-loader',
           options: {
-            presets: ['@babel/preset-env'],
-            // eslint-disable-next-line global-require
-            plugins: [babelPluginObjectRestSpread],
+            presets: [
+              [
+                '@babel/preset-env',
+                {
+                  targets: '> 5%, last 2 versions, Firefox ESR, not dead',
+                },
+              ],
+            ],
+            plugins: ['@babel/plugin-proposal-object-rest-spread'],
           },
         },
       },
       {
         test: /\.worker\.js$/,
-        use: {
-          loader: 'worker-loader',
-          options: { inline: true, fallback: false },
-        },
+        exclude: /(node_modules|bower_components)/,
+        use: [
+          {
+            loader: 'worker-loader',
+            options: { inline: true, fallback: false },
+          },
+          {
+            // See: https://medium.com/@zural143/basic-webpack-4-and-es5-to-es6-transpiler-using-babel-dc66e72c86c6
+            loader: 'babel-loader',
+            options: {
+              presets: [
+                [
+                  '@babel/preset-env',
+                  {
+                    targets: '> 5%, last 2 versions, Firefox ESR, not dead',
+                  },
+                ],
+              ],
+              plugins: ['@babel/plugin-proposal-object-rest-spread'],
+            },
+          },
+        ],
       },
     ],
   },

@@ -37,16 +37,9 @@ bridge.load(NRS => {
 
   log('Loaded NRS-bridge.')
 
-  const fixTxNumberFormat = ({
-    accountRS,
-    recipientRS,
-    assetId,
-    amount,
-    decimals,
-    quantity,
-    price,
-    ...txData
-  }) => {
+  const fixTxNumberFormat = tx => {
+    const { accountRS, recipientRS, assetId, amount, decimals, quantity, price, ...txData } = tx
+
     /* eslint-disable no-param-reassign */
     if (amount !== undefined) txData.amountNQT = NRS.convertToNQT(amount)
     if (decimals !== undefined) {
@@ -258,7 +251,8 @@ bridge.load(NRS => {
     },
     storeUnprotectedKey: (passphrase, passphraseImage) => {
       if (typeof passphrase !== 'string') throw new Error('passphrase is not a string')
-      if (passphraseImage && !(passphraseImage instanceof 'ImageData'))
+      // eslint-disable-next-line no-undef
+      if (passphraseImage && !(passphraseImage instanceof ImageData))
         throw new Error('passphraseImage is not an ImageData')
 
       const passphraseUint8 = Uint8Array.from(converters.stringToByteArray(passphrase))
