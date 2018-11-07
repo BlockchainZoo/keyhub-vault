@@ -1,7 +1,7 @@
+'use strict'
+
 /* eslint-disable global-require, no-console */
 
-// const { JSDOM } = require('jsdom')
-// const jquery = require('jquery')
 const cheerio = require('cheerio')
 const qs = require('qs')
 
@@ -11,7 +11,7 @@ if (process.env.APP_ENV !== 'browser') {
 }
 
 // See: https://api.jquery.com/jQuery.ajax/
-const jqAjax = (settings) => {
+const jqAjax = settings => {
   const {
     url,
     crossDomain,
@@ -30,16 +30,16 @@ const jqAjax = (settings) => {
   let doneCallback
   let failCallback
 
-  const data = (typeof dataObj !== 'string' && processData)
-    ? qs.stringify(dataObj, { arrayFormat: traditional ? 'repeat' : 'brackets' })
-    : dataObj
+  const data =
+    typeof dataObj !== 'string' && processData
+      ? qs.stringify(dataObj, { arrayFormat: traditional ? 'repeat' : 'brackets' })
+      : dataObj
 
   // eslint-disable-next-line no-undef
-  const controller = (typeof global.AbortController !== 'undefined') ? new AbortController() : null
-  const abortTimer = (controller && timeout) ? setTimeout(() => controller.abort(), timeout) : null
+  const controller = typeof global.AbortController !== 'undefined' ? new AbortController() : null
+  const abortTimer = controller && timeout ? setTimeout(() => controller.abort(), timeout) : null
 
-  // eslint-disable-next-line no-undef
-  const thenable = fetch(method === 'GET' && processData ? `${url}?${dataString}` : url, {
+  const fetchOpts = {
     method,
     headers: {
       'Content-Type': contentType || 'application/x-www-form-urlencoded; charset=UTF-8',
@@ -48,44 +48,57 @@ const jqAjax = (settings) => {
     signal: controller && controller.signal,
     mode: crossDomain ? 'cors' : undefined,
     credentials: withCredentials ? 'include' : undefined,
-  }).catch((err) => {
-    if (abortTimer) clearTimeout(abortTimer)
-    if (failCallback) failCallback({}, null, err)
-  }).then((res) => {
-    const textStatus = res.statusText
+  }
 
-    if (res.status >= 400) {
-      const err = new Error(textStatus)
-      if (failCallback) failCallback(res, textStatus, err)
-      throw err
-    }
-
-    let ret
-    if (dataType === 'json') ret = res.json()
-    else if (dataType === 'html') ret = res.text()
-    else if (dataType === 'text') ret = res.text()
-    else if (dataType) throw new Error('Unsupported dataType')
-    else ret = res.headers.get('content-type').includes('/json') ? res.json() : res.text()
-
-    return ret.catch((err) => {
+  // eslint-disable-next-line no-undef
+  const thenable = fetch(method === 'GET' && processData ? `${url}?${dataString}` : url, fetchOpts)
+    .catch(err => {
       if (abortTimer) clearTimeout(abortTimer)
-      if (failCallback) failCallback(res, textStatus, err)
-      throw err
-    }).then((resData) => {
-      if (abortTimer) clearTimeout(abortTimer)
-      if (doneCallback) {
-        doneCallback(
-          resData,
-          textStatus,
-          (dataType === 'json' ? { responseJSON: resData } : { responseText: resData }),
-        )
-      }
+      if (failCallback) failCallback({}, null, err)
     })
-  })
+    .then(res => {
+      const textStatus = res.statusText
+
+      if (res.status >= 400) {
+        const err = new Error(textStatus)
+        if (failCallback) failCallback(res, textStatus, err)
+        throw err
+      }
+
+      let ret
+      if (dataType === 'json') ret = res.json()
+      else if (dataType === 'html') ret = res.text()
+      else if (dataType === 'text') ret = res.text()
+      else if (dataType) throw new Error('Unsupported dataType')
+      else ret = res.headers.get('content-type').includes('/json') ? res.json() : res.text()
+
+      return ret
+        .catch(err => {
+          if (abortTimer) clearTimeout(abortTimer)
+          if (failCallback) failCallback(res, textStatus, err)
+          throw err
+        })
+        .then(resData => {
+          if (abortTimer) clearTimeout(abortTimer)
+          if (doneCallback) {
+            doneCallback(
+              resData,
+              textStatus,
+              dataType === 'json' ? { responseJSON: resData } : { responseText: resData }
+            )
+          }
+        })
+    })
 
   return Object.assign(thenable, {
-    done(callback) { doneCallback = callback; return this },
-    fail(callback) { failCallback = callback; return this },
+    done(callback) {
+      doneCallback = callback
+      return this
+    },
+    fail(callback) {
+      failCallback = callback
+      return this
+    },
   })
 }
 
@@ -100,12 +113,22 @@ const jqEach = (objOrArr, callback) => {
 
 const jqMocks = {
   // eslint-disable-next-line no-restricted-syntax, guard-for-in
-  isEmptyObject: (obj) => { for (const k in obj) { return false } return true },
+  isEmptyObject: obj => {
+    // eslint-disable-next-line guard-for-in, no-restricted-syntax
+    for (const k in obj) {
+      return false
+    }
+    return true
+  },
   inArray: (needle, arr) => arr.indexOf(needle),
   trim: text => text.trim(),
   extend: (obj, data) => Object.assign(obj, data),
-  get fn() { return Object.getPrototypeOf(this) },
-  growl: (msg) => { console.log(`growl: ${msg}`) },
+  get fn() {
+    return Object.getPrototypeOf(this)
+  },
+  growl: msg => {
+    console.log(`growl: ${msg}`)
+  },
   t: (text, params) => (params ? `${text} - ${JSON.stringify(params)}` : text),
   support: {},
   i18n: null,
@@ -113,7 +136,9 @@ const jqMocks = {
   ajax: jqAjax,
 }
 
-const noop = function () { return this }
+const noop = function() {
+  return this
+}
 const jqPrototypeMocks = {
   show: noop,
   hide: noop,
@@ -140,8 +165,14 @@ const defaultOptions = {
 
 class NrsBridge {
   constructor(params) {
-    this.options = { ...defaultOptions }
-    if (params) Object.assign(this.options, params, { init: true })
+    this.options = {}
+    if (params) {
+      Object.assign(this.options, defaultOptions, params)
+      this.init = true
+    } else {
+      Object.assign(this.options, defaultOptions)
+      this.init = false
+    }
     return this
   }
 
@@ -173,27 +204,22 @@ class NrsBridge {
     }
   }
 
-  configure(params = this.options, client = this.client) {
-    // eslint-disable-next-line no-param-reassign
-    client.isTestNet = params.isTestNet || this.options.isTestNet
-    this.constructor.setCurrentAccount(params.accountRS || this.options.accountRS, client)
-    this.constructor.setLastKnownBlock(params.lastKnownBlock || this.options.lastKnownBlock, client)
+  configure(params, client = this.client) {
+    Object.assign(this.options, params)
 
-    if (params.getter) {
-      client.getModuleConfig = params.getter // eslint-disable-line no-param-reassign
-    } else {
-      const opts = { ...this.options, ...params }
-      client.getModuleConfig = () => opts // eslint-disable-line no-param-reassign
-    }
+    // eslint-disable-next-line no-param-reassign
+    client.isTestNet = this.options.isTestNet
+    this.constructor.setCurrentAccount(this.options.accountRS, client)
+    this.constructor.setLastKnownBlock(this.options.lastKnownBlock, client)
+
+    // eslint-disable-next-line no-param-reassign
+    client.getModuleConfig = this.options.getNode || (() => this.options)
 
     return this
   }
 
   load(callback) {
     try {
-      // jsdom is necessary to define the window object on which jquery relies
-      // const { window } = new JSDOM()
-
       // console.log('Initializing NRS-bridge...')
 
       // Load the necessary node modules and assign them to the global scope
@@ -217,7 +243,8 @@ class NrsBridge {
         if (!global.window.crypto && !global.window.msCrypto) {
           global.crypto = require('crypto')
         }
-      } else if (typeof self !== 'undefined') { // eslint-disable-line no-restricted-globals
+        // eslint-disable-next-line no-restricted-globals
+      } else if (typeof self !== 'undefined') {
         // WebWorker
         global.window = self // eslint-disable-line no-restricted-globals, no-undef
         if (!global.window.crypto && !global.window.msCrypto) {
@@ -233,7 +260,8 @@ class NrsBridge {
 
       // Mock other objects on which the client depends
       if (typeof global.window.document === 'undefined') global.window.document = {}
-      if (typeof global.window.navigator === 'undefined') global.window.navigator = { userAgent: '' }
+      if (typeof global.window.navigator === 'undefined')
+        global.window.navigator = { userAgent: '' }
       global.isNode = true // for code which has to execute differently by node compared to browser
 
       // Now load some NXT specific libraries into the global scope
@@ -259,13 +287,13 @@ class NrsBridge {
       Object.assign(client, require('./nrs'))
       Object.assign(client, require('./nrs.server'))
 
-      if (this.options.init) this.configure(this.options, client)
+      if (this.init) this.configure(null, client)
 
       // Now load the constants locally since we cannot trust the remote node to
       // return the correct constants.
       client.processConstants(require('../conf/constants'))
       this.client = client
-      callback(this.client)
+      if (callback) callback(this.client)
     } catch (err) {
       console.log(err.message || err)
       console.log(err.stack)
