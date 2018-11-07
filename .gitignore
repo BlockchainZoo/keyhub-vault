@@ -72,9 +72,6 @@ dist
 secrets.yml
 secrets.json
 
-# react-scripts
-build
-
 # awsmobilejs
 appsync-info.json
 aws-info.json

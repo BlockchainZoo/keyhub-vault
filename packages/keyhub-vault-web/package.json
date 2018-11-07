@@ -8,7 +8,7 @@
     "start": "caddy",
     "test": "echo \"Error: no test specified\" && exit 1",
     "winlf": "(cat ./node_modules/openpgp/src/worker/worker.js | normalize-newline > ./node_modules/openpgp/src/worker/worker.js) && (cat ./node_modules/openpgp/dist/openpgp.min.js | normalize-newline > ./node_modules/openpgp/dist/openpgp.min.js)",
-    "prepare": "([ -e dist/js/openpgp.worker.bundle.js ] || browserify -p browserify-derequire -r openpgp/src/worker/worker -s openpgp -o dist/js/openpgp.worker.bundle.js) && webpack --config webpack.config.js --env.CODESIGN_PASSPHRASE=\"${CODESIGN_PASSPHRASE}\" --progress"
+    "prepare": "([ -e dist/js/openpgp.worker.bundle.js ] || browserify -p browserify-derequire -r openpgp/src/worker/worker -s openpgp -o dist/js/openpgp.worker.bundle.js) && node build/sri.hash.js && webpack --config webpack.config.js --env.STAGE=\"${STAGE}\" --env.CODESIGN_PASSPHRASE=\"${CODESIGN_PASSPHRASE}\" --progress"
   },
   "repository": {
     "type": "git",
@@ -36,7 +36,6 @@
     "serverless-plugin-cloudfront-lambda-edge": "^2.0.0",
     "serverless-s3-sync": "^1.7.1",
     "serverless-stack-output": "^0.2.3",
-    "ssri": "^6.0.0",
-    "worker-loader": "^2.0.0"
+    "ssri": "^6.0.0"
   }
 }

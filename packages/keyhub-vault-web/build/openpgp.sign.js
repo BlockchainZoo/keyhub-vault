@@ -21,37 +21,39 @@ const options = {
 if (!options.passphrase) {
   console.warn('Skip code-signing as env.CODESIGN_PASSPHRASE not provided') // eslint-disable-line no-console
 } else {
-  // Generate new keyPair
-  openpgp
-    .generateKey(options)
-    .then(key => {
-      if (
-        fs.existsSync(`${FILEPATH_TO_KEYPAIR}.key.asc`) ||
-        fs.existsSync(`${FILEPATH_TO_KEYPAIR}.pub.asc`)
-      )
-        return null
-      console.info('Keypair generated!') // eslint-disable-line no-console
-      return hkp.upload(key.publicKeyArmored).then(() => key)
+  Promise.resolve()
+    .then(() => ({
+      publicKeyArmored: fs.readFileSync(`${FILEPATH_TO_KEYPAIR}.pub.asc`, 'utf8'),
+      privateKeyArmored: fs.readFileSync(`${FILEPATH_TO_KEYPAIR}.key.asc`, 'utf8'),
+    }))
+    .catch(() => {
+      // Generate new keyPair
+      console.info('Generating key...') // eslint-disable-line no-console
+      return openpgp.generateKey(options).then(key => {
+        console.info('Keypair generated!') // eslint-disable-line no-console
+        return hkp.upload(key.publicKeyArmored).then(() => {
+          console.info('PublicKey uploaded!') // eslint-disable-line no-console
+          fs.writeFileSync(`${FILEPATH_TO_KEYPAIR}.key.asc`, key.privateKeyArmored)
+          fs.writeFileSync(`${FILEPATH_TO_KEYPAIR}.pub.asc`, key.publicKeyArmored)
+          if (key.revocationCertificate)
+            fs.writeFileSync(`${FILEPATH_TO_KEYPAIR}.revoke.asc`, key.revocationCertificate)
+          return key
+        })
+      })
     })
-    .then(key => {
-      if (key) {
-        console.info('PublicKey uploaded!') // eslint-disable-line no-console
-        fs.writeFileSync(`${FILEPATH_TO_KEYPAIR}.key.asc`, key.privateKeyArmored)
-        fs.writeFileSync(`${FILEPATH_TO_KEYPAIR}.pub.asc`, key.publicKeyArmored)
-        if (key.revocationCertificate)
-          fs.writeFileSync(`${FILEPATH_TO_KEYPAIR}.revoke.asc`, key.revocationCertificate)
-      }
-
-      return fs.readFileSync(`${FILEPATH_TO_KEYPAIR}.key.asc`, 'utf8')
+    .then(({ publicKeyArmored, privateKeyArmored }) => {
+      console.info('Decrypting key...') // eslint-disable-line no-console
+      const publicKeys = openpgp.key.readArmored(publicKeyArmored).keys
+      const privateKeys = openpgp.key.readArmored(privateKeyArmored).keys
+      return Promise.all(
+        privateKeys.map(privKeyObj => privKeyObj.decrypt(options.passphrase))
+      ).then(() => ({
+        publicKeys,
+        privateKeys,
+      }))
     })
-    .then(privkey => {
-      const privKeyObj = openpgp.key.readArmored(privkey).keys[0]
-      return privKeyObj.decrypt(options.passphrase).then(() => privKeyObj)
-    })
-    .then(privKeyObj => {
-      const privateKeys = [privKeyObj]
-
-      console.info('Code-signing...') // eslint-disable-line no-console
+    .then(({ publicKeys, privateKeys }) => {
+      console.info('Signing code...') // eslint-disable-line no-console
 
       // const data = fs.readFileSync(FILEPATH_TO_SIGN, 'utf8')
       // const message = openpgp.message.fromText(data)
@@ -59,63 +61,51 @@ if (!options.passphrase) {
       //   signature: sig.armor(),
       // }))
 
-      return openpgp.sign({
-        data: fs.readFileSync(FILEPATH_TO_SIGN),
-        privateKeys,
-        detached: true,
-      })
-    })
-    .catch(err => {
-      console.error('cannot sign:', err) // eslint-disable-line no-console
-    })
-    .then(signed => {
-      console.info('signed:', FILEPATH_TO_SIGN) // eslint-disable-line no-console
-      fs.writeFileSync(`${FILEPATH_TO_SIGN}.sig.asc`, signed.signature)
+      const data = fs.readFileSync(FILEPATH_TO_SIGN)
 
-      const data = fs.readFileSync(FILEPATH_TO_SIGN, 'utf8')
-      const message = openpgp.message.fromText(data)
-      const signature = openpgp.signature.readArmored(signed.signature)
-      const publicKeys = openpgp.key.readArmored(
-        fs.readFileSync(`${FILEPATH_TO_KEYPAIR}.pub.asc`, 'utf8')
-      ).keys
+      return openpgp
+        .sign({
+          data,
+          privateKeys,
+          detached: true,
+        })
+        .catch(err => {
+          console.error('cannot sign:', err) // eslint-disable-line no-console
+        })
+        .then(({ signature }) => ({ data, signature, publicKeys }))
+    })
+    .then(({ data, signature, publicKeys }) => {
+      console.info('Generated code-signature...') // eslint-disable-line no-console
+      fs.writeFileSync(`${FILEPATH_TO_SIGN}.sig.asc`, signature)
 
-      // return message.verifyDetached(signature, publicKeys, new Date()).then(console.log)
-      return openpgp.verify({ message, signature, publicKeys })
+      const message = openpgp.message.fromBinary(data)
+      return message
+        .verifyDetached(openpgp.signature.readArmored(signature), publicKeys, new Date())
+        .then(signatures => ({ data, signatures }))
+      // return openpgp
+      //   .verify({
+      //     publicKeys,
+      //     message: openpgp.message.fromBinary(data),
+      //     signature: openpgp.signature.readArmored(signature),
+      //   })
+      //   .catch(err => {
+      //     console.error('Cannot verify:', err) // eslint-disable-line no-console
+      //   })
     })
     .then(({ data, signatures }) => {
-      const { valid: isSignatureValid, signature } = signatures[0]
+      const { valid: isValid, signature } = signatures[0]
       const { created: signatureDate } = signature.packets[0]
+      const text = data.toString('utf8')
       // eslint-disable-next-line no-console
       console.info(
-        'valid:',
-        isSignatureValid,
-        '| signatureDate:',
+        'File:',
+        FILEPATH_TO_SIGN,
+        '| Signature:',
+        isValid ? 'valid' : 'invalid',
+        '| Date:',
         signatureDate,
-        '| dataLength:',
-        data.length
+        '| lastLine:',
+        text.slice(text.lastIndexOf('\n') + 1)
       )
     })
-    .catch(err => {
-      console.error('cannot verify:', err) // eslint-disable-line no-console
-    })
 }
-
-// eslint-disable-next-line import/no-extraneous-dependencies
-const ssri = require('ssri')
-
-const fileListToSRI = [
-  'dist/js/openpgp.worker.bundle.js',
-  'public/index.js',
-  'public/css/styles.css',
-  'public/css/main.css',
-]
-
-Promise.all(
-  fileListToSRI.map(filepath =>
-    ssri.fromStream(fs.createReadStream(filepath), { algorithms: ['sha384'] }).then(sri => {
-      console.info(`SRI of ${filepath}:`, sri.toString()) // eslint-disable-line no-console
-    })
-  )
-).catch(err => {
-  console.error('cannot hash:', err) // eslint-disable-line no-console
-})
