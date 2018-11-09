@@ -1,7 +1,7 @@
 'use strict'
 
 global.isNode = true
-const { NrsBridge, converters } = require('keyhub-vault-nxt')
+const { NrsBridge, converters } = require('@keyhub/keyhub-vault-nxt')
 
 const wordlistEnEff = require('diceware-wordlist-en-eff')
 const dicewareGen = require('./util/diceware')
@@ -37,23 +37,7 @@ bridge.load(NRS => {
 
   log('Loaded NRS-bridge.')
 
-  const fixTxNumberFormat = tx => {
-    const { accountRS, recipientRS, assetId, amount, decimals, quantity, price, ...txData } = tx
-
-    /* eslint-disable no-param-reassign */
-    if (amount !== undefined) txData.amountNQT = NRS.convertToNQT(amount)
-    if (decimals !== undefined) {
-      if (quantity) txData.quantityQNT = NRS.convertToQNT(quantity, decimals)
-      if (price) txData.priceNQT = NRS.calculatePricePerWholeQNT(NRS.convertToNQT(price), decimals)
-    }
-
-    if (recipientRS) txData.recipient = NRS.convertRSToNumericAccountFormat(recipientRS)
-    if (accountRS) txData.account = NRS.convertRSToNumericAccountFormat(accountRS)
-    if (assetId !== undefined) txData.asset = assetId
-
-    return txData
-  }
-
+  // Helper function to get key info of a provided secretPhrase
   const getKeyInfo = secretPhrase => {
     const publicKey = NRS.getPublicKey(secretPhrase)
     const accountNo = NRS.getAccountIdFromPublicKey(publicKey)
@@ -61,7 +45,8 @@ bridge.load(NRS => {
     return { publicKey, accountNo, address }
   }
 
-  const createKeyPair = (passphraseUint8, cryptoKeyOrPin, opts) =>
+  // Helper function to create and store a new Key
+  const storeKey = (passphraseUint8, cryptoKeyOrPin, opts) =>
     // Hash the passphrase to get the nxt secretPhrase
     digest(passphraseUint8, { name: 'SHA-384' })
       .then(secretPhraseBuffer => {
@@ -107,6 +92,7 @@ bridge.load(NRS => {
         })
       })
 
+  // Helper function to store cleartext passphrase
   const storePassphrase = (entryId, passphraseImage, cryptoKey) => {
     // Encrypt the cleardata of the passphraseImage
     const encryptAlgo = { name: 'AES-GCM', iv: genInitVector() }
@@ -122,6 +108,7 @@ bridge.load(NRS => {
                 reject(new Error('key is missing in this browser'))
                 return
               }
+              // eslint-disable-next-line no-param-reassign
               entry.passphraseImage = {
                 encryptData: cipherdataBuffer,
                 encryptAlgo,
@@ -139,6 +126,7 @@ bridge.load(NRS => {
     )
   }
 
+  // Helper function to retrieve cleartext passphrase
   const retrievePassphrase = (entryId, cryptoKey) =>
     new Promise((resolve, reject) => {
       // Retrieve encrypted passphrase in browser's indexedDB
@@ -169,6 +157,47 @@ bridge.load(NRS => {
         }
       })
     })
+
+  // Helper function to convert transaction data to correct numerical format
+  const fixTxNumberFormat = tx => {
+    const { accountRS, recipientRS, assetId, amount, decimals, quantity, price, ...txData } = tx
+
+    /* eslint-disable no-param-reassign */
+    if (amount !== undefined) txData.amountNQT = NRS.convertToNQT(amount)
+    if (decimals !== undefined) {
+      if (quantity) txData.quantityQNT = NRS.convertToQNT(quantity, decimals)
+      if (price) txData.priceNQT = NRS.calculatePricePerWholeQNT(NRS.convertToNQT(price), decimals)
+    }
+
+    if (recipientRS) txData.recipient = NRS.convertRSToNumericAccountFormat(recipientRS)
+    if (accountRS) txData.account = NRS.convertRSToNumericAccountFormat(accountRS)
+    if (assetId !== undefined) txData.asset = assetId
+
+    return txData
+  }
+
+  // Helper function to convert transaction from json data to binary format
+  const encodeTransactionBytes = (txType, txData, secretPhraseHex) => {
+    const data = safeObj({
+      ...fixTxNumberFormat(txData),
+      broadcast: 'false',
+      secretPhraseHex, // secretPhraseHex is the sha256 hash of the user's passphrase
+      ...NRS.getMandatoryParams(),
+    })
+
+    // Set current account in NRS bridge
+    const { address } = getKeyInfo(secretPhraseHex)
+    NrsBridge.setCurrentAccount(address, NRS)
+    // bridge.configure({ accountRS: address })
+
+    // Use NRS bridge to sign the transaction data
+    return new Promise((resolve, reject) => {
+      NRS.sendRequest(txType, data, res => {
+        if (res.errorCode) reject(new Error(res.errorDescription))
+        resolve(res)
+      })
+    })
+  }
 
   const methods = safeObj({
     configure: config => {
@@ -221,6 +250,7 @@ bridge.load(NRS => {
                 accountNo: entry.accountNo,
                 publicKey: entry.publicKey,
                 createdAt: entry.createdAt,
+                hasPinProtection: !!entry.secretPhrase.deriveAlgo,
                 hasPassphrase: !!entry.passphraseImage,
               })
             }
@@ -279,7 +309,7 @@ bridge.load(NRS => {
           req.onsuccess = ({ target: { result: entry } }) => {
             if (entry) {
               const masterCryptoKey = entry
-              createKeyPair(passphraseUint8, masterCryptoKey, opts)
+              storeKey(passphraseUint8, masterCryptoKey, opts)
                 .then(keyInfo => {
                   if (!passphraseImage) {
                     resolve(keyInfo)
@@ -300,7 +330,7 @@ bridge.load(NRS => {
                   callOnStore('prefs', p => {
                     p.put(masterCryptoKey, 'masterkey')
                   })
-                  return createKeyPair(passphraseUint8, masterCryptoKey, opts).then(keyInfo => {
+                  return storeKey(passphraseUint8, masterCryptoKey, opts).then(keyInfo => {
                     if (!passphraseImage) {
                       resolve(keyInfo)
                     } else {
@@ -338,16 +368,13 @@ bridge.load(NRS => {
         deriveAlgo: genDeriveAlgo(),
       }
 
-      return createKeyPair(passphraseUint8, secretPinUint8, opts)
+      return storeKey(passphraseUint8, secretPinUint8, opts)
     },
-    signTransaction: (entryId, secretPin, txType, txData) => {
+    signTransaction: (entryId, txType, txData, secretPin) => {
       if (typeof entryId !== 'string') throw new Error('address / entryId is not a string')
       if (typeof secretPin !== 'string') throw new Error('secretPin is not a string')
       if (typeof txType !== 'string') throw new Error('txType is not a string')
       if (typeof txData !== 'object') throw new Error('txData is not an object')
-
-      const secretPinBytes = converters.stringToByteArray(secretPin)
-      const secretPinUint8 = Uint8Array.from(secretPinBytes)
 
       // Get key from  browser's indexedDB
       return new Promise((resolve, reject) => {
@@ -369,38 +396,64 @@ bridge.load(NRS => {
 
             // TODO: Update the lastUsedAt timestamp
 
-            // Unwrap the wrapped secretPhrase object
-            unwrapKeyWithPin(secretPinUint8, secretPhraseObj)
-              .then(secretPhraseBuffer => {
-                const secretPhraseUint8 = new Uint8Array(secretPhraseBuffer)
-                return converters.byteArrayToHexString(Array.from(secretPhraseUint8))
-              })
-              .then(secretPhraseHex => {
-                // secretPhraseHex is the sha256 hash of the user's passphrase
-                const data = safeObj({
-                  ...fixTxNumberFormat(txData),
-                  broadcast: 'false',
-                  secretPhraseHex,
-                  ...NRS.getMandatoryParams(),
+            if (secretPhraseObj.deriveAlgo) {
+              if (typeof secretPin !== 'string') throw new Error('secretPin is not a string')
+
+              const secretPinBytes = converters.stringToByteArray(secretPin)
+              const secretPinUint8 = Uint8Array.from(secretPinBytes)
+
+              // Unwrap the wrapped secretPhrase object
+              unwrapKeyWithPin(secretPinUint8, secretPhraseObj)
+                .catch(err => {
+                  if (err.type === 'OperationError') throw Error('PIN is incorrect')
+                  throw err
                 })
-                // Use NRS bridge to sign the transaction data
-                NRS.sendRequest(txType, data, res => {
-                  const {
-                    errorCode,
-                    errorDescription,
-                    transactionJSON,
-                    transactionBytes,
-                    fullHash,
-                  } = res
-                  if (errorCode) reject(new Error(errorDescription))
+                .then(secretPhraseBuffer => {
+                  const secretPhraseUint8 = new Uint8Array(secretPhraseBuffer)
+                  return converters.byteArrayToHexString(Array.from(secretPhraseUint8))
+                })
+                .then(secretPhraseHex => encodeTransactionBytes(txType, txData, secretPhraseHex))
+                .then(({ transactionJSON, transactionBytes, fullHash: transactionFullHash }) => {
                   resolve({
                     transactionJSON,
                     transactionBytes,
-                    transactionFullHash: fullHash,
+                    transactionFullHash,
                   })
                 })
+                .catch(reject)
+            } else {
+              // Get masterkey from browser's indexedDB
+              callOnStore('prefs', prefs => {
+                const req2 = prefs.get('masterkey')
+                req2.onerror = err => reject(err)
+                req2.onsuccess = ({ target: { result: masterCryptoKey } }) => {
+                  if (!masterCryptoKey) {
+                    reject(new Error('vault masterKey is missing in this browser'))
+                    return
+                  }
+
+                  // Unwrap the wrapped secretPhrase object
+                  unwrapKey(masterCryptoKey, secretPhraseObj)
+                    .then(secretPhraseBuffer => {
+                      const secretPhraseUint8 = new Uint8Array(secretPhraseBuffer)
+                      return converters.byteArrayToHexString(Array.from(secretPhraseUint8))
+                    })
+                    .then(secretPhraseHex =>
+                      encodeTransactionBytes(txType, txData, secretPhraseHex)
+                    )
+                    .then(
+                      ({ transactionJSON, transactionBytes, fullHash: transactionFullHash }) => {
+                        resolve({
+                          transactionJSON,
+                          transactionBytes,
+                          transactionFullHash,
+                        })
+                      }
+                    )
+                    .catch(reject)
+                }
               })
-              .catch(reject)
+            }
           }
         })
       })

@@ -1,6 +1,6 @@
 import { safeHtml } from 'common-tags'
 
-export default function createElement(document, title, message) {
+export default function createElement(document, title, message, timeoutDuration = 5000) {
   const div = document.createElement('div')
 
   div.innerHTML = safeHtml`<div class="card card-tx-succsess">
@@ -15,7 +15,7 @@ export default function createElement(document, title, message) {
     </div>
   </div>`
 
-  const promise = new Promise(resolve => {
+  const promise1 = new Promise(resolve => {
     div.querySelectorAll('button').forEach(b =>
       b.addEventListener('click', ev => {
         const {
@@ -25,6 +25,13 @@ export default function createElement(document, title, message) {
       })
     )
   })
+
+  // Close the window after 5 seconds if no response from user
+  const promise2 = new Promise(resolve => {
+    setTimeout(() => resolve('timeout'), timeoutDuration)
+  })
+
+  const promise = Promise.race([promise1, promise2])
 
   return [div, promise]
 }
