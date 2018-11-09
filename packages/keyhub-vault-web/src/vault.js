@@ -239,12 +239,13 @@ export default function loadVault(window, document, mainElement) {
 
     // call getKeyPair on background webworker
     return postMessage(worker, ['getStoredKeyInfo', entryId]).then(
-      ({ address, accountNo, publicKey, hasPassphrase }) => {
+      ({ address, accountNo, publicKey, hasPinProtection, hasPassphrase }) => {
         if (!hasPassphrase) {
           return {
             address,
             accountNo,
             publicKey,
+            hasPinProtection,
           }
         }
 
@@ -252,44 +253,28 @@ export default function loadVault(window, document, mainElement) {
           address,
           accountNo,
           publicKey,
+          hasPinProtection,
           passphraseImage,
         }))
       }
     )
   }
 
-  const showTxDetailScreen = (tx, platform, address) => {
-    contentDiv.innerHTML = ''
-    const loadingDiv = LoadingScreen(document, `Signing Transaction`)
-    loadingDiv.classList.add('d-none')
-    contentDiv.appendChild(loadingDiv)
-
+  const signTransaction = (platform, address, tx, optionalPin = null) => {
     // Lazy-Load Webworker
     if (!workers[platform]) workers[platform] = new VaultWorker()
     const worker = workers[platform]
 
-    return postMessage(worker, ['getStoredKeyInfo', address])
-      .catch(err => {
-        if (err.message.includes('missing')) {
-          return showRestoreMissingKeyScreen(platform, address)
-        }
-        throw err
+    contentDiv.innerHTML = ''
+    contentDiv.appendChild(LoadingScreen(document, 'Signing Transaction'))
+
+    return postMessage(worker, ['signTransaction', address, tx.type, tx.data, optionalPin]).then(
+      ({ transactionBytes, transactionJSON, transactionFullHash }) => ({
+        transactionBytes,
+        transactionJSON,
+        transactionFullHash,
       })
-      .then(({ accountNo }) =>
-        postMessage(worker, ['configure', { address }]).then(() => {
-          const [div, promise] = TxDetailScreen(document, platform, accountNo, address, tx)
-          contentDiv.appendChild(div)
-          return promise.then(([choice, pin]) => {
-            if (choice !== 'ok') throw new Error('cancelled by user')
-
-            div.classList.add('d-none')
-            loadingDiv.classList.remove('d-none')
-
-            // call signTransaction on background webworker
-            return postMessage(worker, ['signTransaction', address, pin, tx.type, tx.data])
-          })
-        })
-      )
+    )
   }
 
   const signMessage = (platform, address, message, optionalPin = null) => {
@@ -333,7 +318,7 @@ export default function loadVault(window, document, mainElement) {
                       )
                       classList.remove('btn-light')
                       classList.add('btn-dark')
-                      getKeyDetail(platform, entryId).then(keyDetail => {
+                      return getKeyDetail(platform, entryId).then(keyDetail => {
                         const [div] = KeyDetailScreen(document, keyDetail)
                         contentDiv.innerHTML = ''
                         contentDiv.appendChild(div)
@@ -424,7 +409,7 @@ export default function loadVault(window, document, mainElement) {
                 encPassphrase,
               })
             return pRetry(run, {
-              retries: 10,
+              retries: 5,
               factor: 1.71,
               onFailedAttempt: error => {
                 contentDiv.innerHTML = ''
@@ -476,7 +461,7 @@ export default function loadVault(window, document, mainElement) {
                 signature,
               })
             return pRetry(run, {
-              retries: 10,
+              retries: 5,
               factor: 1.71,
               onFailedAttempt: error => {
                 contentDiv.innerHTML = ''
@@ -494,17 +479,10 @@ export default function loadVault(window, document, mainElement) {
         .then(() => {
           const message =
             'Key Added. Thank you for using our Open-source Vault. You will be returned to the main app.'
-          const [div, promise] = SuccessScreen(document, 'Thank You', message)
+          const [div, promise] = SuccessScreen(document, 'Thank You', message, 1000)
           contentDiv.innerHTML = ''
           contentDiv.appendChild(div)
-
-          // Close the window after 5 seconds if no response from user
-          return Promise.race([
-            promise,
-            new Promise(resolve => {
-              window.setTimeout(() => resolve('timeout'), 5000)
-            }),
-          ])
+          return promise
         })
         .then(() => self.close()) // eslint-disable-line
         .catch(error => {
@@ -527,9 +505,9 @@ export default function loadVault(window, document, mainElement) {
     // Input: { action: 'showKeyDetail', params: [ 'EQH', 'EQH-xxx-xxx-xxx-xxx' ] }
     // Output: { hasKeyPair: true, hasPassphrase: false }
     if (action === 'showKeyDetail' && params) {
-      const [platform, address] = params
+      const [platform, entryId] = params
 
-      return getKeyDetail(platform, address)
+      return getKeyDetail(platform, entryId)
         .catch(err => {
           if (!err.message.includes('missing')) throw err
           // callback to the parent window with key state before restore
@@ -537,8 +515,8 @@ export default function loadVault(window, document, mainElement) {
             hasKeyPair: false,
             hasPassphrase: false,
           })
-          return showRestoreMissingKeyScreen(platform, address).then(() =>
-            getKeyDetail(platform, address)
+          return showRestoreMissingKeyScreen(platform, entryId).then(() =>
+            getKeyDetail(platform, entryId)
           )
         })
         .then(keyDetail => {
@@ -577,12 +555,56 @@ export default function loadVault(window, document, mainElement) {
     // Input: { action: 'signTx', params: [ 'EQH', 'EQH-xxx-xxx-xxx-xxx', tx ] }
     // Output: { transactionBytes, transactionJSON, transactionFullHash }
     if (action === 'signTx' && params) {
-      const [platform, address, tx] = params
+      const [platform, entryId, tx] = params
 
-      return showTxDetailScreen(tx, platform, address)
+      return getKeyDetail(platform, entryId)
+        .catch(err => {
+          if (!err.message.includes('missing')) throw err
+          // callback to the parent window with key state before restore
+          callback(null, {
+            hasKeyPair: false,
+            hasPassphrase: false,
+          })
+          return showRestoreMissingKeyScreen(platform, entryId).then(() =>
+            getKeyDetail(platform, entryId)
+          )
+        })
+        .then(keyDetail => {
+          // callback to the parent window with result after restore
+          callback(null, {
+            hasKeyPair: !!keyDetail.publicKey,
+            hasPassphrase: !!keyDetail.passphraseImage,
+          })
+          return keyDetail
+        })
+        .then(({ accountNo, address, hasPinProtection }) => {
+          const [div, promise] = TxDetailScreen(
+            document,
+            platform,
+            accountNo,
+            address,
+            tx,
+            hasPinProtection
+          )
+          const loadingDiv = LoadingScreen(document, `Signing Transaction`)
+          loadingDiv.classList.add('d-none')
+
+          contentDiv.innerHTML = ''
+          contentDiv.appendChild(div)
+          contentDiv.appendChild(loadingDiv)
+
+          return promise.then(([choice, pin]) => {
+            if (choice !== 'ok') throw new Error('cancelled by user')
+
+            div.classList.add('d-none')
+            loadingDiv.classList.remove('d-none')
+
+            return signTransaction(platform, address, tx, pin)
+          })
+        })
         .then(({ transactionBytes, transactionJSON, transactionFullHash }) => {
           contentDiv.innerHTML = ''
-          contentDiv.appendChild(LoadingScreen(document, 'Verifying Transaction'))
+          contentDiv.appendChild(LoadingScreen(document, 'Posting Transaction'))
           // callback to the parent window with result
           const run = () =>
             callback(null, {
@@ -591,14 +613,14 @@ export default function loadVault(window, document, mainElement) {
               transactionFullHash,
             })
           return pRetry(run, {
-            retries: 10,
+            retries: 5,
             factor: 1.71,
             onFailedAttempt: error => {
               contentDiv.innerHTML = ''
               contentDiv.appendChild(
                 LoadingScreen(
                   document,
-                  `Verifying Transaction (attempt: ${error.attemptNumber})`,
+                  `Posting Transaction (attempt: ${error.attemptNumber})`,
                   `Error in Main App: ${error.message || error}`
                 )
               )
@@ -608,17 +630,10 @@ export default function loadVault(window, document, mainElement) {
         .then(() => {
           const message =
             'Transaction Signed. Thank you for using our Open-source Vault. You will be returned to the main app.'
-          const [div, promise] = SuccessScreen(document, 'Thank You', message)
+          const [div, promise] = SuccessScreen(document, 'Thank You', message, 2000)
           contentDiv.innerHTML = ''
           contentDiv.appendChild(div)
-
-          // Close the window after 5 seconds if no response from user
-          return Promise.race([
-            promise,
-            new Promise(resolve => {
-              window.setTimeout(() => resolve('timeout'), 5000)
-            }),
-          ])
+          return promise
         })
         .then(() => self.close()) // eslint-disable-line
         .catch(error => {

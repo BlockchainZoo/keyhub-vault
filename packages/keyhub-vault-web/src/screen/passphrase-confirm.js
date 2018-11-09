@@ -1,4 +1,4 @@
-import { safeHtml, html } from 'common-tags'
+import { safeHtml } from 'common-tags'
 
 const validatePassphrase = (passphrase, passphraseInput, passphraseAlert) => {
   /* eslint-disable no-param-reassign */
@@ -54,29 +54,27 @@ const validatePin = (pinInput, pinConfirmInput, pinAlert) => {
   return false
 }
 
-export default function createElement(document, passphrase, withPin) {
+export default function createElement(document, passphrase, promptPin) {
   const div = document.createElement('div')
 
-  const pinForm = safeHtml`
-    <div class="form-group">
-      <label for="text-pin">Please input a new Security PIN: (any letter or number)</label><br>
-      <input type="password" class="form-control" id="pin-input" />
-    </div>
-    <div class="form-group">
-      <label for="text-pin-confirm">Please re-confirm your Security PIN:</label><br>
-      <input type="password" class="form-control" id="pin-confirm-input" />
-    </div>
-    <div id="pin-alert" class="d-none form-group"></div>
-  `
-
-  div.innerHTML = html`
+  div.innerHTML = safeHtml`
     <h2 class="page-title">Confirm Backup of Passhphrase</h2>
     <div class="form-group">
       <label for="text-passphrase-copied">Your passphrase is very important! In order to be sure that you have written it to paper, please type your passphrase below:</label><br>
       <textarea class="form-control" id="passphrase-input"></textarea>
     </div>
     <div id="passphrase-alert" class="d-none form-group"></div>
-    ${withPin ? pinForm : ''}
+    <div class="${promptPin ? '' : 'd-none'}">
+      <div class="form-group">
+        <label for="text-pin">Please input a new Security PIN: (any letter or number)</label><br>
+        <input type="password" class="form-control" id="pin-input" />
+      </div>
+      <div class="form-group">
+        <label for="text-pin-confirm">Please re-confirm your Security PIN:</label><br>
+        <input type="password" class="form-control" id="pin-confirm-input" />
+      </div>
+      <div id="pin-alert" class="d-none form-group"></div>
+    </div>
     <div class="form-group">
       <button type="button" class="btn btn-secondary" data-choice="ok">Finish</button>
       <button type="button" class="btn btn-primary" data-choice="cancel">Cancel</button>
@@ -96,7 +94,7 @@ export default function createElement(document, passphrase, withPin) {
       if (choice === 'ok') {
         const isValid =
           validatePassphrase(passphrase, passphraseInput, passphraseAlert) &&
-          (withPin ? validatePin(pinInput, pinConfirmInput, pinAlert) : true)
+          (promptPin ? validatePin(pinInput, pinConfirmInput, pinAlert) : true)
         if (!isValid) return
       }
 

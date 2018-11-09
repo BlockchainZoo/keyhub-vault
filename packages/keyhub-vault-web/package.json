@@ -1,9 +1,7 @@
 {
-  "name": "keyhub-vault-web",
+  "name": "@keyhub/keyhub-vault-web",
   "version": "0.1.0",
   "description": "Secure enclave to store private keys and sign messages/transactions.",
-  "private": false,
-  "main": "dist/index.js",
   "scripts": {
     "start": "caddy",
     "test": "echo \"Error: no test specified\" && exit 1",
@@ -21,21 +19,21 @@
   },
   "homepage": "https://github.com/BlockchainZoo/keyhub-vault#readme",
   "dependencies": {
+    "@keyhub/keyhub-vault-nxt": "^0.1.0",
     "common-tags": "^1.8.0",
     "diceware-wordlist-en-eff": "^1.0.1",
-    "keyhub-vault-nxt": "^0.1.0",
     "p-retry": "^2.0.0",
-    "post-robot": "^8.0.28"
+    "post-robot": "^8.0.29"
   },
   "devDependencies": {
-    "@fortawesome/fontawesome-free": "^5.2.0",
+    "@fortawesome/fontawesome-free": "^5.5.0",
     "bootstrap": "^4.1.3",
-    "copy-webpack-plugin": "^4.5.2",
+    "copy-webpack-plugin": "^4.6.0",
     "normalize-newline-cli": "^1.1.0",
     "openpgp": "github:heri16/openpgpjs#v3.1.0",
-    "serverless-plugin-cloudfront-lambda-edge": "^2.0.0",
+    "serverless-plugin-cloudfront-lambda-edge": "^2.1.0",
     "serverless-s3-sync": "^1.7.1",
     "serverless-stack-output": "^0.2.3",
-    "ssri": "^6.0.0"
+    "ssri": "^6.0.1"
   }
 }

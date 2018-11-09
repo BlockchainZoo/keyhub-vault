@@ -1,4 +1,4 @@
-import { safeHtml, html } from 'common-tags'
+import { safeHtml } from 'common-tags'
 
 const validatePin = (pinInput, pinAlert) => {
   /* eslint-disable no-param-reassign */
@@ -30,7 +30,7 @@ const splitNumber = accountNo => {
   return result.join('')
 }
 
-const displayTransaction = (document, detailDiv, { type, data }) => {
+const displayTransaction = (document, detailDiv, { type, data = {} }) => {
   const domFragment = document.createDocumentFragment()
   let txData = ''
 
@@ -88,18 +88,10 @@ const displayTransaction = (document, detailDiv, { type, data }) => {
   detailDiv.appendChild(domFragment)
 }
 
-export default function createElement(document, platform, accountNo, address, tx) {
+export default function createElement(document, platform, accountNo, address, tx, promptPin) {
   const div = document.createElement('div')
 
-  const pinForm = safeHtml`
-    <div class="form-group">
-      <label for="text-pin">Security Pin: </label><br>
-      <input type="password" class="form-control" id="pin-input" />
-    </div>
-    <div id="pin-alert" class="d-none form-group"></div>
-  `
-
-  div.innerHTML = html`
+  div.innerHTML = safeHtml`
   <div class="card-header text-center bg-secondary text-white">
     <h4 class="mb-2"><i class="fas fa-lock"></i> ${platform} Transaction Detail</h4>
     <p class="mb-0">Your Account No. ${splitNumber(accountNo)}</p>
@@ -112,8 +104,12 @@ export default function createElement(document, platform, accountNo, address, tx
       </div>
     </div>
 
-    <div class="row justify-content-center mt-5">
-      ${pinForm}
+    <div class="${promptPin ? '' : 'd-none '}row justify-content-center mt-5">
+      <div class="form-group">
+        <label for="text-pin">Security Pin: </label><br>
+        <input type="password" class="form-control" id="pin-input" />
+      </div>
+      <div id="pin-alert" class="d-none form-group"></div>
     </div>
     <div class="row justify-content-center">
       <div class="col col-md-5 mb-3">
@@ -133,7 +129,7 @@ export default function createElement(document, platform, accountNo, address, tx
 
   const promise = new Promise(resolve => {
     const verifyChoice = choice => {
-      if (choice === 'ok') {
+      if (choice === 'ok' && promptPin) {
         const isValid = validatePin(pinInput, pinAlert)
         if (!isValid) return
       }
