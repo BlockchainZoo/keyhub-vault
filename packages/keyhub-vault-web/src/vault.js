@@ -391,7 +391,9 @@ export default function loadVault(window, document, mainElement) {
     // Input: { action: 'newUnprotectedKeyAndSign', params: [ 'EQH', messageHex, phoneNumber ] }
     // Output: { publicKey, signature }
     if (action === 'newUnprotectedKeyAndSign' && params) {
-      const [platform, messageHex, phoneNum] = params
+      const [platform, messageHex, phoneNum = ''] = params
+      if (!platform) throw new Error(`invalid platform ${platform}`)
+      if (!messageHex) throw new Error(`invalid messageHex ${messageHex}`)
 
       return showGenerateUnprotectedKeyScreen(platform, phoneNum)
         .then(res => updateKeyListDiv().then(() => res))
@@ -446,6 +448,8 @@ export default function loadVault(window, document, mainElement) {
     // Output: { publicKey, signature }
     if (action === 'newKeyAndSign' && params) {
       const [platform, messageHex] = params
+      if (!platform) throw new Error(`invalid platform ${platform}`)
+      if (!messageHex) throw new Error(`invalid messageHex ${messageHex}`)
 
       return showGenerateKeyScreen(platform)
         .then(res => updateKeyListDiv().then(() => res))
@@ -506,6 +510,8 @@ export default function loadVault(window, document, mainElement) {
     // Output: { hasKeyPair: true, hasPassphrase: false }
     if (action === 'showKeyDetail' && params) {
       const [platform, entryId] = params
+      if (!platform) throw new Error(`invalid platform ${platform}`)
+      if (!entryId) throw new Error(`invalid entryId ${entryId}`)
 
       return getKeyDetail(platform, entryId)
         .catch(err => {
@@ -556,6 +562,9 @@ export default function loadVault(window, document, mainElement) {
     // Output: { transactionBytes, transactionJSON, transactionFullHash }
     if (action === 'signTx' && params) {
       const [platform, entryId, tx] = params
+      if (!platform) throw new Error(`invalid platform ${platform}`)
+      if (!entryId) throw new Error(`invalid entryId ${entryId}`)
+      if (typeof tx !== 'object') throw new Error(`invalid tx ${tx}`)
 
       return getKeyDetail(platform, entryId)
         .catch(err => {
@@ -704,7 +713,8 @@ export default function loadVault(window, document, mainElement) {
           .catch(error => {
             // Handle any errors that stopped our call from going through
             console.error('Trigger', error) // eslint-disable-line no-console
-            window.alert(error.message || error)
+            contentDiv.textContent = `Problem with command sent from the main app. ${error}`
+            setTimeout(() => window.close(), 5000)
           })
       }
     })
