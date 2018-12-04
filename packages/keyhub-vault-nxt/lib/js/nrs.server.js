@@ -1342,6 +1342,26 @@ var NRS = (function (NRS, $, undefined) {
                 }
                 pos += 2;
                 break;
+            case "updateHorse":
+                if (transaction.type !== 8 || transaction.subtype !== 0) {
+                    return false;
+                }
+                break;
+            case "registerIHOHorse":
+                if (transaction.type !== 8 || transaction.subtype !== 1) {
+                    return false;
+                }
+                break;
+            case "closeIHOHorse":
+                if (transaction.type !== 8 || transaction.subtype !== 2) {
+                    return false;
+                }
+                break;
+            case "updateHorseTrainingFee":
+                if (transaction.type !== 8 || transaction.subtype !== 3) {
+                    return false;
+                }
+                break;
             default:
                 //invalid requestType..
                 return false;
