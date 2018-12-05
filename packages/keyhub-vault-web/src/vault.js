@@ -26,7 +26,8 @@ const { postMessage } = require('./util/webworker')
 const { drawText, getImageData } = require('./util/canvas')
 
 export default function loadVault(window, document, mainElement) {
-  // workers from multiple platforms
+  // VaultWorker singletons from multiple networks
+  // One platform might run multiple networks (e.g. mainnet)
   const workers = Object.create(null)
 
   const vaultLayoutHTML = safeHtml`<div class="container fade-in" id="mainWrapper">
@@ -52,26 +53,25 @@ export default function loadVault(window, document, mainElement) {
 
   let welcomeDiv
 
-  const activatePlatformKey = (platform, address) => {
+  const activateNetwork = (network, address) => {
     // Lazy-Load Webworker
-    if (!workers[platform]) workers[platform] = new VaultWorker()
-    const worker = workers[platform]
+    if (!workers[network]) workers[network] = new VaultWorker()
+    const worker = workers[network]
 
-    // call configure on background webworker
-    return postMessage(worker, ['configure', { address }]).then(({ config }) => config)
+    // call configure on background webworker to get current config
+    return postMessage(worker, ['configure', { address }]).then(config => ({
+      worker,
+      config,
+    }))
   }
 
-  const showGenerateUnprotectedKeyScreen = (platform, phonenum) => {
-    // Lazy-Load Webworker
-    if (!workers[platform]) workers[platform] = new VaultWorker()
-    const worker = workers[platform]
+  const showGenerateUnprotectedKeyScreen = (platform, network, phonenum) =>
+    activateNetwork(network).then(({ worker }) => {
+      const message = stripIndent`
+        We will text the seed-passphrase to your phone for backup purpose.
+        SMS might be intercepted by an unknown third-party.`
 
-    const message = stripIndent`
-      We will text the secret key to your phone for backup purpose.
-      SMS might be intercepted by an unknown third-party.
-    `
-
-    const pubkey = stripIndent`
+      const pubkey = stripIndent`
       -----BEGIN PGP PUBLIC KEY BLOCK-----
       Version: OpenPGP.js v3.1.0
       Comment: https://openpgpjs.org
@@ -89,37 +89,41 @@ export default function loadVault(window, document, mainElement) {
       -----END PGP PUBLIC KEY BLOCK-----
     `
 
-    const [div, promise] = PhonenumConfirmScreen(document, phonenum, message)
-    contentDiv.innerHTML = ''
-    contentDiv.appendChild(div)
-
-    return promise.then(([choice, phoneNumber]) => {
+      const [div, promise] = PhonenumConfirmScreen(document, phonenum, message)
       contentDiv.innerHTML = ''
-      contentDiv.appendChild(LoadingScreen(document, `Generating ${platform} Key`))
+      contentDiv.appendChild(div)
 
-      return postMessage(worker, ['generatePassphrase', 10])
-        .then(passphrase => `${platform.toLowerCase()} ${passphrase}`)
-        .then(passphrase => {
-          if (choice === 'skip') return { passphrase }
-          // TODO: Updated OpenPGP version has breaking changes to API
-          const openpgp = (window && window.openpgp) || global.openpgp
-          const options = {
-            data: passphrase,
-            publicKeys: openpgp.key.readArmored(pubkey).keys,
-            compression: openpgp.enums.compression.zlib,
-          }
-          return openpgp
-            .encrypt(options)
-            .then(({ data: encPassphrase }) => ({ passphrase, encPassphrase }))
-        })
-        .then(({ passphrase, encPassphrase }) => {
-          contentDiv.innerHTML = ''
-          contentDiv.appendChild(LoadingScreen(document, 'Storing Key in Browser'))
-          const ctx = document.createElement('canvas').getContext('2d')
-          const passphraseImage = getImageData(drawText(ctx, passphrase, 400))
+      return promise.then(([choice, phoneNumber]) => {
+        contentDiv.innerHTML = ''
+        contentDiv.appendChild(LoadingScreen(document, `Generating ${platform} Key`))
 
-          return postMessage(worker, ['storeUnprotectedKey', passphrase, passphraseImage]).then(
-            ({ id, address, accountNo, publicKey }) =>
+        return postMessage(worker, ['generatePassphrase', 10])
+          .then(passphrase => `${platform.toLowerCase()} ${passphrase}`)
+          .then(passphrase => {
+            if (choice === 'skip') return { passphrase }
+            // TODO: Updated OpenPGP version has breaking changes to API
+            const openpgp = (window && window.openpgp) || global.openpgp
+            const options = {
+              data: passphrase,
+              publicKeys: openpgp.key.readArmored(pubkey).keys,
+              compression: openpgp.enums.compression.zlib,
+            }
+            return openpgp
+              .encrypt(options)
+              .then(({ data: encPassphrase }) => ({ passphrase, encPassphrase }))
+          })
+          .then(({ passphrase, encPassphrase }) => {
+            contentDiv.innerHTML = ''
+            contentDiv.appendChild(LoadingScreen(document, 'Storing Key in Browser'))
+            const ctx = document.createElement('canvas').getContext('2d')
+            const passphraseImage = getImageData(drawText(ctx, passphrase, 400))
+
+            return postMessage(worker, [
+              'storeUnprotectedKey',
+              network,
+              passphrase,
+              passphraseImage,
+            ]).then(({ id, address, accountNo, publicKey }) =>
               !encPassphrase
                 ? {
                     id,
@@ -135,161 +139,151 @@ export default function loadVault(window, document, mainElement) {
                     phoneNumber,
                     encPassphrase,
                   }
-          )
+            )
+          })
+      })
+    })
+
+  const showGenerateKeyScreen = (platform, network) =>
+    activateNetwork(network).then(({ worker }) => {
+      contentDiv.innerHTML = ''
+      contentDiv.appendChild(LoadingScreen(document, `Generating Passphrase for ${platform}`))
+
+      // call generatePassphrase on background webworker
+      const p = postMessage(worker, ['generatePassphrase', 10]).then(
+        passphrase => `${platform.toLowerCase()} ${passphrase}`
+      )
+
+      return p
+        .then(passphrase => {
+          const [div, promise] = PassphraseDisplayScreen(document, passphrase)
+          contentDiv.innerHTML = ''
+          contentDiv.appendChild(div)
+          return promise
+        })
+        .then(([choice, passphrase]) => {
+          if (choice !== 'ok') throw new Error('cancelled by user')
+
+          const [div, promise] = PassphraseConfirmScreen(document, passphrase, true)
+          contentDiv.innerHTML = ''
+          contentDiv.appendChild(div)
+
+          return promise.then(([choice2, pin]) => {
+            if (choice2 !== 'ok') throw new Error('cancelled by user')
+
+            contentDiv.innerHTML = ''
+            contentDiv.appendChild(
+              LoadingScreen(document, 'Securely Storing your Key in this Browser')
+            )
+
+            // call createKeyPair on background webworker
+            return postMessage(worker, ['storeProtectedKey', network, passphrase, pin]).then(
+              ({ id, address, accountNo, publicKey }) => ({
+                id,
+                address,
+                accountNo,
+                publicKey,
+                pin,
+              })
+            )
+          })
         })
     })
-  }
-
-  const showGenerateKeyScreen = platform => {
-    contentDiv.innerHTML = ''
-    contentDiv.appendChild(LoadingScreen(document, `Generating Passphrase for ${platform}`))
-
-    // Lazy-Load Webworker
-    if (!workers[platform]) workers[platform] = new VaultWorker()
-    const worker = workers[platform]
-
-    // call generatePassphrase on background webworker
-    const p = postMessage(worker, ['generatePassphrase', 10]).then(
-      passphrase => `${platform.toLowerCase()} ${passphrase}`
-    )
-
-    return p
-      .then(passphrase => {
-        const [div, promise] = PassphraseDisplayScreen(document, passphrase)
-        contentDiv.innerHTML = ''
-        contentDiv.appendChild(div)
-        return promise
-      })
-      .then(([choice, passphrase]) => {
-        if (choice !== 'ok') throw new Error('cancelled by user')
-
-        const [div, promise] = PassphraseConfirmScreen(document, passphrase, true)
-        contentDiv.innerHTML = ''
-        contentDiv.appendChild(div)
-
-        return promise.then(([choice2, pin]) => {
-          if (choice2 !== 'ok') throw new Error('cancelled by user')
-
-          contentDiv.innerHTML = ''
-          contentDiv.appendChild(
-            LoadingScreen(document, 'Securely Storing your Key in this Browser')
-          )
-
-          // call createKeyPair on background webworker
-          return postMessage(worker, ['storeProtectedKey', passphrase, pin]).then(
-            ({ id, address, accountNo, publicKey }) => ({
-              id,
-              address,
-              accountNo,
-              publicKey,
-              pin,
-            })
-          )
-        })
-      })
-  }
 
   const showAddKeyScreen = () => {
     const [div, promise] = KeyAddScreen(document)
     contentDiv.innerHTML = ''
     contentDiv.appendChild(div)
-    return promise.then(platform => showGenerateKeyScreen(platform))
+    return promise.then(({ platform, network }) => showGenerateKeyScreen(platform, network))
   }
 
-  const showRestoreMissingKeyScreen = (platform, desiredAddress) => {
-    // Lazy-Load Webworker
-    if (!workers[platform]) workers[platform] = new VaultWorker()
-    const worker = workers[platform]
+  const showRestoreMissingKeyScreen = (platform, network, desiredAddress) =>
+    activateNetwork(network).then(({ worker }) => {
+      const message = stripIndent`
+        Key for ${desiredAddress} is missing from this browser.
+        Please restore your ${network} key using a backup of your seed-passphrase.`
 
-    const message = `You do not seem to have the key for ${desiredAddress} stored in this browser. Please restore the ${platform} key from backup.`
-
-    const [div, promise] = KeyRestoreScreen(
-      document,
-      'Key Missing',
-      message,
-      platform,
-      desiredAddress,
-      passphrase => postMessage(worker, ['getPassphraseInfo', passphrase])
-    )
-    contentDiv.innerHTML = ''
-    contentDiv.appendChild(div)
-
-    return promise.then(([choice, passphrase]) => {
-      if (choice !== 'ok') throw new Error('cancelled by user')
+      const [div, promise] = KeyRestoreScreen(
+        document,
+        'Key Missing',
+        message,
+        platform,
+        desiredAddress,
+        passphrase => postMessage(worker, ['getPassphraseInfo', passphrase])
+      )
       contentDiv.innerHTML = ''
-      contentDiv.appendChild(LoadingScreen(document, 'Storing Key in Browser'))
-      const ctx = document.createElement('canvas').getContext('2d')
-      const passphraseImage = getImageData(drawText(ctx, passphrase, 400))
+      contentDiv.appendChild(div)
 
-      return postMessage(worker, ['storeUnprotectedKey', passphrase, passphraseImage]).then(
-        ({ id, address, accountNo, publicKey }) => ({
+      return promise.then(([choice, passphrase]) => {
+        if (choice !== 'ok') throw new Error('cancelled by user')
+        contentDiv.innerHTML = ''
+        contentDiv.appendChild(LoadingScreen(document, 'Storing Key in Browser'))
+        const ctx = document.createElement('canvas').getContext('2d')
+        const passphraseImage = getImageData(drawText(ctx, passphrase, 400))
+
+        return postMessage(worker, [
+          'storeUnprotectedKey',
+          network,
+          passphrase,
+          passphraseImage,
+        ]).then(({ id, address, accountNo, publicKey }) => ({
           id,
           address,
           accountNo,
           publicKey,
-        })
-      )
+        }))
+      })
     })
-  }
 
-  const getKeyDetail = (platform, entryId) => {
-    // Lazy-Load Webworker
-    if (!workers[platform]) workers[platform] = new VaultWorker()
-    const worker = workers[platform]
+  const getKeyDetail = (network, entryId) =>
+    activateNetwork(network).then(({ worker }) =>
+      // call getKeyPair on background webworker
+      postMessage(worker, ['getStoredKeyInfo', entryId]).then(
+        ({ address, accountNo, publicKey, hasPinProtection, hasPassphrase }) => {
+          if (!hasPassphrase) {
+            return {
+              address,
+              accountNo,
+              publicKey,
+              hasPinProtection,
+            }
+          }
 
-    // call getKeyPair on background webworker
-    return postMessage(worker, ['getStoredKeyInfo', entryId]).then(
-      ({ address, accountNo, publicKey, hasPinProtection, hasPassphrase }) => {
-        if (!hasPassphrase) {
-          return {
+          return postMessage(worker, ['getStoredKeyPassphrase', entryId]).then(passphraseImage => ({
             address,
             accountNo,
             publicKey,
             hasPinProtection,
-          }
+            passphraseImage,
+          }))
         }
-
-        return postMessage(worker, ['getStoredKeyPassphrase', entryId]).then(passphraseImage => ({
-          address,
-          accountNo,
-          publicKey,
-          hasPinProtection,
-          passphraseImage,
-        }))
-      }
+      )
     )
-  }
 
-  const signTransaction = (platform, address, tx, optionalPin = null) => {
-    // Lazy-Load Webworker
-    if (!workers[platform]) workers[platform] = new VaultWorker()
-    const worker = workers[platform]
+  const signTransaction = (network, address, tx, optionalPin = null) =>
+    activateNetwork(network).then(({ worker }) => {
+      contentDiv.innerHTML = ''
+      contentDiv.appendChild(LoadingScreen(document, 'Signing Transaction'))
 
-    contentDiv.innerHTML = ''
-    contentDiv.appendChild(LoadingScreen(document, 'Signing Transaction'))
+      return postMessage(worker, ['signTransaction', address, tx.type, tx.data, optionalPin]).then(
+        ({ transactionBytes, transactionJSON, transactionFullHash }) => ({
+          transactionBytes,
+          transactionJSON,
+          transactionFullHash,
+        })
+      )
+    })
 
-    return postMessage(worker, ['signTransaction', address, tx.type, tx.data, optionalPin]).then(
-      ({ transactionBytes, transactionJSON, transactionFullHash }) => ({
-        transactionBytes,
-        transactionJSON,
-        transactionFullHash,
-      })
-    )
-  }
+  const signMessage = (network, address, message, optionalPin = null) =>
+    activateNetwork(network).then(({ worker }) => {
+      contentDiv.innerHTML = ''
+      contentDiv.appendChild(LoadingScreen(document, 'Signing Document'))
 
-  const signMessage = (platform, address, message, optionalPin = null) => {
-    // Lazy-Load Webworker
-    if (!workers[platform]) workers[platform] = new VaultWorker()
-    const worker = workers[platform]
-
-    contentDiv.innerHTML = ''
-    contentDiv.appendChild(LoadingScreen(document, 'Signing Document'))
-
-    // call signMessage on background worker
-    return postMessage(worker, ['signMessage', address, message, optionalPin]).then(
-      ({ signature }) => signature
-    )
-  }
+      // call signMessage on background worker
+      return postMessage(worker, ['signMessage', address, message, optionalPin]).then(
+        ({ signature }) => signature
+      )
+    })
 
   const updateKeyListDiv = () =>
     new Promise((resolve, reject) => {
@@ -298,27 +292,26 @@ export default function loadVault(window, document, mainElement) {
           const req = accounts.getAll()
           req.onsuccess = ({ target: { result: entries } }) => {
             if (Array.isArray(entries) && entries.length > 0) {
-              // Group by platform
-              const keysByPlatform = entries.reduce((acc, entry) => {
-                const g = acc[entry.platform]
+              // Group by network name
+              const keysByNetwork = entries.reduce((acc, entry) => {
+                const g = acc[entry.network || entry.platform]
                 if (g) g.push(entry)
-                else acc[entry.platform] = [entry]
+                else acc[entry.network || entry.platform] = [entry]
                 return acc
               }, {})
 
               // onClick handler for <ul/>
               const onClick = ul => ({ target: { type, dataset, classList } }) => {
                 if (type === 'button' && dataset) {
-                  const { platform, address, entryId } = dataset
-                  // const entry = entries.find(e => e.platform === platform && e.address === address)
-                  activatePlatformKey(platform, address)
+                  const { network, address, entryId } = dataset
+                  activateNetwork(network, address)
                     .then(() => {
                       ul.querySelectorAll('button').forEach(
                         li => li.classList.remove('btn-dark') && li.classList.add('btn-light')
                       )
                       classList.remove('btn-light')
                       classList.add('btn-dark')
-                      return getKeyDetail(platform, entryId).then(keyDetail => {
+                      return getKeyDetail(network, entryId).then(keyDetail => {
                         const [div] = KeyDetailScreen(document, keyDetail)
                         contentDiv.innerHTML = ''
                         contentDiv.appendChild(div)
@@ -331,22 +324,22 @@ export default function loadVault(window, document, mainElement) {
               }
 
               keyListDiv.innerHTML = ''
-              Object.keys(keysByPlatform).forEach(platform => {
+              Object.keys(keysByNetwork).forEach(network => {
                 const div = document.createElement('div')
                 const h3 = document.createElement('h3')
-                h3.appendChild(document.createTextNode(platform))
+                h3.appendChild(document.createTextNode(network))
                 div.appendChild(h3)
                 const ul = document.createElement('ul')
                 ul.addEventListener('click', onClick(ul))
 
-                const plaformKeys = keysByPlatform[platform]
+                const plaformKeys = keysByNetwork[network]
                 plaformKeys.forEach(entry => {
                   const li = document.createElement('li')
                   const button = document.createElement('button') // eslint-disable-line
                   button.type = 'button'
                   button.classList.add('btn', 'btn-light')
                   button.appendChild(document.createTextNode(entry.address))
-                  button.dataset.platform = entry.platform
+                  button.dataset.network = entry.network
                   button.dataset.address = entry.address
                   button.dataset.entryId = entry.id
                   li.appendChild(button)
@@ -388,17 +381,18 @@ export default function loadVault(window, document, mainElement) {
   // Handle Cross-Tab Actions from postRobot
   const triggerAction = (action, params, callback) => {
     // Trigger A: App wants to create new unprotected key for user
-    // Input: { action: 'newUnprotectedKeyAndSign', params: [ 'EQH', messageHex, phoneNumber ] }
+    // Input: { action: 'newUnprotectedKeyAndSign', params: { platform: 'EQH', network: 'Equinehub', messageHex: '', phoneNumber: '' } }
     // Output: { publicKey, signature }
     if (action === 'newUnprotectedKeyAndSign' && params) {
-      const [platform, messageHex, phoneNum = ''] = params
+      const { platform, network, messageHex, phoneNum = '' } = params
       if (!platform) throw new Error(`invalid platform ${platform}`)
+      if (!network) throw new Error(`invalid network ${network}`)
       if (!messageHex) throw new Error(`invalid messageHex ${messageHex}`)
 
-      return showGenerateUnprotectedKeyScreen(platform, phoneNum)
+      return showGenerateUnprotectedKeyScreen(platform, network, phoneNum)
         .then(res => updateKeyListDiv().then(() => res))
         .then(({ address, publicKey, phoneNumber, encPassphrase }) =>
-          signMessage(platform, address, messageHex).then(signature => {
+          signMessage(network, address, messageHex).then(signature => {
             contentDiv.innerHTML = ''
             contentDiv.appendChild(LoadingScreen(document, 'Registering Key'))
             // callback to the parent window with result
@@ -444,17 +438,18 @@ export default function loadVault(window, document, mainElement) {
     }
 
     // Trigger B: App wants to create new key for user
-    // Input: { action: 'newKeyAndSign', params: [ 'EQH', messageHex ] }
+    // Input: { action: 'newKeyAndSign', params: { platform: 'EQH', network: 'Main', messageHex: '' } }
     // Output: { publicKey, signature }
     if (action === 'newKeyAndSign' && params) {
-      const [platform, messageHex] = params
+      const { platform, network, messageHex } = params
       if (!platform) throw new Error(`invalid platform ${platform}`)
+      if (!network) throw new Error(`invalid network ${network}`)
       if (!messageHex) throw new Error(`invalid messageHex ${messageHex}`)
 
-      return showGenerateKeyScreen(platform)
+      return showGenerateKeyScreen(platform, network)
         .then(res => updateKeyListDiv().then(() => res))
         .then(({ address, publicKey, pin }) =>
-          signMessage(platform, address, messageHex, pin).then(signature => {
+          signMessage(network, address, messageHex, pin).then(signature => {
             contentDiv.innerHTML = ''
             contentDiv.appendChild(LoadingScreen(document, 'Registering Key'))
             // callback to the parent window with result
@@ -506,14 +501,15 @@ export default function loadVault(window, document, mainElement) {
     }
 
     // Trigger C: App wants to display key detail screen
-    // Input: { action: 'showKeyDetail', params: [ 'EQH', 'EQH-xxx-xxx-xxx-xxx' ] }
+    // Input: { action: 'showKeyDetail', params: { platform: 'EQH', network: 'Equinehub', id: 'EQH-xxx-xxx-xxx-xxx' } }
     // Output: { hasKeyPair: true, hasPassphrase: false }
     if (action === 'showKeyDetail' && params) {
-      const [platform, entryId] = params
+      const { platform, network, id: entryId } = params
       if (!platform) throw new Error(`invalid platform ${platform}`)
-      if (!entryId) throw new Error(`invalid entryId ${entryId}`)
+      if (!network) throw new Error(`invalid network ${network}`)
+      if (!entryId) throw new Error(`invalid id ${entryId}`)
 
-      return getKeyDetail(platform, entryId)
+      return getKeyDetail(network, entryId)
         .catch(err => {
           if (!err.message.includes('missing')) throw err
           // callback to the parent window with key state before restore
@@ -521,8 +517,8 @@ export default function loadVault(window, document, mainElement) {
             hasKeyPair: false,
             hasPassphrase: false,
           })
-          return showRestoreMissingKeyScreen(platform, entryId).then(() =>
-            getKeyDetail(platform, entryId)
+          return showRestoreMissingKeyScreen(platform, network, entryId).then(() =>
+            getKeyDetail(network, entryId)
           )
         })
         .then(keyDetail => {
@@ -558,15 +554,16 @@ export default function loadVault(window, document, mainElement) {
     }
 
     // Trigger D: App wants to sign transaction
-    // Input: { action: 'signTx', params: [ 'EQH', 'EQH-xxx-xxx-xxx-xxx', tx ] }
+    // Input: { action: 'signTx', params: { platform: 'EQH', network: 'Equinehub', id: 'EQH-xxx-xxx-xxx-xxx', tx: {} } }
     // Output: { transactionBytes, transactionJSON, transactionFullHash }
     if (action === 'signTx' && params) {
-      const [platform, entryId, tx] = params
+      const { platform, network, id: entryId, tx } = params
       if (!platform) throw new Error(`invalid platform ${platform}`)
-      if (!entryId) throw new Error(`invalid entryId ${entryId}`)
+      if (!network) throw new Error(`invalid network ${network}`)
+      if (!entryId) throw new Error(`invalid id ${entryId}`)
       if (typeof tx !== 'object') throw new Error(`invalid tx ${tx}`)
 
-      return getKeyDetail(platform, entryId)
+      return getKeyDetail(network, entryId)
         .catch(err => {
           if (!err.message.includes('missing')) throw err
           // callback to the parent window with key state before restore
@@ -574,8 +571,8 @@ export default function loadVault(window, document, mainElement) {
             hasKeyPair: false,
             hasPassphrase: false,
           })
-          return showRestoreMissingKeyScreen(platform, entryId).then(() =>
-            getKeyDetail(platform, entryId)
+          return showRestoreMissingKeyScreen(platform, network, entryId).then(() =>
+            getKeyDetail(network, entryId)
           )
         })
         .then(keyDetail => {
@@ -608,7 +605,7 @@ export default function loadVault(window, document, mainElement) {
             div.classList.add('d-none')
             loadingDiv.classList.remove('d-none')
 
-            return signTransaction(platform, address, tx, pin)
+            return signTransaction(network, address, tx, pin)
           })
         })
         .then(({ transactionBytes, transactionJSON, transactionFullHash }) => {
@@ -694,7 +691,7 @@ export default function loadVault(window, document, mainElement) {
       } else {
         // Tell parent window vault is ready
         postRobot
-          .send(window.opener, 'vaultReady', { version: '1.0' })
+          .send(window.opener, 'vaultReady', { version: '1.2.0' })
           .then(event => {
             // console.log(event.source, event.origin)
             // TODO: security checks on source/origin

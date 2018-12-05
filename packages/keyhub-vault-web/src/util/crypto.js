@@ -119,6 +119,20 @@ const digest = (messageArrayBuf, algo = { name: 'SHA-384' }) => {
   return subtle.digest(safeObj(algo), messageArrayBuf)
 }
 
+const digestKeyed = (keyArrayBuf, messageArrayBuf, algo = { name: 'SHA-512' }) => {
+  // See: https://security.stackexchange.com/questions/79577/whats-the-difference-between-hmac-sha256key-data-and-sha256key-data
+  const subtle = getCryptoSubtle()
+  return subtle
+    .importKey(
+      'raw',
+      keyArrayBuf,
+      { name: 'HMAC', length: keyArrayBuf.byteLength * 8, hash: safeObj(algo) },
+      false,
+      ['sign', 'verify']
+    )
+    .then(cryptoKey => subtle.sign({ name: 'HMAC' }, cryptoKey, messageArrayBuf))
+}
+
 const encrypt = (plaintextArrayBuf, strongCryptoKey, algo) => {
   const subtle = getCryptoSubtle()
   return subtle.encrypt(safeObj(algo), strongCryptoKey, plaintextArrayBuf)
@@ -232,6 +246,7 @@ module.exports = {
   exportKey,
   exportKeys,
   digest,
+  digestKeyed,
   encrypt,
   decrypt,
   wrapKey,

@@ -8,7 +8,7 @@ export default function createElement(document) {
     Please pick from one of our partners below:
   </p>
   <div class="plaform-picker">
-    <a href="#" data-platform="EQH">
+    <a href="#" data-platform="EQH" data-network="Equinehub">
       <img src="./img/brand/eqh-logo.png" alt="EquineHub" />
     </a>
   </div>
@@ -17,7 +17,7 @@ export default function createElement(document) {
   const promise = new Promise(resolve => {
     const options = div.querySelectorAll('a')
     options.forEach(a =>
-      a.addEventListener('click', ev => resolve(ev.currentTarget.dataset.platform))
+      a.addEventListener('click', ev => resolve(Object.assign({}, ev.currentTarget.dataset)))
     )
   })
 

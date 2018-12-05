@@ -10,7 +10,7 @@ const {
   safeObj,
   encrypt,
   decrypt,
-  digest,
+  digestKeyed,
   wrapKey,
   wrapKeyWithPin,
   unwrapKey,
@@ -38,42 +38,44 @@ bridge.load(NRS => {
   log('Loaded NRS-bridge.')
 
   // Helper function to get key info of a provided secretPhrase
-  const getKeyInfo = secretPhrase => {
-    const publicKey = NRS.getPublicKey(secretPhrase)
+  const getKeyInfo = secretPhraseHex => {
+    const publicKey = NRS.getPublicKey(secretPhraseHex)
     const accountNo = NRS.getAccountIdFromPublicKey(publicKey)
     const address = NRS.convertNumericToRSAccountFormat(accountNo)
     return { publicKey, accountNo, address }
   }
 
   // Helper function to create and store a new Key
-  const storeKey = (passphraseUint8, cryptoKeyOrPin, opts) =>
-    // Hash the passphrase to get the nxt secretPhrase
-    digest(passphraseUint8, { name: 'SHA-384' })
-      .then(secretPhraseBuffer => {
+  const storeKey = (networkName, passphraseUint8, cryptoKeyOrPin, opts) => {
+    // See: https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki
+    const digestKeyUint8 = Uint8Array.from(converters.stringToByteArray(`${networkName} seed`))
+    // Hash the seed passphrase to get the nxt masterPhrase
+    return digestKeyed(digestKeyUint8, passphraseUint8, { name: 'SHA-512' })
+      .then(digestBuffer => {
         // Note: Non-truncated SHA is vulnerable to length extension attack (e.g. sha256 & sha512)
         // We use a longer hash here and truncate to desired AES keySize (e.g. 256)
-        const secretPhraseUint8 = new Uint8Array(secretPhraseBuffer, 0, PRIVATE_KEY_LENGTH / 8)
+        const masterPhraseUint8 = new Uint8Array(digestBuffer, 0, PRIVATE_KEY_LENGTH / 8)
+        // const chainCodeUint8 = new Uint8Array(digestBuffer, PRIVATE_KEY_LENGTH / 8)
         return cryptoKeyOrPin instanceof Uint8Array
-          ? wrapKeyWithPin(secretPhraseUint8, cryptoKeyOrPin, opts)
-          : wrapKey(secretPhraseUint8, cryptoKeyOrPin, opts)
+          ? wrapKeyWithPin(masterPhraseUint8, cryptoKeyOrPin, opts)
+          : wrapKey(masterPhraseUint8, cryptoKeyOrPin, opts)
       })
       .then(exportKeys) // Ensure key can be exported / extracted
-      .then(([secretPhraseObj, secretPhraseBuffer]) => {
-        // secretPhraseHex is the real secretPhrase used to sign transactions
-        // secretPhraseJwk is the encrypted secretPhrase in 'jwk' format
-        const secretPhraseUint8 = new Uint8Array(secretPhraseBuffer)
-        const secretPhraseHex = converters.byteArrayToHexString(Array.from(secretPhraseUint8))
-        const { publicKey, address, accountNo } = getKeyInfo(secretPhraseHex)
+      .then(([masterPhraseObj, masterPhraseBuffer]) => {
+        // masterPhrase is the real privateKey used to sign transactions
+        const masterPhraseUint8 = new Uint8Array(masterPhraseBuffer)
+        const masterPhraseHex = converters.byteArrayToHexString(Array.from(masterPhraseUint8))
+        const { publicKey, address, accountNo } = getKeyInfo(masterPhraseHex)
 
         // Store key in browser's indexedDB
         return new Promise((resolve, reject) => {
           const entry = {
             id: address,
-            platform: 'EquineHub',
+            network: networkName,
             publicKey,
             address,
             accountNo,
-            secretPhrase: secretPhraseObj,
+            masterPhrase: masterPhraseObj,
             createdAt: new Date(),
             lastUsedAt: null,
           }
@@ -91,15 +93,16 @@ bridge.load(NRS => {
           })
         })
       })
+  }
 
-  // Helper function to store cleartext passphrase
+  // Helper function to store seed passphrase
   const storePassphrase = (entryId, passphraseImage, cryptoKey) => {
-    // Encrypt the cleardata of the passphraseImage
+    // Encrypt the cleardata of the seed passphraseImage
     const encryptAlgo = { name: 'AES-GCM', iv: genInitVector() }
     return encrypt(passphraseImage.data, cryptoKey, encryptAlgo).then(
       cipherdataBuffer =>
         new Promise((resolve, reject) => {
-          // Store encrypted passphrase image in browser's indexedDB
+          // Store encrypted seed passphrase image in browser's indexedDB
           callOnStore('accounts', accounts => {
             const req = accounts.get(entryId)
             req.onerror = err => reject(err)
@@ -126,10 +129,10 @@ bridge.load(NRS => {
     )
   }
 
-  // Helper function to retrieve cleartext passphrase
+  // Helper function to retrieve seed passphrase
   const retrievePassphrase = (entryId, cryptoKey) =>
     new Promise((resolve, reject) => {
-      // Retrieve encrypted passphrase in browser's indexedDB
+      // Retrieve encrypted seed passphrase in browser's indexedDB
       callOnStore('accounts', accounts => {
         const req = accounts.get(entryId)
         req.onerror = err => reject(err)
@@ -140,7 +143,7 @@ bridge.load(NRS => {
           }
 
           if (entry.passphraseImage) {
-            // Decrypt the plaintext passphrase
+            // Decrypt the seed passphrase
             const { encryptData, encryptAlgo, width, height } = entry.passphraseImage
             decrypt(encryptData, cryptoKey, encryptAlgo)
               .then(cleardataBuffer =>
@@ -181,7 +184,7 @@ bridge.load(NRS => {
     const data = safeObj({
       ...fixTxNumberFormat(txData),
       broadcast: 'false',
-      secretPhraseHex, // secretPhraseHex is the sha256 hash of the user's passphrase
+      secretPhraseHex,
       ...NRS.getMandatoryParams(),
     })
 
@@ -203,14 +206,14 @@ bridge.load(NRS => {
     configure: config => {
       if (typeof config !== 'object') throw new Error('config is not an object')
 
-      if (config.address !== undefined) {
+      if (config.address) {
         const { address, ...conf } = config
         conf.accountRS = address
         bridge.configure(conf)
       } else {
         bridge.configure(config)
       }
-      return { config }
+      return config
     },
     generatePassphrase: wordcount => {
       const randomWords = dicewareGen({
@@ -222,16 +225,21 @@ bridge.load(NRS => {
 
       return passphrase
     },
-    getPassphraseInfo: passphrase => {
+    getPassphraseInfo: (networkName, passphrase) => {
+      // See: https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki
+      const digestKeyUint8 = Uint8Array.from(converters.stringToByteArray(`${networkName} seed`))
       const passphraseUint8 = Uint8Array.from(converters.stringToByteArray(passphrase))
-      // Hash the passphrase to get the nxt secretPhrase
-      return digest(passphraseUint8, { name: 'SHA-384' }).then(secretPhraseBuffer => {
-        // Note: Non-truncated SHA is vulnerable to length extension attack (e.g. sha256 & sha512)
-        // We use a longer hash here and truncate to desired AES keySize (e.g. 256)
-        const secretPhraseUint8 = new Uint8Array(secretPhraseBuffer, 0, PRIVATE_KEY_LENGTH / 8)
-        const secretPhraseHex = converters.byteArrayToHexString(Array.from(secretPhraseUint8))
-        return getKeyInfo(secretPhraseHex)
-      })
+      // Hash the passphrase to get the nxt masterPhrase
+      return digestKeyed(digestKeyUint8, passphraseUint8, { name: 'SHA-512' }).then(
+        digestBuffer => {
+          // Note: Non-truncated SHA is vulnerable to length extension attack (e.g. sha256 & sha512)
+          // We use a longer hash here and truncate to desired AES keySize (e.g. 256)
+          const masterPhraseUint8 = new Uint8Array(digestBuffer, 0, PRIVATE_KEY_LENGTH / 8)
+          // const chainCodeUint8 = new Uint8Array(digestBuffer, PRIVATE_KEY_LENGTH / 8)
+          const masterPhraseHex = converters.byteArrayToHexString(Array.from(masterPhraseUint8))
+          return getKeyInfo(masterPhraseHex)
+        }
+      )
     },
     getStoredKeyInfo: entryId => {
       if (typeof entryId !== 'string') throw new Error('address / entryId is not a string')
@@ -250,7 +258,7 @@ bridge.load(NRS => {
                 accountNo: entry.accountNo,
                 publicKey: entry.publicKey,
                 createdAt: entry.createdAt,
-                hasPinProtection: !!entry.secretPhrase.deriveAlgo,
+                hasPinProtection: !!(entry.masterPhrase && entry.masterPhrase.deriveAlgo),
                 hasPassphrase: !!entry.passphraseImage,
               })
             }
@@ -266,20 +274,20 @@ bridge.load(NRS => {
         callOnStore('prefs', prefs => {
           const req = prefs.get('masterkey')
           req.onerror = err => reject(err)
-          req.onsuccess = ({ target: { result: masterCryptoKey } }) => {
-            if (!masterCryptoKey) {
+          req.onsuccess = ({ target: { result: defaultCryptoKey } }) => {
+            if (!defaultCryptoKey) {
               reject(new Error('vault masterKey is missing in this browser'))
               return
             }
 
-            retrievePassphrase(entryId, masterCryptoKey)
+            retrievePassphrase(entryId, defaultCryptoKey)
               .then(resolve)
               .catch(reject)
           }
         })
       })
     },
-    storeUnprotectedKey: (passphrase, passphraseImage) => {
+    storeUnprotectedKey: (networkName, passphrase, passphraseImage) => {
       if (typeof passphrase !== 'string') throw new Error('passphrase is not a string')
       // eslint-disable-next-line no-undef
       if (passphraseImage && !(passphraseImage instanceof ImageData))
@@ -308,13 +316,13 @@ bridge.load(NRS => {
           req.onerror = err => reject(err)
           req.onsuccess = ({ target: { result: entry } }) => {
             if (entry) {
-              const masterCryptoKey = entry
-              storeKey(passphraseUint8, masterCryptoKey, opts)
+              const defaultCryptoKey = entry
+              storeKey(networkName, passphraseUint8, defaultCryptoKey, opts)
                 .then(keyInfo => {
                   if (!passphraseImage) {
                     resolve(keyInfo)
                   } else {
-                    storePassphrase(keyInfo.id, passphraseImage, masterCryptoKey).then(() =>
+                    storePassphrase(keyInfo.id, passphraseImage, defaultCryptoKey).then(() =>
                       resolve(keyInfo)
                     )
                   }
@@ -326,19 +334,21 @@ bridge.load(NRS => {
               const masterKeyUsages = ['encrypt', 'decrypt', 'wrapKey', 'unwrapKey']
               subtle
                 .generateKey(safeObj(keyAlgo), masterKeyExtractable, masterKeyUsages)
-                .then(masterCryptoKey => {
+                .then(defaultCryptoKey => {
                   callOnStore('prefs', p => {
-                    p.put(masterCryptoKey, 'masterkey')
+                    p.put(defaultCryptoKey, 'masterkey')
                   })
-                  return storeKey(passphraseUint8, masterCryptoKey, opts).then(keyInfo => {
-                    if (!passphraseImage) {
-                      resolve(keyInfo)
-                    } else {
-                      storePassphrase(keyInfo.id, passphraseImage, masterCryptoKey).then(() =>
+                  return storeKey(networkName, passphraseUint8, defaultCryptoKey, opts).then(
+                    keyInfo => {
+                      if (!passphraseImage) {
                         resolve(keyInfo)
-                      )
+                      } else {
+                        storePassphrase(keyInfo.id, passphraseImage, defaultCryptoKey).then(() =>
+                          resolve(keyInfo)
+                        )
+                      }
                     }
-                  })
+                  )
                 })
                 .catch(reject)
             }
@@ -346,12 +356,12 @@ bridge.load(NRS => {
         })
       })
     },
-    storeProtectedKey: (passphrase, secretPin) => {
+    storeProtectedKey: (networkName, passphrase, masterPin) => {
       if (typeof passphrase !== 'string') throw new Error('passphrase is not a string')
-      if (typeof secretPin !== 'string') throw new Error('secretPin is not a string')
+      if (typeof masterPin !== 'string') throw new Error('masterPin is not a string')
 
       const passphraseUint8 = Uint8Array.from(converters.stringToByteArray(passphrase))
-      const secretPinUint8 = Uint8Array.from(converters.stringToByteArray(secretPin))
+      const masterPinUint8 = Uint8Array.from(converters.stringToByteArray(masterPin))
 
       const keyAlgo = {
         name: 'AES-GCM',
@@ -368,11 +378,11 @@ bridge.load(NRS => {
         deriveAlgo: genDeriveAlgo(),
       }
 
-      return storeKey(passphraseUint8, secretPinUint8, opts)
+      return storeKey(networkName, passphraseUint8, masterPinUint8, opts)
     },
-    signTransaction: (entryId, txType, txData, secretPin) => {
+    signTransaction: (entryId, txType, txData, masterPin) => {
       if (typeof entryId !== 'string') throw new Error('address / entryId is not a string')
-      if (typeof secretPin !== 'string') throw new Error('secretPin is not a string')
+      if (typeof masterPin !== 'string') throw new Error('masterPin is not a string')
       if (typeof txType !== 'string') throw new Error('txType is not a string')
       if (typeof txData !== 'object') throw new Error('txData is not an object')
 
@@ -386,33 +396,33 @@ bridge.load(NRS => {
               reject(new Error('key is missing in this browser'))
               return
             }
-            if (!entry.secretPhrase) {
-              reject(new Error('key secretPhrase is not stored in this browser'))
+            if (!entry.masterPhrase) {
+              reject(new Error('key masterPhrase is not stored in this browser'))
               return
             }
 
-            // const { format, key, keyAlgo, unwrapAlgo, deriveAlgo } = entry.secretPhrase
-            const { secretPhrase: secretPhraseObj } = entry
+            // const { format, key, keyAlgo, unwrapAlgo, deriveAlgo } = entry.masterPhrase
+            const { masterPhrase: masterPhraseObj } = entry
 
             // TODO: Update the lastUsedAt timestamp
 
-            if (secretPhraseObj.deriveAlgo) {
-              if (typeof secretPin !== 'string') throw new Error('secretPin is not a string')
+            if (masterPhraseObj.deriveAlgo) {
+              if (typeof masterPin !== 'string') throw new Error('masterPin is not a string')
 
-              const secretPinBytes = converters.stringToByteArray(secretPin)
-              const secretPinUint8 = Uint8Array.from(secretPinBytes)
+              const masterPinBytes = converters.stringToByteArray(masterPin)
+              const masterPinUint8 = Uint8Array.from(masterPinBytes)
 
-              // Unwrap the wrapped secretPhrase object
-              unwrapKeyWithPin(secretPinUint8, secretPhraseObj)
+              // Unwrap the wrapped masterPhrase object
+              unwrapKeyWithPin(masterPinUint8, masterPhraseObj)
                 .catch(err => {
                   if (err.type === 'OperationError') throw Error('PIN is incorrect')
                   throw err
                 })
-                .then(secretPhraseBuffer => {
-                  const secretPhraseUint8 = new Uint8Array(secretPhraseBuffer)
-                  return converters.byteArrayToHexString(Array.from(secretPhraseUint8))
+                .then(masterPhraseBuffer => {
+                  const masterPhraseUint8 = new Uint8Array(masterPhraseBuffer)
+                  return converters.byteArrayToHexString(Array.from(masterPhraseUint8))
                 })
-                .then(secretPhraseHex => encodeTransactionBytes(txType, txData, secretPhraseHex))
+                .then(masterPhraseHex => encodeTransactionBytes(txType, txData, masterPhraseHex))
                 .then(({ transactionJSON, transactionBytes, fullHash: transactionFullHash }) => {
                   resolve({
                     transactionJSON,
@@ -426,20 +436,20 @@ bridge.load(NRS => {
               callOnStore('prefs', prefs => {
                 const req2 = prefs.get('masterkey')
                 req2.onerror = err => reject(err)
-                req2.onsuccess = ({ target: { result: masterCryptoKey } }) => {
-                  if (!masterCryptoKey) {
+                req2.onsuccess = ({ target: { result: defaultCryptoKey } }) => {
+                  if (!defaultCryptoKey) {
                     reject(new Error('vault masterKey is missing in this browser'))
                     return
                   }
 
-                  // Unwrap the wrapped secretPhrase object
-                  unwrapKey(masterCryptoKey, secretPhraseObj)
-                    .then(secretPhraseBuffer => {
-                      const secretPhraseUint8 = new Uint8Array(secretPhraseBuffer)
-                      return converters.byteArrayToHexString(Array.from(secretPhraseUint8))
+                  // Unwrap the wrapped masterPhrase object
+                  unwrapKey(defaultCryptoKey, masterPhraseObj)
+                    .then(masterPhraseBuffer => {
+                      const masterPhraseUint8 = new Uint8Array(masterPhraseBuffer)
+                      return converters.byteArrayToHexString(Array.from(masterPhraseUint8))
                     })
-                    .then(secretPhraseHex =>
-                      encodeTransactionBytes(txType, txData, secretPhraseHex)
+                    .then(masterPhraseHex =>
+                      encodeTransactionBytes(txType, txData, masterPhraseHex)
                     )
                     .then(
                       ({ transactionJSON, transactionBytes, fullHash: transactionFullHash }) => {
@@ -458,7 +468,7 @@ bridge.load(NRS => {
         })
       })
     },
-    signMessage: (entryId, messageHex, secretPin) => {
+    signMessage: (entryId, messageHex, masterPin) => {
       if (typeof entryId !== 'string') throw new Error('address / entryId is not a string')
       if (typeof messageHex !== 'string') throw new Error('message is not a hex string')
 
@@ -474,30 +484,30 @@ bridge.load(NRS => {
               reject(new Error('key is missing in this browser'))
               return
             }
-            if (!entry.secretPhrase) {
-              reject(new Error('key secretPhrase is not stored in this browser'))
+            if (!entry.masterPhrase) {
+              reject(new Error('key masterPhrase is not stored in this browser'))
               return
             }
 
-            // const { format, key, keyAlgo, unwrapAlgo, deriveAlgo } = entry.secretPhrase
-            const { secretPhrase: secretPhraseObj } = entry
+            // const { format, key, keyAlgo, unwrapAlgo, deriveAlgo } = entry.masterPhrase
+            const { masterPhrase: masterPhraseObj } = entry
 
             // TODO: Update the lastUsedAt timestamp
 
-            if (secretPhraseObj.deriveAlgo) {
-              if (typeof secretPin !== 'string') throw new Error('secretPin is not a string')
+            if (masterPhraseObj.deriveAlgo) {
+              if (typeof masterPin !== 'string') throw new Error('masterPin is not a string')
 
-              const secretPinBytes = converters.stringToByteArray(secretPin)
-              const secretPinUint8 = Uint8Array.from(secretPinBytes)
+              const masterPinBytes = converters.stringToByteArray(masterPin)
+              const masterPinUint8 = Uint8Array.from(masterPinBytes)
 
-              // Unwrap the wrapped secretPhrase object
-              unwrapKeyWithPin(secretPinUint8, secretPhraseObj)
-                .then(secretPhraseBuffer => {
-                  const secretPhraseUint8 = new Uint8Array(secretPhraseBuffer)
-                  return converters.byteArrayToHexString(Array.from(secretPhraseUint8))
+              // Unwrap the wrapped masterPhrase object
+              unwrapKeyWithPin(masterPinUint8, masterPhraseObj)
+                .then(masterPhraseBuffer => {
+                  const masterPhraseUint8 = new Uint8Array(masterPhraseBuffer)
+                  return converters.byteArrayToHexString(Array.from(masterPhraseUint8))
                 })
-                .then(secretPhraseHex => {
-                  const signature = NRS.signBytes(messageHex, secretPhraseHex)
+                .then(masterPhraseHex => {
+                  const signature = NRS.signBytes(messageHex, masterPhraseHex)
                   resolve({ signature })
                 })
                 .catch(reject)
@@ -506,19 +516,19 @@ bridge.load(NRS => {
               callOnStore('prefs', prefs => {
                 const req2 = prefs.get('masterkey')
                 req2.onerror = err => reject(err)
-                req2.onsuccess = ({ target: { result: masterCryptoKey } }) => {
-                  if (!masterCryptoKey) {
+                req2.onsuccess = ({ target: { result: defaultCryptoKey } }) => {
+                  if (!defaultCryptoKey) {
                     reject(new Error('vault masterKey is missing in this browser'))
                     return
                   }
 
-                  unwrapKey(masterCryptoKey, secretPhraseObj)
-                    .then(secretPhraseBuffer => {
-                      const secretPhraseUint8 = new Uint8Array(secretPhraseBuffer)
-                      return converters.byteArrayToHexString(Array.from(secretPhraseUint8))
+                  unwrapKey(defaultCryptoKey, masterPhraseObj)
+                    .then(masterPhraseBuffer => {
+                      const masterPhraseUint8 = new Uint8Array(masterPhraseBuffer)
+                      return converters.byteArrayToHexString(Array.from(masterPhraseUint8))
                     })
-                    .then(secretPhraseHex => {
-                      const signature = NRS.signBytes(messageHex, secretPhraseHex)
+                    .then(masterPhraseHex => {
+                      const signature = NRS.signBytes(messageHex, masterPhraseHex)
                       resolve({ signature })
                     })
                     .catch(reject)
