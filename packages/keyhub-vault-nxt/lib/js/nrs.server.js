@@ -1346,21 +1346,246 @@ var NRS = (function (NRS, $, undefined) {
                 if (transaction.type !== 8 || transaction.subtype !== 0) {
                     return false;
                 }
+
+                pos++;
+                // validating horseId
+                if (converters.byteArrayToBigInteger(byteArray, pos) !== data.horseId) {
+                  return false;
+                }
+                pos+=8;
+
+                // validating type
+                length = byteArray[pos];
+                pos++;
+                if (converters.byteArrayToString(byteArray, pos, length) !== data.type) {
+                  return false;
+                }
+                pos+=length;
+
+                // validating name
+                length = byteArray[pos];
+                pos++;
+                if (converters.byteArrayToString(byteArray, pos, length) !== data.name) {
+                  return false;
+                }
+                pos+=length;
+
+                // validating birthDate
+                length = byteArray[pos];
+                pos++;
+                if (converters.byteArrayToString(byteArray, pos, length) !== data.birthDate) {
+                  return false;
+                }
+
+                // validating sireId
+                if (converters.byteArrayToBigInteger(byteArray, pos) !== data.sireId) {
+                  return false;
+                }
+                pos+=8;
+
+                // validating sireName
+                length = byteArray[pos];
+                pos++;
+                if (converters.byteArrayToString(byteArray, pos, length) !== data.sireName) {
+                  return false;
+                }
+                pos+=length;
+
+                // validating damId
+                if (converters.byteArrayToBigInteger(byteArray, pos) !== data.damId) {
+                  return false;
+                }
+                pos+=8;
+
+                // validating damName
+                length = byteArray[pos];
+                pos++;
+                if (converters.byteArrayToString(byteArray, pos, length) !== data.damName) {
+                  return false;
+                }
+                pos+=length;
+
+                // validating lotSize
+                if (converters.byteArrayToSignedInt32(byteArray, pos) !== data.lotSize) {
+                  return false;
+                }
+                pos+=4;
+
+                // validating requiredMonthDeposit
+                if (converters.byteArrayToSignedInt32(byteArray, pos) !== data.requiredMonthDeposit) {
+                  return false;
+                }
+                pos+=4;
+
                 break;
             case "registerIHOHorse":
                 if (transaction.type !== 8 || transaction.subtype !== 1) {
                     return false;
                 }
+
+                pos++;
+                // validating horseId
+                if (converters.byteArrayToBigInteger(byteArray, pos) !== data.horseId) {
+                  return false;
+                }
+                pos+=8;
+
+                // validating type
+                length = byteArray[pos];
+                pos++;
+                if (converters.byteArrayToString(byteArray, pos, length) !== data.type) {
+                  return false;
+                }
+                pos+=length;
+
+                // validating name
+                length = byteArray[pos];
+                pos++;
+                if (converters.byteArrayToString(byteArray, pos, length) !== data.name) {
+                  return false;
+                }
+                pos+=length;
+
+                // validating birthDate
+                length = byteArray[pos];
+                pos++;
+                if (converters.byteArrayToString(byteArray, pos, length) !== data.birthDate) {
+                  return false;
+                }
+                pos+=length;
+
+                // validating sireId
+                if (converters.byteArrayToBigInteger(byteArray, pos) !== data.sireId) {
+                  return false;
+                }
+                pos+=8;
+
+                // validating sireName
+                length = byteArray[pos];
+                pos++;
+                if (converters.byteArrayToString(byteArray, pos, length) !== data.sireName) {
+                  return false;
+                }
+                pos+=length;
+
+                // validating damId
+                if (converters.byteArrayToBigInteger(byteArray, pos) !== data.damId) {
+                  return false;
+                }
+                pos+=8;
+
+                // validating damName
+                length = byteArray[pos];
+                pos++;
+                if (converters.byteArrayToString(byteArray, pos, length) !== data.damName) {
+                  return false;
+                }
+                pos+=length;
+
+                // validating lotSize
+                if (converters.byteArrayToSignedInt32(byteArray, pos) !== data.lotSize) {
+                  return false;
+                }
+                pos+=4;
+
+                // validating requiredMonthDeposit
+                if (converters.byteArrayToSignedInt32(byteArray, pos) !== data.requiredMonthDeposit) {
+                  return false;
+                }
+                pos+=4;
+
+                // validating trainingFee
+                if (converters.byteArrayToBigInteger(byteArray, pos) !== data.trainingFee) {
+                  return false;
+                }
+                pos+=8;
+
+                // validating ihoQuantity
+                if (converters.byteArrayToBigInteger(byteArray, pos) !== data.ihoQuantity) {
+                  return false;
+                }
+                pos+=8;
+
+                // validating ihoSellable
+                if (converters.byteArrayToBigInteger(byteArray, pos) !== data.ihoSellable) {
+                  return false;
+                }
+                pos+=8;
+
+                // validating ihoPrice
+                if (converters.byteArrayToBigInteger(byteArray, pos) !== data.ihoPrice) {
+                  return false;
+                }
+                pos+=8;
+
+                // validating startTimestamp
+                if (converters.byteArrayToBigInteger(byteArray, pos) !== data.startTimestamp) {
+                  return false;
+                }
+                pos+=8;
+
+                // validating endTimestamp
+                if (converters.byteArrayToBigInteger(byteArray, pos) !== data.endTimestamp) {
+                  return false;
+                }
+                pos+=8;
+
+                // validating quantityQNT
+                if (converters.byteArrayToSignedInt32(byteArray, pos) !== data.quantityQNT) {
+                  return false;
+                }
+                pos+=4;
+
+                // validating decimals
+                if (converters.byteArrayToSignedShort(byteArray, pos) !== data.decimals) {
+                  return false;
+                }
+
                 break;
             case "closeIHOHorse":
                 if (transaction.type !== 8 || transaction.subtype !== 2) {
                     return false;
                 }
+                pos++;
+
+                // validating horseId
+                if (converters.byteArrayToBigInteger(byteArray, pos) !== data.horseId) {
+                  return false;
+                }
+                pos+=8;
+
+                length = byteArray[pos];
+                if (length != 0){
+                  pos++;
+                  if (converters.byteArrayToString(byteArray, pos, length) !== data.sendRemainingShareToAccountId) {
+                    return false;
+                  }
+                }
+
                 break;
             case "updateHorseTrainingFee":
                 if (transaction.type !== 8 || transaction.subtype !== 3) {
                     return false;
                 }
+
+                pos++;
+                // validating horseId
+                if (converters.byteArrayToBigInteger(byteArray, pos) !== data.horseId) {
+                  return false;
+                }
+                pos+=8;
+
+                // validating trainingFee
+                if (converters.byteArrayToBigInteger(byteArray, pos) !== data.trainingFee) {
+                  return false;
+                }
+                pos+=8;
+
+                // validating startTimestamp
+                if (converters.byteArrayToBigInteger(byteArray, pos) !== data.startTimestamp) {
+                  return false;
+                }
+
                 break;
             default:
                 //invalid requestType..
