@@ -17,7 +17,7 @@ export default function createElement(document, keyDetail) {
           Passphrase
         </div>
         <div class="col-sm-8 text-grey word-wrap text-field-data">
-          ${passphraseImage.data ? '' : 'The plaintext passphrase is no longer available'}
+          ${passphraseImage.data ? '' : 'The seed passphrase is no longer available'}
           <canvas id="passphraseCanvas" width="${passphraseImage.width ||
             0}" height="${passphraseImage.height || 0}"></canvas>
         </div>
