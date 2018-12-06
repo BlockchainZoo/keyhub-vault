@@ -156,7 +156,7 @@ export default function loadVault(window, document, mainElement) {
 
       return p
         .then(passphrase => {
-          const [div, promise] = PassphraseDisplayScreen(document, passphrase)
+          const [div, promise] = PassphraseDisplayScreen(document, network, passphrase)
           contentDiv.innerHTML = ''
           contentDiv.appendChild(div)
           return promise
@@ -242,6 +242,7 @@ export default function loadVault(window, document, mainElement) {
         ({ address, accountNo, publicKey, hasPinProtection, hasPassphrase }) => {
           if (!hasPassphrase) {
             return {
+              network,
               address,
               accountNo,
               publicKey,
@@ -250,6 +251,7 @@ export default function loadVault(window, document, mainElement) {
           }
 
           return postMessage(worker, ['getStoredKeyPassphrase', entryId]).then(passphraseImage => ({
+            network,
             address,
             accountNo,
             publicKey,
