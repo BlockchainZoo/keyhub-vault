@@ -1342,6 +1342,11 @@ var NRS = (function (NRS, $, undefined) {
                 }
                 pos += 2;
                 break;
+              case "chargeHorseMonthlyTrainingFee":
+                if (transaction.type !== 8 && transaction.subtype !== 4) {
+                  return false
+                }
+                break;
             default:
                 //invalid requestType..
                 return false;
