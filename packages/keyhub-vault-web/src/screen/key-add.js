@@ -5,11 +5,14 @@ export default function createElement(document) {
   div.innerHTML = safeHtml`
   <h2 class="page-title">Platforms & Merchants</h2>
   <p>
-    Please pick from one of our partners below:
+    Please pick from one of the blockchain networks below:
   </p>
   <div class="plaform-picker">
     <a href="#" data-platform="EQH" data-network="Equinehub">
-      <img src="./img/brand/eqh-logo.png" alt="EquineHub" />
+      <img src="./img/brand/equinehub-logo.png" alt="EquineHub Main Net" />
+    </a>
+    <a href="#" data-platform="EQH" data-network="Equinehub-Dev">
+      <img src="./img/brand/equinehub-dev-logo.png" alt="EquineHub Dev Net" />
     </a>
   </div>
   `

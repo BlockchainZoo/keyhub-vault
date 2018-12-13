@@ -58,19 +58,19 @@ export default function createElement(document, passphrase, promptPin) {
   const div = document.createElement('div')
 
   div.innerHTML = safeHtml`
-    <h2 class="page-title">Confirm Backup of Passhphrase</h2>
+    <h2 class="page-title">Confirm Secret Passhphrase</h2>
     <div class="form-group">
-      <label for="text-passphrase-copied">Your passphrase is very important! In order to be sure that you have written it to paper, please type your passphrase below:</label><br>
+      <label for="text-passphrase-copied">You must not lose your seed passphrase! In order to be sure that you have written it on paper, please type your passphrase below:</label><br>
       <textarea class="form-control" id="passphrase-input"></textarea>
     </div>
     <div id="passphrase-alert" class="d-none form-group"></div>
     <div class="${promptPin ? '' : 'd-none'}">
       <div class="form-group">
-        <label for="text-pin">Please input a new Security PIN: (any letter or number)</label><br>
+        <label for="text-pin">Please input a new Security PIN: (one or more letters or numbers)</label><br>
         <input type="password" class="form-control" id="pin-input" />
       </div>
       <div class="form-group">
-        <label for="text-pin-confirm">Please re-confirm your Security PIN:</label><br>
+        <label for="text-pin-confirm">Please confirm your Security PIN:</label><br>
         <input type="password" class="form-control" id="pin-confirm-input" />
       </div>
       <div id="pin-alert" class="d-none form-group"></div>

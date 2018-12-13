@@ -1,7 +1,7 @@
 import { safeHtml } from 'common-tags'
 
 export default function createElement(document, keyDetail) {
-  const { accountNo, address, publicKey, passphraseImage = {} } = keyDetail
+  const { network, accountNo, address, publicKey, passphraseImage = {} } = keyDetail
   const splitAccNo = `${accountNo.substring(0, 5)}.${accountNo.substring(
     5,
     10
@@ -12,6 +12,14 @@ export default function createElement(document, keyDetail) {
   div.innerHTML = safeHtml`
   <div class="col-12 px-5">
     <h2 class="page-title">Your Account Detail</h2>
+    <div class="row my-2 border-bottom py-3">
+        <div class="col-sm-4 text-capitalize text-strong text-field-head">
+          Network Name
+        </div>
+        <div class="col-sm-8 text-grey">
+          ${network}
+        </div>
+    </div>
     <div class="row my-2 border-bottom py-3">
         <div class="col-sm-4 text-capitalize text-strong text-field-head">
           Passphrase
