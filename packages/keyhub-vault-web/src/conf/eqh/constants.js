@@ -8,6 +8,14 @@ NRS.constants.SERVER = {
   genesisAccountId: (process.env.STAGE === 'sandbox' ? '1380548969593842148' : ''),
   // genesisBlockId: "2680262203532249785",
   transactionSubTypes: {
+    chargeHorseMonthlyTrainingFee: {
+      allowRequiredBlockParameters: false,
+      requireFullClient: false,
+      requirePassword: false,
+      requireBlockchain: true,
+      requirePost: true,
+      enabled: true,
+    },
     ReserveClaim: {
       isPhasable: true,
       subtype: 2,
@@ -1090,6 +1098,14 @@ NRS.constants.SERVER = {
     RIPEMD160_SHA256: 62,
   },
   requestTypes: {
+    chargeHorseMonthlyTrainingFee: {
+      allowRequiredBlockParameters: true,
+      requireFullClient: false,
+      requirePassword: false,
+      requireBlockchain: true,
+      requirePost: false,
+      enabled: true,
+    },
     getLastExchanges: {
       allowRequiredBlockParameters: true,
       requireFullClient: false,
