@@ -5,6 +5,8 @@
 const cheerio = require('cheerio')
 const qs = require('qs')
 
+const nxtConstants = require('../conf/constants')
+
 if (process.env.APP_ENV !== 'browser') {
   global.fetch = require('node-fetch')
   require('abortcontroller-polyfill/dist/polyfill-patch-fetch')
@@ -204,6 +206,11 @@ class NrsBridge {
     }
   }
 
+  static processConstants(constants, client) {
+    // TODO: Deep-merge
+    client.processConstants(constants)
+  }
+
   configure(params, client = this.client) {
     Object.assign(this.options, params)
 
@@ -214,6 +221,8 @@ class NrsBridge {
 
     // eslint-disable-next-line no-param-reassign
     client.getModuleConfig = this.options.getNode || (() => this.options)
+
+    if (params.constants) this.constructor.processConstants(params.constants, client)
 
     return this
   }
@@ -260,8 +269,9 @@ class NrsBridge {
 
       // Mock other objects on which the client depends
       if (typeof global.window.document === 'undefined') global.window.document = {}
-      if (typeof global.window.navigator === 'undefined')
+      if (typeof global.window.navigator === 'undefined') {
         global.window.navigator = { userAgent: '' }
+      }
       global.isNode = true // for code which has to execute differently by node compared to browser
 
       // Now load some NXT specific libraries into the global scope
@@ -287,11 +297,14 @@ class NrsBridge {
       Object.assign(client, require('./nrs'))
       Object.assign(client, require('./nrs.server'))
 
-      if (this.init) this.configure(null, client)
-
       // Now load the constants locally since we cannot trust the remote node to
       // return the correct constants.
-      client.processConstants(require('../conf/constants'))
+      if (this.init) {
+        this.configure(null, client)
+      } else {
+        client.processConstants(nxtConstants)
+      }
+
       this.client = client
       if (callback) callback(this.client)
     } catch (err) {

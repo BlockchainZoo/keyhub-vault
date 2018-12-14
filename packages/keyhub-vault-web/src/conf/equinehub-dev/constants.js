@@ -3,10 +3,11 @@
 // eslint-disable-next-line no-use-before-define
 const NRS = typeof global.NRS === 'undefined' ? { constants: {} } : NRS
 
+// See: https://nxt1.vault.keyhub.app/test?requestType=getConstants
 NRS.constants.SERVER = {
-  epochBeginning: (process.env.STAGE === 'sandbox' ? 1385294400000 : 0),
-  genesisAccountId: (process.env.STAGE === 'sandbox' ? '1380548969593842148' : ''),
-  // genesisBlockId: "2680262203532249785",
+  epochBeginning: 1385294400000,
+  genesisAccountId: '17244641543336723894',
+  // genesisBlockId: "11913921164225463854",
   transactionSubTypes: {
     chargeHorseMonthlyTrainingFee: {
       allowRequiredBlockParameters: false,
