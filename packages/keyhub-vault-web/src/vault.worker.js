@@ -167,17 +167,16 @@ const retrievePassphrase = (entryId, cryptoKey) =>
 
 // Helper function to convert transaction data to correct numerical format
 const fixTxNumberFormat = tx => {
-  const { accountRS, recipientRS, assetId, amount, decimals, quantity, price, ...txData } = tx
+  const { accountRS, recipientRS, assetId, amount, quantity, price, decimals = 0, ...txData } = tx
 
   /* eslint-disable no-param-reassign */
   if (amount !== undefined) txData.amountNQT = NRS.convertToNQT(amount)
-  if (decimals !== undefined) {
-    if (quantity) txData.quantityQNT = NRS.convertToQNT(quantity, decimals)
-    if (price) txData.priceNQT = NRS.calculatePricePerWholeQNT(NRS.convertToNQT(price), decimals)
-  }
+  if (quantity !== undefined) txData.quantityQNT = NRS.convertToQNT(quantity, decimals)
+  if (price !== undefined)
+    txData.priceNQT = NRS.calculatePricePerWholeQNT(NRS.convertToNQT(price), decimals)
 
-  if (recipientRS) txData.recipient = NRS.convertRSToNumericAccountFormat(recipientRS)
-  if (accountRS) txData.account = NRS.convertRSToNumericAccountFormat(accountRS)
+  if (recipientRS !== undefined) txData.recipient = NRS.convertRSToNumericAccountFormat(recipientRS)
+  if (accountRS !== undefined) txData.account = NRS.convertRSToNumericAccountFormat(accountRS)
   if (assetId !== undefined) txData.asset = assetId
 
   return txData
