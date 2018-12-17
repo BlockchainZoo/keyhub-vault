@@ -53,13 +53,13 @@ export default function loadVault(window, document, mainElement) {
 
   let welcomeDiv
 
-  const activateNetwork = (network, address) => {
+  const activateNetwork = (networkName, address) => {
     // Lazy-Load Webworker
-    if (!workers[network]) workers[network] = new VaultWorker()
-    const worker = workers[network]
+    if (!workers[networkName]) workers[networkName] = new VaultWorker()
+    const worker = workers[networkName]
 
     // call configure on background webworker to get current config
-    return postMessage(worker, ['configure', { address }]).then(config => ({
+    return postMessage(worker, ['configure', { networkName, address }]).then(config => ({
       worker,
       config,
     }))
@@ -320,7 +320,7 @@ export default function loadVault(window, document, mainElement) {
                       })
                     })
                     .catch(error => {
-                      window.alert(`Error: ${error.message || error}`)
+                      window.alert(error.message || error)
                     })
                 }
               }
@@ -373,7 +373,7 @@ export default function loadVault(window, document, mainElement) {
       })
       .catch(error => {
         if (error.message !== 'cancelled by user') {
-          window.alert(`Error: ${error.message || error}`)
+          window.alert(error.message || error)
         }
         contentDiv.innerHTML = ''
         contentDiv.appendChild(welcomeDiv)
@@ -424,9 +424,9 @@ export default function loadVault(window, document, mainElement) {
         )
         .then(() => self.close()) // eslint-disable-line
         .catch(error => {
-          if (error.message !== 'cancelled by user') {
-            window.alert(`Error: ${error.message || error}`)
-          }
+          // if (error.message !== 'cancelled by user') {
+          //   window.alert(error.message || error)
+          // }
 
           // callback to the parent window on error
           callback(error)
@@ -487,9 +487,9 @@ export default function loadVault(window, document, mainElement) {
         })
         .then(() => self.close()) // eslint-disable-line
         .catch(error => {
-          if (error.message !== 'cancelled by user') {
-            window.alert(`Error: ${error.message || error}`)
-          }
+          // if (error.message !== 'cancelled by user') {
+          //   window.alert(error.message || error)
+          // }
 
           // callback to the parent window on error
           callback(error)
@@ -540,9 +540,9 @@ export default function loadVault(window, document, mainElement) {
           })
         })
         .catch(error => {
-          if (error.message !== 'cancelled by user' && error.message !== 'key missing') {
-            window.alert(`Error: ${error.message || error}`) // eslint-disable-line
-          }
+          // if (error.message !== 'cancelled by user' && error.message !== 'key missing') {
+          //   window.alert(error.message || error) // eslint-disable-line
+          // }
 
           // callback to the parent window on error
           callback(error)
@@ -645,9 +645,9 @@ export default function loadVault(window, document, mainElement) {
         })
         .then(() => self.close()) // eslint-disable-line
         .catch(error => {
-          if (error.message !== 'cancelled by user' && error.message !== 'key missing') {
-            window.alert(`Error: ${error.message || error}`) // eslint-disable-line
-          }
+          // if (error.message !== 'cancelled by user' && error.message !== 'key missing') {
+          //   window.alert(error.message || error) // eslint-disable-line
+          // }
 
           // callback to the parent window on error
           callback(error)
