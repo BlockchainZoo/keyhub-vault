@@ -23,7 +23,7 @@
     "common-tags": "^1.8.0",
     "diceware-wordlist-en-eff": "^1.0.1",
     "p-retry": "^2.0.0",
-    "post-robot": "^8.0.29"
+    "post-robot": "^9.0.19"
   },
   "devDependencies": {
     "@fortawesome/fontawesome-free": "^5.5.0",

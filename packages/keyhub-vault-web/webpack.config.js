@@ -123,14 +123,13 @@ module.exports = env => ({
   //     root: 'fetch',
   //   },
   // },
-  // node: {
-  //   global: true,
-  //   // Buffer: true,
-  //   // setImmediate: true,
-  //   // process: false,
-  //   // net: 'mock',
-  //   // tls: 'mock',
-  //   // fs: 'empty',
-  //   // child_process: 'empty',
-  // },
+  node: {
+    console: false,
+    global: true,
+    process: 'mock',
+    __filename: false,
+    __dirname: false,
+    Buffer: 'mock',
+    setImmediate: false,
+  },
 })
