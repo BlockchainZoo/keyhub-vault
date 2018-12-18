@@ -6,6 +6,7 @@ const { fork } = require('child_process')
 
 // eslint-disable-next-line import/no-extraneous-dependencies
 const webpack = require('webpack')
+// eslint-disable-next-line import/no-extraneous-dependencies
 const CopyWebpackPlugin = require('copy-webpack-plugin')
 
 module.exports = env => ({

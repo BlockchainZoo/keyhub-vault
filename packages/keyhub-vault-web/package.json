@@ -28,7 +28,6 @@
   "devDependencies": {
     "@fortawesome/fontawesome-free": "^5.5.0",
     "bootstrap": "^4.1.3",
-    "copy-webpack-plugin": "^4.6.0",
     "normalize-newline-cli": "^1.1.0",
     "openpgp": "github:heri16/openpgpjs#v3.1.0",
     "serverless-plugin-cloudfront-lambda-edge": "^2.1.0",
