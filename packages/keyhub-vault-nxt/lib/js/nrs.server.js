@@ -1563,7 +1563,8 @@ var NRS = (function (NRS, $, undefined) {
                 pos+=4;
 
                 // validating decimals
-                if (String(converters.byteArrayToSignedShort(byteArray, pos)) !== String(data.decimals) || '0') {
+                const decimal = String(converters.byteArrayToSignedShort(byteArray, pos))
+                if ( decimal !== String(data.decimals) && decimal !== '0') {
                   console.log('invalid decimals');
                   return false;
                 }
