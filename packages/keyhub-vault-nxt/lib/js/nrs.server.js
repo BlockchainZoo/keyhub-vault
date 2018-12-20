@@ -1617,6 +1617,17 @@ var NRS = (function (NRS, $, undefined) {
                   return false
                 }
                 break;
+            case "cancelIHO":
+                if (transaction.type !== 8 || transaction.subtype !== 5) {
+                    return false;
+                }
+
+                // validating horseId
+                if (String(converters.byteArrayToBigInteger(byteArray, pos)) !== String(data.horseId)) {
+                  return false;
+                }
+
+                break;
             default:
                 //invalid requestType..
                 return false;
