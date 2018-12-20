@@ -1,10 +1,12 @@
 'use strict'
 
 const log = (...args) => {
+  /* eslint-disable no-console */
   // eslint-disable-next-line no-restricted-globals, no-undef
   const name = (self && self.name) || 'VaultWorker'
-  // eslint-disable-next-line no-console
-  console.log(`${name}:`, ...args.map(arg => JSON.stringify(arg, null, '  ')))
+
+  if (typeof console !== 'undefined' && console.log)
+    console.log(`${name}:`, ...args.map(arg => JSON.stringify(arg, null, '  ')))
 }
 
 log('Loading...')
@@ -14,6 +16,8 @@ const { NrsBridge, converters } = require('@keyhub/keyhub-vault-nxt')
 
 const wordlistEnEff = require('diceware-wordlist-en-eff')
 const dicewareGen = require('./util/diceware')
+
+const { normalizeMessage: normalizeMsg } = require('./util/webworker')
 const { callOnStore } = require('./util/indexeddb')
 const {
   safeObj,
@@ -563,38 +567,25 @@ const methods = safeObj({
 // eslint-disable-next-line no-restricted-globals
 if (typeof self !== 'undefined') {
   // eslint-disable-next-line no-restricted-globals, no-undef
-  const workerName = self.name || 'VaultWorker'
-
-  // eslint-disable-next-line no-restricted-globals, no-undef
   self.onmessage = event => {
     const {
-      data: [name, ...params],
+      data: {
+        payload: [name, ...params],
+        resultPort,
+      },
     } = event
-    // const safeParams = params.filter(p =>
-    //   ['number', 'string', 'boolean', 'undefined', 'object'].includes(typeof p)
-    // )
+
     if (!(name in methods)) {
-      throw new Error('invalid method name')
+      resultPort.postMessage(normalizeMsg({ error: new Error('invalid method name') }))
     }
-    try {
-      Promise.resolve(methods[name](...params)).then(
-        res => {
-          // eslint-disable-next-line no-undef, no-restricted-globals
-          self.postMessage(res)
-        },
-        err => {
-          console.error(`${workerName}:`, err) // eslint-disable-line no-console
-          // eslint-disable-next-line no-undef, no-restricted-globals
-          self.setTimeout(() => {
-            // throw an unhandled error inside a promise chain
-            throw err
-          })
-        }
+
+    // Capture both sync and async errors when calling method
+    return new Promise(resolve => resolve(methods[name](...params)))
+      .then(
+        res => resultPort.postMessage(res),
+        err => resultPort.postMessage(normalizeMsg({ error: err }))
       )
-    } catch (err) {
-      console.error(`${workerName}:`, err) // eslint-disable-line no-console
-      throw err
-    }
+      .then(() => resultPort.close())
   }
 
   log('Ready')
