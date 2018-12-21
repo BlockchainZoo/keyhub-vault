@@ -1342,10 +1342,292 @@ var NRS = (function (NRS, $, undefined) {
                 }
                 pos += 2;
                 break;
-              case "chargeHorseMonthlyTrainingFee":
+            case "updateHorse":
+                if (transaction.type !== 8 || transaction.subtype !== 0) {
+                    return false;
+                }
+
+                // validating horseId
+                if (String(converters.byteArrayToBigInteger(byteArray, pos)) !== String(data.horseId)) {
+                  console.log('invalid horseId');
+                  return false;
+                }
+                pos+=8;
+
+                // // validating type
+                length = byteArray[pos];
+                pos+=4;
+                console.log(length, String(converters.byteArrayToString(byteArray, pos, length)))
+                if (String(converters.byteArrayToString(byteArray, pos, length)) !== data.type) {
+                  console.log('invalid type');
+                  return false;
+                }
+                pos+=length;
+
+                // validating name
+                length = byteArray[pos];
+                pos+=4;
+                if (String(converters.byteArrayToString(byteArray, pos, length)) !== data.name) {
+                  console.log('invalid name');
+                  return false;
+                }
+                pos+=length;
+
+                // validating birthDate
+                length = byteArray[pos];
+                pos+=4;
+                if (String(converters.byteArrayToString(byteArray, pos, length)) !== data.birthDate) {
+                  console.log('invalid birthDate');
+                  return false;
+                }
+                pos+=length;
+
+                // validating sireId
+                if (String(converters.byteArrayToBigInteger(byteArray, pos)) !== String(data.sireId)) {
+                  console.log('invalid sireId');
+                  return false;
+                }
+                pos+=8;
+
+                // validating sireName
+                length = byteArray[pos];
+                pos+=4;
+                if (String(converters.byteArrayToString(byteArray, pos, length)) !== data.sireName) {
+                  console.log('invalid sireName');
+                  return false;
+                }
+                pos+=length;
+
+                // validating damId
+                if (String(converters.byteArrayToBigInteger(byteArray, pos)) !== String(data.damId)) {
+                  console.log('invalid damId');
+                  return false;
+                }
+                pos+=8;
+
+                // validating damName
+                length = byteArray[pos];
+                pos+=4;
+                if (String(converters.byteArrayToString(byteArray, pos, length)) !== data.damName) {
+                  console.log('invalid damName');
+                  return false;
+                }
+                pos+=length;
+
+                // validating lotSize
+                if (String(converters.byteArrayToSignedInt32(byteArray, pos)) !== String(data.lotSize)) {
+                  console.log('invalid lotSize');
+                  return false;
+                }
+                pos+=4;
+
+                // validating requiredMonthDeposit
+                if (String(converters.byteArrayToSignedInt32(byteArray, pos)) !== String(data.requiredMonthDeposit)) {
+                  console.log('invalid requiredMonthDeposit');
+                  return false;
+                }
+
+                break;
+            case "registerIHOHorse":
+                if (transaction.type !== 8 || transaction.subtype !== 1) {
+                    return false;
+                }
+
+                // validating horseId
+                if (String(converters.byteArrayToBigInteger(byteArray, pos)) !== String(data.horseId)) {
+                  console.log('invalid horseId');
+                  return false;
+                }
+                pos+=8;
+
+                // // validating type
+                length = byteArray[pos];
+                pos+=4;
+                if (String(converters.byteArrayToString(byteArray, pos, length)) !== data.type) {
+                  console.log('invalid type');
+                  return false;
+                }
+                pos+=length;
+
+                // validating name
+                length = byteArray[pos];
+                pos+=4;
+                if (String(converters.byteArrayToString(byteArray, pos, length)) !== data.name) {
+                  console.log('invalid name');
+                  return false;
+                }
+                pos+=length;
+
+                // validating birthDate
+                length = byteArray[pos];
+                pos+=4;
+                if (String(converters.byteArrayToString(byteArray, pos, length)) !== data.birthDate) {
+                  console.log('invalid birthDate');
+                  return false;
+                }
+                pos+=length;
+
+                // validating sireId
+                if (String(converters.byteArrayToBigInteger(byteArray, pos)) !== String(data.sireId)) {
+                  console.log('invalid sireId');
+                  return false;
+                }
+                pos+=8;
+
+                // validating sireName
+                length = byteArray[pos];
+                pos+=4;
+                if (String(converters.byteArrayToString(byteArray, pos, length)) !== data.sireName) {
+                  console.log('invalid sireName');
+                  return false;
+                }
+                pos+=length;
+
+                // validating damId
+                if (String(converters.byteArrayToBigInteger(byteArray, pos)) !== String(data.damId)) {
+                  console.log('invalid damId');
+                  return false;
+                }
+                pos+=8;
+
+                // validating damName
+                length = byteArray[pos];
+                pos+=4;
+                if (String(converters.byteArrayToString(byteArray, pos, length)) !== data.damName) {
+                  console.log('invalid damName');
+                  return false;
+                }
+                pos+=length;
+
+                // validating lotSize
+                if (String(converters.byteArrayToSignedInt32(byteArray, pos)) !== String(data.lotSize)) {
+                  console.log('invalid lotSize');
+                  return false;
+                }
+                pos+=4;
+
+                // validating requiredMonthDeposit
+                if (String(converters.byteArrayToSignedInt32(byteArray, pos)) !== String(data.requiredMonthDeposit)) {
+                  console.log('invalid requiredMonthDeposit');
+                  return false;
+                }
+                pos+=4;
+
+                // validating trainingFee
+                if (String(converters.byteArrayToBigInteger(byteArray, pos)) !== String(data.trainingFee)) {
+                  console.log('invalid trainingFee');
+                  return false;
+                }
+                pos+=8;
+
+                // validating ihoQuantity
+                if (String(converters.byteArrayToBigInteger(byteArray, pos)) !== String(data.ihoQuantity)) {
+                  console.log('invalid ihoQuantity');
+                  return false;
+                }
+                pos+=8;
+
+                // validating ihoSellable
+                if (String(converters.byteArrayToBigInteger(byteArray, pos)) !== String(data.ihoQuantity)) {
+                  console.log('invalid ihoSellable');
+                  return false;
+                }
+                pos+=8;
+
+                // validating ihoPrice
+                if (String(converters.byteArrayToBigInteger(byteArray, pos)) !== String(data.ihoPrice)) {
+                  console.log('invalid ihoPrice');
+                  return false;
+                }
+                pos+=8;
+
+                // validating startTimestamp
+                if (String(converters.byteArrayToBigInteger(byteArray, pos)) !== String(data.startTimestamp)) {
+                  console.log('invalid startTimestamp');
+                  return false;
+                }
+                pos+=8;
+
+                // validating endTimestamp
+                if (String(converters.byteArrayToBigInteger(byteArray, pos)) !== String(data.endTimestamp)) {
+                  console.log('invalid endTimestamp');
+                  return false;
+                }
+                pos+=8;
+
+                // validating quantityQNT
+                if (String(converters.byteArrayToSignedInt32(byteArray, pos)) !== String(data.quantityQNT)) {
+                  console.log('invalid quantityQNT');
+                  return false;
+                }
+                pos+=4;
+
+                // validating decimals
+                const decimal = String(converters.byteArrayToSignedShort(byteArray, pos))
+                if ( decimal !== String(data.decimals) && decimal !== '0') {
+                  console.log('invalid decimals');
+                  return false;
+                }
+
+                break;
+            case "closeIHOHorse":
+                if (transaction.type !== 8 || transaction.subtype !== 2) {
+                    return false;
+                }
+
+                // validating horseId
+                if (String(converters.byteArrayToBigInteger(byteArray, pos)) !== String(data.horseId)) {
+                  return false;
+                }
+                pos+=8;
+
+                length = byteArray[pos];
+                if (length != 0){
+                  pos+=4;
+                  if (String(converters.byteArrayToString(byteArray, pos, length)) !== String(data.sendRemainingShareToAccountId)) {
+                    return false;
+                  }
+                }
+
+                break;
+            case "updateHorseTrainingFee":
+                if (transaction.type !== 8 || transaction.subtype !== 3) {
+                    return false;
+                }
+
+                // validating horseId
+                if (String(converters.byteArrayToBigInteger(byteArray, pos)) !== String(data.horseId)) {
+                  return false;
+                }
+                pos+=8;
+
+                // validating trainingFee
+                if (String(converters.byteArrayToBigInteger(byteArray, pos)) !== String(data.trainingFee)) {
+                  return false;
+                }
+                pos+=8;
+
+                // validating startTimestamp
+                if (String(converters.byteArrayToBigInteger(byteArray, pos)) !== String(data.startTimestamp)) {
+                  return false;
+                }
+
+                break;
+            case "chargeHorseMonthlyTrainingFee":
                 if (transaction.type !== 8 && transaction.subtype !== 4) {
                   return false
                 }
+                break;
+            case "cancelIHO":
+                if (transaction.type !== 8 || transaction.subtype !== 5) {
+                    return false;
+                }
+
+                // validating horseId
+                if (String(converters.byteArrayToBigInteger(byteArray, pos)) !== String(data.horseId)) {
+                  return false;
+                }
+
                 break;
             default:
                 //invalid requestType..
