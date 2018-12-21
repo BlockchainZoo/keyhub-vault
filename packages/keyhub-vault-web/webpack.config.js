@@ -6,6 +6,7 @@ const { fork } = require('child_process')
 
 // eslint-disable-next-line import/no-extraneous-dependencies
 const webpack = require('webpack')
+// eslint-disable-next-line import/no-extraneous-dependencies
 const CopyWebpackPlugin = require('copy-webpack-plugin')
 
 module.exports = env => ({
@@ -122,14 +123,13 @@ module.exports = env => ({
   //     root: 'fetch',
   //   },
   // },
-  // node: {
-  //   global: true,
-  //   // Buffer: true,
-  //   // setImmediate: true,
-  //   // process: false,
-  //   // net: 'mock',
-  //   // tls: 'mock',
-  //   // fs: 'empty',
-  //   // child_process: 'empty',
-  // },
+  node: {
+    console: false,
+    global: true,
+    process: 'mock',
+    __filename: false,
+    __dirname: false,
+    Buffer: 'mock',
+    setImmediate: false,
+  },
 })

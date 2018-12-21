@@ -25,11 +25,94 @@ const { postMessage } = require('./util/webworker')
 
 const { drawText, getImageData } = require('./util/canvas')
 
-export default function loadVault(window, document, mainElement) {
-  // VaultWorker singletons from multiple networks
-  // One platform might run multiple networks (e.g. mainnet)
-  const workers = Object.create(null)
+// VaultWorker singletons from multiple networks
+// One platform might run multiple networks (e.g. mainnet)
+const workers = Object.create(null)
 
+const activateNetwork = (networkName, address) => {
+  // Lazy-Load Webworker
+  if (!workers[networkName]) workers[networkName] = new VaultWorker()
+  const worker = workers[networkName]
+
+  // call configure on background webworker to get current config
+  return postMessage(worker, ['configure', { networkName, address }]).then(config => ({
+    worker,
+    config,
+  }))
+}
+
+const appendStylesheet = (href, document) =>
+  new Promise((resolve, reject) => {
+    const linkElement = document.createElement('link')
+    linkElement.type = 'text/css'
+    linkElement.rel = 'stylesheet'
+    linkElement.href = href
+    linkElement.onload = resolve
+    linkElement.onerror = reject
+    document.head.appendChild(linkElement)
+  })
+
+const registerEvents = (service, eventHandlers, desiredVersion) => {
+  const [, majorStr, minorStr, patchStr] = desiredVersion.match(/(\d+)\.(\d+)\.(\d+)/)
+  if (!majorStr || !minorStr || !patchStr) throw new Error('invalid version')
+
+  const major = +majorStr
+  let minor = +minorStr
+  let patch = +patchStr
+  let version
+
+  // Enable all suitable event handlers for desiredVersion
+  while (minor >= 0) {
+    while (patch >= 0) {
+      const ver = `${major}.${minor}.${patch}`
+      if (eventHandlers[ver]) {
+        if (!version) version = ver
+        const handlers = eventHandlers[ver]
+        Object.keys(handlers).forEach(eventName => {
+          try {
+            service.on(eventName, handlers[eventName])
+          } catch (err) {
+            // nothing
+          }
+        })
+      }
+      patch -= 1
+    }
+    minor -= 1
+    patch = 99
+  }
+
+  return version
+}
+
+const getKeyDetail = (network, entryId) =>
+  activateNetwork(network).then(({ worker }) =>
+    // call getKeyPair on background webworker
+    postMessage(worker, ['getStoredKeyInfo', entryId]).then(
+      ({ address, accountNo, publicKey, hasPinProtection, hasPassphrase }) => {
+        if (!hasPassphrase) {
+          return {
+            network,
+            address,
+            accountNo,
+            publicKey,
+            hasPinProtection,
+          }
+        }
+
+        return postMessage(worker, ['getStoredKeyPassphrase', entryId]).then(passphraseImage => ({
+          network,
+          address,
+          accountNo,
+          publicKey,
+          hasPinProtection,
+          passphraseImage,
+        }))
+      }
+    )
+  )
+
+export default function loadVault(window, document, mainElement) {
   const vaultLayoutHTML = safeHtml`<div class="container fade-in" id="mainWrapper">
     <div class="row" >
       <div class="sidebar col-md-4 bg-grey py-3 d-none" id="sidebar">
@@ -50,20 +133,6 @@ export default function loadVault(window, document, mainElement) {
   const keyListDiv = document.getElementById('key-list')
   const mainWrapper = document.getElementById('mainWrapper')
   const mainContent = document.getElementById('mainContent')
-
-  let welcomeDiv
-
-  const activateNetwork = (networkName, address) => {
-    // Lazy-Load Webworker
-    if (!workers[networkName]) workers[networkName] = new VaultWorker()
-    const worker = workers[networkName]
-
-    // call configure on background webworker to get current config
-    return postMessage(worker, ['configure', { networkName, address }]).then(config => ({
-      worker,
-      config,
-    }))
-  }
 
   const showGenerateUnprotectedKeyScreen = (platform, network, phonenum) =>
     activateNetwork(network).then(({ worker }) => {
@@ -235,33 +304,6 @@ export default function loadVault(window, document, mainElement) {
       })
     })
 
-  const getKeyDetail = (network, entryId) =>
-    activateNetwork(network).then(({ worker }) =>
-      // call getKeyPair on background webworker
-      postMessage(worker, ['getStoredKeyInfo', entryId]).then(
-        ({ address, accountNo, publicKey, hasPinProtection, hasPassphrase }) => {
-          if (!hasPassphrase) {
-            return {
-              network,
-              address,
-              accountNo,
-              publicKey,
-              hasPinProtection,
-            }
-          }
-
-          return postMessage(worker, ['getStoredKeyPassphrase', entryId]).then(passphraseImage => ({
-            network,
-            address,
-            accountNo,
-            publicKey,
-            hasPinProtection,
-            passphraseImage,
-          }))
-        }
-      )
-    )
-
   const signTransaction = (network, address, tx, optionalPin = null) =>
     activateNetwork(network).then(({ worker }) => {
       contentDiv.innerHTML = ''
@@ -363,29 +405,14 @@ export default function loadVault(window, document, mainElement) {
       }
     })
 
-  // Add Event Listener: User clicks "Add Key" Button
-  document.getElementById('goto-add-key-btn').addEventListener('click', () => {
-    showAddKeyScreen()
-      .then(() => updateKeyListDiv())
-      .then(() => {
-        contentDiv.innerHTML = ''
-        contentDiv.appendChild(welcomeDiv)
-      })
-      .catch(error => {
-        if (error.message !== 'cancelled by user') {
-          window.alert(error.message || error)
-        }
-        contentDiv.innerHTML = ''
-        contentDiv.appendChild(welcomeDiv)
-      })
-  })
+  // Map of event handlers by semantic versioning
+  const eventHandlers = {}
+  eventHandlers['1.3.0'] = {
+    newUnprotectedKeyAndSign: ({ data: { params, callback } }) => {
+      // Trigger A: App wants to create new unprotected key for user
+      // Input: { params: { platform: 'EQH', network: 'Equinehub', messageHex: '', phoneNumber: '' } }
+      // Output: { publicKey, signature }
 
-  // Handle Cross-Tab Actions from postRobot
-  const triggerAction = (action, params, callback) => {
-    // Trigger A: App wants to create new unprotected key for user
-    // Input: { action: 'newUnprotectedKeyAndSign', params: { platform: 'EQH', network: 'Equinehub', messageHex: '', phoneNumber: '' } }
-    // Output: { publicKey, signature }
-    if (action === 'newUnprotectedKeyAndSign' && params) {
       const { platform, network, messageHex, phoneNum = '' } = params
       if (!platform) throw new Error(`invalid platform ${platform}`)
       if (!network) throw new Error(`invalid network ${network}`)
@@ -394,55 +421,48 @@ export default function loadVault(window, document, mainElement) {
       return showGenerateUnprotectedKeyScreen(platform, network, phoneNum)
         .then(res => updateKeyListDiv().then(() => res))
         .then(({ address, publicKey, phoneNumber, encPassphrase }) =>
-          signMessage(network, address, messageHex).then(signature => {
-            contentDiv.innerHTML = ''
-            contentDiv.appendChild(LoadingScreen(document, 'Registering Key'))
-            // callback to the parent window with result
-            const run = () =>
-              callback(null, {
-                address,
-                publicKey,
-                signature,
-                phoneNumber,
-                encPassphrase,
-              })
-            return pRetry(run, {
-              retries: 5,
-              factor: 1.71,
-              onFailedAttempt: error => {
-                contentDiv.innerHTML = ''
-                contentDiv.appendChild(
-                  LoadingScreen(
-                    document,
-                    `Registering Key (attempt: ${error.attemptNumber})`,
-                    `Error in Main App: ${error.message || error}`
-                  )
-                )
-              },
+          signMessage(network, address, messageHex)
+            .then(signature => {
+              contentDiv.innerHTML = ''
+              contentDiv.appendChild(LoadingScreen(document, 'Registering Key'))
+              return signature
             })
-          })
+            .then(
+              signature => {
+                // callback to the parent window with result
+                const run = () =>
+                  callback(null, {
+                    address,
+                    publicKey,
+                    signature,
+                    phoneNumber,
+                    encPassphrase,
+                  })
+                return pRetry(run, {
+                  retries: 5,
+                  factor: 1.71,
+                  onFailedAttempt: error => {
+                    contentDiv.innerHTML = ''
+                    contentDiv.appendChild(
+                      LoadingScreen(
+                        document,
+                        `Registering Key (attempt: ${error.attemptNumber})`,
+                        `Error in Parent App: ${error.message || error}`
+                      )
+                    )
+                  },
+                })
+              }
+              // error => callback(error) // callback to the parent window with error
+            )
         )
-        .then(() => self.close()) // eslint-disable-line
-        .catch(error => {
-          // if (error.message !== 'cancelled by user') {
-          //   window.alert(error.message || error)
-          // }
+      // .then(() => self.close()) // eslint-disable-line
+    },
+    newKeyAndSign: ({ data: { params, callback } }) => {
+      // Trigger B: App wants to create new key for user
+      // Input: { params: { platform: 'EQH', network: 'Main', messageHex: '' } }
+      // Output: { publicKey, signature }
 
-          // callback to the parent window on error
-          callback(error)
-            .then(() => {
-              self.close() // eslint-disable-line
-            })
-            .catch(err => {
-              window.alert(`Could not return error to parent window: ${err.message || err}`)
-            })
-        })
-    }
-
-    // Trigger B: App wants to create new key for user
-    // Input: { action: 'newKeyAndSign', params: { platform: 'EQH', network: 'Main', messageHex: '' } }
-    // Output: { publicKey, signature }
-    if (action === 'newKeyAndSign' && params) {
       const { platform, network, messageHex } = params
       if (!platform) throw new Error(`invalid platform ${platform}`)
       if (!network) throw new Error(`invalid network ${network}`)
@@ -451,61 +471,53 @@ export default function loadVault(window, document, mainElement) {
       return showGenerateKeyScreen(platform, network)
         .then(res => updateKeyListDiv().then(() => res))
         .then(({ address, publicKey, pin }) =>
-          signMessage(network, address, messageHex, pin).then(signature => {
-            contentDiv.innerHTML = ''
-            contentDiv.appendChild(LoadingScreen(document, 'Registering Key'))
-            // callback to the parent window with result
-            const run = () =>
-              callback(null, {
-                address,
-                publicKey,
-                signature,
-              })
-            return pRetry(run, {
-              retries: 5,
-              factor: 1.71,
-              onFailedAttempt: error => {
-                contentDiv.innerHTML = ''
-                contentDiv.appendChild(
-                  LoadingScreen(
-                    document,
-                    `Registering Key (attempt: ${error.attemptNumber})`,
-                    `Error in Main App: ${error.message || error}`
-                  )
-                )
-              },
+          signMessage(network, address, messageHex, pin)
+            .then(signature => {
+              contentDiv.innerHTML = ''
+              contentDiv.appendChild(LoadingScreen(document, 'Registering Key'))
+              return signature
             })
-          })
+            .then(
+              signature => {
+                // callback to the parent window with result
+                const run = () =>
+                  callback(null, {
+                    address,
+                    publicKey,
+                    signature,
+                  })
+                return pRetry(run, {
+                  retries: 5,
+                  factor: 1.71,
+                  onFailedAttempt: error => {
+                    contentDiv.innerHTML = ''
+                    contentDiv.appendChild(
+                      LoadingScreen(
+                        document,
+                        `Registering Key (attempt: ${error.attemptNumber})`,
+                        `Error in Parent App: ${error.message || error}`
+                      )
+                    )
+                  },
+                }).then(() => {
+                  const message =
+                    'Key Added. Thank you for using our Open-source Vault. You will be returned to the parent app.'
+                  const [div, promise] = SuccessScreen(document, 'Thank You', message, 1000)
+                  contentDiv.innerHTML = ''
+                  contentDiv.appendChild(div)
+                  return promise
+                })
+              }
+              // error => callback(error) // callback to the parent window with error)
+            )
         )
-        .then(() => {
-          const message =
-            'Key Added. Thank you for using our Open-source Vault. You will be returned to the main app.'
-          const [div, promise] = SuccessScreen(document, 'Thank You', message, 1000)
-          contentDiv.innerHTML = ''
-          contentDiv.appendChild(div)
-          return promise
-        })
-        .then(() => self.close()) // eslint-disable-line
-        .catch(error => {
-          // if (error.message !== 'cancelled by user') {
-          //   window.alert(error.message || error)
-          // }
+      // .then(() => self.close()) // eslint-disable-line
+    },
+    showKeyDetail: ({ data: { params, callback } }) => {
+      // Trigger C: App wants to display key detail screen
+      // Input: { params: { platform: 'EQH', network: 'Equinehub', id: 'EQH-xxx-xxx-xxx-xxx' } }
+      // Output: { hasKeyPair: true, hasPassphrase: false }
 
-          // callback to the parent window on error
-          callback(error)
-            .then(() => {
-              self.close() // eslint-disable-line
-            })
-            .catch(err => {
-              window.alert(`Could not return error to parent window: ${err.message || err}`)
-            })
-        })
-    }
-
-    // Trigger C: App wants to display key detail screen
-    // Input: { action: 'showKeyDetail', params: { platform: 'EQH', network: 'Equinehub', id: 'EQH-xxx-xxx-xxx-xxx' } }
-    // Output: { hasKeyPair: true, hasPassphrase: false }
-    if (action === 'showKeyDetail' && params) {
       const { platform, network, id: entryId } = params
       if (!platform) throw new Error(`invalid platform ${platform}`)
       if (!network) throw new Error(`invalid network ${network}`)
@@ -536,29 +548,17 @@ export default function loadVault(window, document, mainElement) {
           contentDiv.innerHTML = ''
           contentDiv.appendChild(div)
           return promise.then(choice => {
-            if (choice === 'ok') self.close() // eslint-disable-line
+            if (choice !== 'ok') throw new Error(choice)
           })
         })
-        .catch(error => {
-          // if (error.message !== 'cancelled by user' && error.message !== 'key missing') {
-          //   window.alert(error.message || error) // eslint-disable-line
-          // }
+      // .catch(error => callback(error)) // callback to the parent window with error
+      // .then(() => self.close()) // eslint-disable-line
+    },
+    signTx: ({ data: { params, callback } }) => {
+      // Trigger D: App wants to sign transaction
+      // Input: { params: { platform: 'EQH', network: 'Equinehub', id: 'EQH-xxx-xxx-xxx-xxx', tx: {} } }
+      // Output: { transactionBytes, transactionJSON, transactionFullHash }
 
-          // callback to the parent window on error
-          callback(error)
-            .then(() => {
-              self.close() // eslint-disable-line
-            })
-            .catch(err => {
-              window.alert(`Could not return error to parent window: ${err.message || err}`)
-            })
-        })
-    }
-
-    // Trigger D: App wants to sign transaction
-    // Input: { action: 'signTx', params: { platform: 'EQH', network: 'Equinehub', id: 'EQH-xxx-xxx-xxx-xxx', tx: {} } }
-    // Output: { transactionBytes, transactionJSON, transactionFullHash }
-    if (action === 'signTx' && params) {
       const { platform, network, id: entryId, tx } = params
       if (!platform) throw new Error(`invalid platform ${platform}`)
       if (!network) throw new Error(`invalid network ${network}`)
@@ -610,111 +610,124 @@ export default function loadVault(window, document, mainElement) {
             return signTransaction(network, address, tx, pin)
           })
         })
-        .then(({ transactionBytes, transactionJSON, transactionFullHash }) => {
+        .then(txSigned => {
           contentDiv.innerHTML = ''
           contentDiv.appendChild(LoadingScreen(document, 'Posting Transaction'))
-          // callback to the parent window with result
-          const run = () =>
+          return txSigned
+        })
+        .then(
+          ({ transactionBytes, transactionJSON, transactionFullHash }) =>
+            // callback to the parent window with result
             callback(null, {
               transactionBytes,
               transactionJSON,
               transactionFullHash,
-            })
-          return pRetry(run, {
-            retries: 5,
-            factor: 1.71,
-            onFailedAttempt: error => {
+            }).then(() => {
+              const message =
+                'Transaction Signed. Thank you for using our Open-source Vault. You will be returned to the parent app.'
+              const [div, promise] = SuccessScreen(document, 'Thank You', message, 2000)
               contentDiv.innerHTML = ''
-              contentDiv.appendChild(
-                LoadingScreen(
-                  document,
-                  `Posting Transaction (attempt: ${error.attemptNumber})`,
-                  `Error in Main App: ${error.message || error}`
-                )
-              )
-            },
-          })
-        })
-        .then(() => {
-          const message =
-            'Transaction Signed. Thank you for using our Open-source Vault. You will be returned to the main app.'
-          const [div, promise] = SuccessScreen(document, 'Thank You', message, 2000)
-          contentDiv.innerHTML = ''
-          contentDiv.appendChild(div)
-          return promise
-        })
-        .then(() => self.close()) // eslint-disable-line
-        .catch(error => {
-          // if (error.message !== 'cancelled by user' && error.message !== 'key missing') {
-          //   window.alert(error.message || error) // eslint-disable-line
-          // }
-
-          // callback to the parent window on error
-          callback(error)
-            .then(() => {
-              self.close() // eslint-disable-line
+              contentDiv.appendChild(div)
+              return promise
             })
-            .catch(err => {
-              window.alert(`Could not return error to parent window: ${err.message || err}`)
-            })
-        })
-    }
-
-    return Promise.reject(new Error('Received unknown action from parent window.'))
+          // error => callback(error) // callback to the parent window with error
+        )
+      // .then(() => self.close()) // eslint-disable-line
+    },
   }
-
-  const appendStylesheet = href =>
-    new Promise((resolve, reject) => {
-      const linkElement = document.createElement('link')
-      linkElement.type = 'text/css'
-      linkElement.rel = 'stylesheet'
-      linkElement.href = href
-      linkElement.onload = resolve
-      linkElement.onerror = reject
-      document.head.appendChild(linkElement)
-    })
 
   // On Load: Update key List
   updateKeyListDiv()
     .then(hasKeys => {
       // Create the welcome screen
-      welcomeDiv = WelcomeScreen(document, hasKeys)
+      const welcomeDiv = WelcomeScreen(document, hasKeys)
 
       if (!window.opener) {
         // Show welcome screen on startup
         contentDiv.appendChild(welcomeDiv)
 
-        appendStylesheet('./css/main.default.css').then(() => {
+        // Add Event Listener: User clicks "Add Key" button in sidebar
+        document.getElementById('goto-add-key-btn').addEventListener('click', () => {
+          showAddKeyScreen()
+            .then(() => updateKeyListDiv())
+            .then(() => {
+              contentDiv.innerHTML = ''
+              contentDiv.appendChild(welcomeDiv)
+            })
+            .catch(error => {
+              if (error.message !== 'cancelled by user') {
+                window.alert(error.message || error)
+              }
+              contentDiv.innerHTML = ''
+              contentDiv.appendChild(welcomeDiv)
+            })
+        })
+
+        appendStylesheet('./css/main.default.css', document).then(() => {
           // Show the sidebar
           mainContent.classList.remove('offset-md-2')
           sidebarDiv.classList.remove('d-none')
           mainWrapper.classList.add('shadow-on')
         })
       } else {
+        // Show some text while waiting for parent app
+        contentDiv.textContent = 'Communicating with the parent app...'
+
         // Tell parent window vault is ready
         postRobot
-          .send(window.opener, 'vaultReady', { version: '1.2.0' })
-          .then(event => {
-            // console.log(event.source, event.origin)
-            // TODO: security checks on source/origin
-            const {
-              data: { style = 'EQH', action, params, callback },
-            } = event
+          .sendToParent('vaultHandshake', { version: '1.3.0' })
+          .then(
+            event => {
+              // Parent received the 'vaultHandshake' event.
+              const {
+                data: { version: desiredVersion, onReady },
+                source: parentWindow,
+                origin: originDomain,
+              } = event
 
-            if (style) {
-              return appendStylesheet(`./css/main.${style.toLowerCase()}.css`).then(() =>
-                triggerAction(action, params, callback)
-              )
+              try {
+                console.info('vaultHandshake origin:', originDomain) // eslint-disable-line no-console
+                const postRobotService = postRobot.listener({
+                  window: parentWindow,
+                  domain: originDomain,
+                })
+
+                const actualVersion = registerEvents(
+                  postRobotService,
+                  eventHandlers,
+                  desiredVersion
+                )
+
+                return onReady(null, { version: actualVersion })
+              } catch (err) {
+                return onReady(err).then(() => {
+                  throw err
+                })
+              }
+            },
+            error => {
+              // Parent did not receive the 'vaultHandshake' event.
+              console.error('vaultHandshake', error) // eslint-disable-line no-console
+              contentDiv.textContent = `Problem communicating with the parent app. ${error.message}`
+              throw error
             }
-            // else
-            return triggerAction(action, params, callback)
-          })
-          .catch(error => {
-            // Handle any errors that stopped our call from going through
-            console.error('Trigger', error) // eslint-disable-line no-console
-            contentDiv.textContent = `Problem with command sent from the main app. ${error}`
-            setTimeout(() => window.close(), 5000)
-          })
+          )
+          .then(
+            ({ platform }) => {
+              // Parent responded to the 'onReady' call.
+              console.info('vaultReady') // eslint-disable-line no-console
+              return platform
+                ? appendStylesheet(`./css/main.${platform.toLowerCase()}.css`, document)
+                : null
+            },
+            error => {
+              // Parent did not receive the 'onReady' call.
+              console.error('vaultReady', error) // eslint-disable-line no-console
+              contentDiv.textContent = `Problem communicating with the parent app. ${error.message}`
+              throw error
+            }
+          )
+          .catch(() => setTimeout(() => window.close(), 5000))
       }
     })
     .catch(error => {
