@@ -2,7 +2,7 @@ import { safeHtml, stripIndent } from 'common-tags'
 
 import postRobot from 'post-robot'
 
-import pRetry from 'p-retry'
+// import pRetry from 'p-retry'
 
 import VaultWorker from './vault.worker'
 
@@ -424,39 +424,34 @@ export default function loadVault(window, document, mainElement) {
           signMessage(network, address, messageHex)
             .then(signature => {
               contentDiv.innerHTML = ''
-              contentDiv.appendChild(LoadingScreen(document, 'Registering Key'))
+              contentDiv.appendChild(LoadingScreen(document, 'Linking Account'))
               return signature
             })
             .then(
-              signature => {
-                // callback to the parent window with result
-                const run = () =>
-                  callback(null, {
-                    address,
-                    publicKey,
-                    signature,
-                    phoneNumber,
-                    encPassphrase,
-                  })
-                return pRetry(run, {
-                  retries: 5,
-                  factor: 1.71,
-                  onFailedAttempt: error => {
-                    contentDiv.innerHTML = ''
-                    contentDiv.appendChild(
-                      LoadingScreen(
-                        document,
-                        `Registering Key (attempt: ${error.attemptNumber})`,
-                        `Error in Parent App: ${error.message || error}`
-                      )
-                    )
-                  },
+              signature =>
+                callback(null, {
+                  address,
+                  publicKey,
+                  signature,
+                  phoneNumber,
+                  encPassphrase,
                 })
-              }
               // error => callback(error) // callback to the parent window with error
             )
+            .then(() => {
+              const message =
+                'Account linked. Thank you for using our Open-source Vault. You will be returned to the parent app.'
+              const [div, promise] = SuccessScreen(document, 'Thank You', message, 1200)
+              contentDiv.innerHTML = ''
+              contentDiv.appendChild(div)
+              return promise
+            })
+            .then(() => ({
+              network,
+              address,
+              publicKey,
+            }))
         )
-      // .then(() => self.close()) // eslint-disable-line
     },
     newKeyAndSign: ({ data: { params, callback } }) => {
       // Trigger B: App wants to create new key for user
@@ -474,44 +469,32 @@ export default function loadVault(window, document, mainElement) {
           signMessage(network, address, messageHex, pin)
             .then(signature => {
               contentDiv.innerHTML = ''
-              contentDiv.appendChild(LoadingScreen(document, 'Registering Key'))
+              contentDiv.appendChild(LoadingScreen(document, 'Linking Account'))
               return signature
             })
             .then(
-              signature => {
-                // callback to the parent window with result
-                const run = () =>
-                  callback(null, {
-                    address,
-                    publicKey,
-                    signature,
-                  })
-                return pRetry(run, {
-                  retries: 5,
-                  factor: 1.71,
-                  onFailedAttempt: error => {
-                    contentDiv.innerHTML = ''
-                    contentDiv.appendChild(
-                      LoadingScreen(
-                        document,
-                        `Registering Key (attempt: ${error.attemptNumber})`,
-                        `Error in Parent App: ${error.message || error}`
-                      )
-                    )
-                  },
-                }).then(() => {
-                  const message =
-                    'Key Added. Thank you for using our Open-source Vault. You will be returned to the parent app.'
-                  const [div, promise] = SuccessScreen(document, 'Thank You', message, 1000)
-                  contentDiv.innerHTML = ''
-                  contentDiv.appendChild(div)
-                  return promise
+              signature =>
+                callback(null, {
+                  address,
+                  publicKey,
+                  signature,
                 })
-              }
-              // error => callback(error) // callback to the parent window with error)
+              // error => callback(error) // callback to the parent window with error
             )
+            .then(() => {
+              const message =
+                'Account linked. Thank you for using our Open-source Vault. You will be returned to the parent app.'
+              const [div, promise] = SuccessScreen(document, 'Thank You', message, 1200)
+              contentDiv.innerHTML = ''
+              contentDiv.appendChild(div)
+              return promise
+            })
+            .then(() => ({
+              network,
+              address,
+              publicKey,
+            }))
         )
-      // .then(() => self.close()) // eslint-disable-line
     },
     showKeyDetail: ({ data: { params, callback } }) => {
       // Trigger C: App wants to display key detail screen
@@ -525,34 +508,40 @@ export default function loadVault(window, document, mainElement) {
 
       return getKeyDetail(network, entryId)
         .catch(err => {
+          // handle key is missing
           if (!err.message.includes('missing')) throw err
-          // callback to the parent window with key state before restore
-          callback(null, {
+          // notify the parent window about key state before restore
+          return callback(null, {
             hasKeyPair: false,
             hasPassphrase: false,
-          })
-          return showRestoreMissingKeyScreen(platform, network, entryId).then(() =>
-            getKeyDetail(network, entryId)
+          }).then(() =>
+            showRestoreMissingKeyScreen(platform, network, entryId).then(() =>
+              getKeyDetail(network, entryId)
+            )
           )
         })
-        .then(keyDetail => {
-          // callback to the parent window with result after restore
-          callback(null, {
-            hasKeyPair: !!keyDetail.publicKey,
-            hasPassphrase: !!keyDetail.passphraseImage,
-          })
-          return keyDetail
-        })
+        .then(
+          keyDetail =>
+            callback(null, {
+              hasKeyPair: !!keyDetail.publicKey,
+              hasPassphrase: !!keyDetail.passphraseImage,
+            }).then(() => keyDetail)
+          // error => callback(error) // callback to the parent window with error
+        )
         .then(keyDetail => {
           const [div, promise] = KeyDetailScreen(document, keyDetail)
           contentDiv.innerHTML = ''
           contentDiv.appendChild(div)
           return promise.then(choice => {
             if (choice !== 'ok') throw new Error(choice)
+            return keyDetail
           })
         })
-      // .catch(error => callback(error)) // callback to the parent window with error
-      // .then(() => self.close()) // eslint-disable-line
+        .then(keyDetail => ({
+          network: keyDetail.network,
+          address: keyDetail.address,
+          publicKey: keyDetail.publicKey,
+        }))
     },
     signTx: ({ data: { params, callback } }) => {
       // Trigger D: App wants to sign transaction
@@ -567,24 +556,26 @@ export default function loadVault(window, document, mainElement) {
 
       return getKeyDetail(network, entryId)
         .catch(err => {
+          // handle key is missing
           if (!err.message.includes('missing')) throw err
-          // callback to the parent window with key state before restore
-          callback(null, {
+          // notify the parent window about key state before restore
+          return callback(null, {
             hasKeyPair: false,
             hasPassphrase: false,
-          })
-          return showRestoreMissingKeyScreen(platform, network, entryId).then(() =>
-            getKeyDetail(network, entryId)
+          }).then(() =>
+            showRestoreMissingKeyScreen(platform, network, entryId).then(() =>
+              getKeyDetail(network, entryId)
+            )
           )
         })
-        .then(keyDetail => {
-          // callback to the parent window with result after restore
-          callback(null, {
-            hasKeyPair: !!keyDetail.publicKey,
-            hasPassphrase: !!keyDetail.passphraseImage,
-          })
-          return keyDetail
-        })
+        .then(
+          keyDetail =>
+            callback(null, {
+              hasKeyPair: !!keyDetail.publicKey,
+              hasPassphrase: !!keyDetail.passphraseImage,
+            }).then(() => keyDetail)
+          // error => callback(error) // callback to the parent window with error
+        )
         .then(({ accountNo, address, hasPinProtection }) => {
           const [div, promise] = TxDetailScreen(
             document,
@@ -617,22 +608,21 @@ export default function loadVault(window, document, mainElement) {
         })
         .then(
           ({ transactionBytes, transactionJSON, transactionFullHash }) =>
-            // callback to the parent window with result
             callback(null, {
               transactionBytes,
               transactionJSON,
               transactionFullHash,
-            }).then(() => {
-              const message =
-                'Transaction Signed. Thank you for using our Open-source Vault. You will be returned to the parent app.'
-              const [div, promise] = SuccessScreen(document, 'Thank You', message, 2000)
-              contentDiv.innerHTML = ''
-              contentDiv.appendChild(div)
-              return promise
-            })
+            }).then(() => ({ hash: transactionFullHash }))
           // error => callback(error) // callback to the parent window with error
         )
-      // .then(() => self.close()) // eslint-disable-line
+        .then(res => {
+          const message =
+            'Transaction Signed. Thank you for using our Open-source Vault. You will be returned to the parent app.'
+          const [div, promise] = SuccessScreen(document, 'Thank You', message, 1200)
+          contentDiv.innerHTML = ''
+          contentDiv.appendChild(div)
+          return promise.then(() => res)
+        })
     },
   }
 
