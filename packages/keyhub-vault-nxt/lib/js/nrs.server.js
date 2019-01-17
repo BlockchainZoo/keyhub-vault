@@ -1373,6 +1373,15 @@ var NRS = (function (NRS, $, undefined) {
                 }
                 pos+=length;
 
+                // validating code
+                length = byteArray[pos];
+                pos+=4;
+                if (String(converters.byteArrayToString(byteArray, pos, length)) !== data.code) {
+                  console.log('invalid code');
+                  return false;
+                }
+                pos+=length;
+
                 // validating birthDate
                 length = byteArray[pos];
                 pos+=4;
@@ -1426,6 +1435,16 @@ var NRS = (function (NRS, $, undefined) {
                   console.log('invalid requiredMonthDeposit');
                   return false;
                 }
+                pos+=4;
+
+                // validating status
+                length = byteArray[pos];
+                pos+=4;
+                if (String(converters.byteArrayToString(byteArray, pos, length)) !== data.status) {
+                  console.log('invalid status');
+                  return false;
+                }
+                pos+=length;
 
                 break;
             case "registerIHOHorse":
@@ -1454,6 +1473,15 @@ var NRS = (function (NRS, $, undefined) {
                 pos+=4;
                 if (String(converters.byteArrayToString(byteArray, pos, length)) !== data.name) {
                   console.log('invalid name');
+                  return false;
+                }
+                pos+=length;
+
+                // validating code
+                length = byteArray[pos];
+                pos+=4;
+                if (String(converters.byteArrayToString(byteArray, pos, length)) !== data.code) {
+                  console.log('invalid code');
                   return false;
                 }
                 pos+=length;
