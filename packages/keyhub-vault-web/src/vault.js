@@ -278,7 +278,7 @@ export default function loadVault(window, document, mainElement) {
         message,
         platform,
         desiredAddress,
-        passphrase => postMessage(worker, ['getPassphraseInfo', passphrase])
+        passphrase => postMessage(worker, ['getPassphraseInfo', network, passphrase])
       )
       contentDiv.innerHTML = ''
       contentDiv.appendChild(div)
@@ -717,7 +717,7 @@ export default function loadVault(window, document, mainElement) {
               throw error
             }
           )
-          .catch(() => setTimeout(() => window.close(), 5000))
+          .catch(() => setTimeout(() => window.close(), 30000))
       }
     })
     .catch(error => {
