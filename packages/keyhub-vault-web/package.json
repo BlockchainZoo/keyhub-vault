@@ -27,11 +27,11 @@
   },
   "devDependencies": {
     "@fortawesome/fontawesome-free": "^5.5.0",
-    "bootstrap": "^4.1.3",
+    "bootstrap": "^4.3.1",
     "normalize-newline-cli": "^1.1.0",
     "openpgp": "github:heri16/openpgpjs#v3.1.0",
     "serverless-plugin-cloudfront-lambda-edge": "^2.1.0",
-    "serverless-s3-sync": "^1.7.1",
+    "serverless-s3-sync": "^1.7.3",
     "serverless-stack-output": "^0.2.3",
     "ssri": "^6.0.1"
   }
