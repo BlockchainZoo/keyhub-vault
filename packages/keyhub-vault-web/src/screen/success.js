@@ -1,6 +1,6 @@
 import { safeHtml } from 'common-tags'
 
-export default function createElement(document, title, message, timeoutDuration = 5000) {
+export default function createElement(document, title, message, timeoutDuration) {
   const div = document.createElement('div')
 
   div.innerHTML = safeHtml`<div class="card card-tx-succsess">
@@ -27,11 +27,14 @@ export default function createElement(document, title, message, timeoutDuration 
   })
 
   // Close the window after 5 seconds if no response from user
-  const promise2 = new Promise(resolve => {
-    setTimeout(() => resolve('timeout'), timeoutDuration)
-  })
-
-  const promise = Promise.race([promise1, promise2])
+  const promise = !timeoutDuration
+    ? promise1
+    : Promise.race([
+        promise1,
+        new Promise(resolve => {
+          setTimeout(() => resolve('timeout'), timeoutDuration)
+        }),
+      ])
 
   return [div, promise]
 }
