@@ -171,17 +171,32 @@ const retrievePassphrase = (entryId, cryptoKey) =>
 
 // Helper function to convert transaction data to correct numerical format
 const fixTxNumberFormat = tx => {
-  const { accountRS, recipientRS, assetId, amount, quantity, price, decimals = 0, ...txData } = tx
+  const { assetId, decimals = 0, ...txData } = tx
+
+  const hasRS = /RS$/
+  // zeroes added to quantity is determined by no. of decimals
+  const hasQuantityQNT = /quantity$/i
+  // price is normally multiplied by quantity
+  // price is a number that applies per QNT
+  const hasPriceNQT = /(price|fee|deposit)$/i
+  // amount is the result of price multiplied by quantity
+  // amount is a number that does not depend on quantity
+  const hasAmountNQT = /amount$/i
 
   /* eslint-disable no-param-reassign */
-  if (amount !== undefined) txData.amountNQT = NRS.convertToNQT(amount)
-  if (quantity !== undefined) txData.quantityQNT = NRS.convertToQNT(quantity, decimals)
-  if (price !== undefined)
-    txData.priceNQT = NRS.calculatePricePerWholeQNT(NRS.convertToNQT(price), decimals)
-
-  if (recipientRS !== undefined) txData.recipient = NRS.convertRSToNumericAccountFormat(recipientRS)
-  if (accountRS !== undefined) txData.account = NRS.convertRSToNumericAccountFormat(accountRS)
   if (assetId !== undefined) txData.asset = assetId
+
+  Object.entries(txData).forEach(([key, val]) => {
+    if (hasRS.test(key)) {
+      txData[key.slice(0, -2)] = NRS.convertRSToNumericAccountFormat(val)
+    } else if (hasQuantityQNT.test(key)) {
+      txData[`${key}QNT`] = NRS.convertToQNT(val, decimals)
+    } else if (hasPriceNQT.test(key)) {
+      txData[`${key}NQT`] = NRS.calculatePricePerWholeQNT(NRS.convertToNQT(val), decimals)
+    } else if (hasAmountNQT.test(key)) {
+      txData[`${key}NQT`] = NRS.convertToNQT(val)
+    }
+  })
 
   return txData
 }
