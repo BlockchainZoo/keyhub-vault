@@ -89,7 +89,7 @@ const getKeyDetail = (network, entryId) =>
   activateNetwork(network).then(({ worker }) =>
     // call getKeyPair on background webworker
     postMessage(worker, ['getStoredKeyInfo', entryId]).then(
-      ({ address, accountNo, publicKey, hasPinProtection, hasPassphrase }) => {
+      ({ address, accountNo, publicKey, hasPinProtection, hasPassphrase, createdAt }) => {
         if (!hasPassphrase) {
           return {
             network,
@@ -97,6 +97,7 @@ const getKeyDetail = (network, entryId) =>
             accountNo,
             publicKey,
             hasPinProtection,
+            createdAt,
           }
         }
 
@@ -107,6 +108,7 @@ const getKeyDetail = (network, entryId) =>
           publicKey,
           hasPinProtection,
           passphraseImage,
+          createdAt,
         }))
       }
     )
@@ -259,13 +261,6 @@ export default function loadVault(window, document, mainElement) {
         })
     })
 
-  const showAddKeyScreen = () => {
-    const [div, promise] = KeyAddScreen(document)
-    contentDiv.innerHTML = ''
-    contentDiv.appendChild(div)
-    return promise.then(({ platform, network }) => showGenerateKeyScreen(platform, network))
-  }
-
   const showRestoreMissingKeyScreen = (platform, network, desiredAddress) =>
     activateNetwork(network).then(({ worker }) => {
       const message = stripIndent`
@@ -331,79 +326,81 @@ export default function loadVault(window, document, mainElement) {
 
   const updateKeyListDiv = () =>
     new Promise((resolve, reject) => {
-      try {
-        callOnStore('accounts', accounts => {
-          const req = accounts.getAll()
-          req.onsuccess = ({ target: { result: entries } }) => {
-            if (Array.isArray(entries) && entries.length > 0) {
-              // Group by network name
-              const keysByNetwork = entries.reduce((acc, entry) => {
-                const g = acc[entry.network || entry.platform]
-                if (g) g.push(entry)
-                else acc[entry.network || entry.platform] = [entry]
-                return acc
-              }, {})
-
-              // onClick handler for <ul/>
-              const onClick = ul => ({ target: { type, dataset, classList } }) => {
-                if (type === 'button' && dataset) {
-                  const { network, address, entryId } = dataset
-                  activateNetwork(network, address)
-                    .then(() => {
-                      ul.querySelectorAll('button').forEach(
-                        li => li.classList.remove('btn-dark') && li.classList.add('btn-light')
-                      )
-                      classList.remove('btn-light')
-                      classList.add('btn-dark')
-                      return getKeyDetail(network, entryId).then(keyDetail => {
-                        const [div] = KeyDetailScreen(document, keyDetail)
-                        contentDiv.innerHTML = ''
-                        contentDiv.appendChild(div)
-                      })
-                    })
-                    .catch(error => {
-                      window.alert(error.message || error)
-                    })
-                }
-              }
-
-              keyListDiv.innerHTML = ''
-              Object.keys(keysByNetwork).forEach(network => {
-                const div = document.createElement('div')
-                const h3 = document.createElement('h3')
-                h3.appendChild(document.createTextNode(network))
-                div.appendChild(h3)
-                const ul = document.createElement('ul')
-                ul.addEventListener('click', onClick(ul))
-
-                const plaformKeys = keysByNetwork[network]
-                plaformKeys.forEach(entry => {
-                  const li = document.createElement('li')
-                  const button = document.createElement('button') // eslint-disable-line
-                  button.type = 'button'
-                  button.classList.add('btn', 'btn-light')
-                  button.appendChild(document.createTextNode(entry.address))
-                  button.dataset.network = entry.network
-                  button.dataset.address = entry.address
-                  button.dataset.entryId = entry.id
-                  li.appendChild(button)
-                  ul.appendChild(li)
-                })
-
-                div.appendChild(ul)
-                keyListDiv.appendChild(div)
-              })
-
-              resolve(true)
-            } else {
-              resolve(false)
-            }
+      callOnStore('accounts', accounts => {
+        const entries = []
+        const req = accounts.openCursor()
+        req.onsuccess = ({ target: { result: cursor } }) => {
+          if (cursor) {
+            entries.push(cursor.value)
+            cursor.continue()
+          } else {
+            // no more entries
+            resolve(entries)
           }
+        }
+        req.onerror = ({ target: { error } }) => {
+          reject(error)
+        }
+      })
+    }).then(entries => {
+      if (entries.length === 0) return false
+
+      // Group by network name
+      const keysByNetwork = entries.reduce((acc, entry) => {
+        const g = acc[entry.network || entry.platform]
+        if (g) g.push(entry)
+        else acc[entry.network || entry.platform] = [entry]
+        return acc
+      }, {})
+
+      keyListDiv.innerHTML = ''
+      Object.keys(keysByNetwork).forEach(network => {
+        const div = document.createElement('div')
+        const h3 = document.createElement('h3')
+        h3.appendChild(document.createTextNode(network))
+        div.appendChild(h3)
+        const ul = document.createElement('ul')
+
+        const plaformKeys = keysByNetwork[network].sort((a, b) => a.createdAt - b.createdAt)
+        plaformKeys.forEach(entry => {
+          const li = document.createElement('li')
+          const button = document.createElement('button') // eslint-disable-line
+          button.type = 'button'
+          button.classList.add('btn', 'btn-light')
+          button.appendChild(document.createTextNode(entry.address))
+          button.dataset.network = entry.network
+          button.dataset.address = entry.address
+          button.dataset.entryId = entry.id
+          li.appendChild(button)
+          ul.appendChild(li)
         })
-      } catch (err) {
-        reject(err)
-      }
+
+        div.appendChild(ul)
+        keyListDiv.appendChild(div)
+      })
+
+      return true
     })
+
+  const showAddKeyScreen = () =>
+    Promise.resolve()
+      .then(() => {
+        const [div, promise] = KeyAddScreen(document)
+        contentDiv.innerHTML = ''
+        contentDiv.appendChild(div)
+        return promise
+      })
+      .then(({ platform, network }) =>
+        showGenerateKeyScreen(platform, network).then(({ id: entryId }) =>
+          updateKeyListDiv().then(() => getKeyDetail(network, entryId))
+        )
+      )
+      .then(keyDetail => {
+        const [div, promise] = KeyDetailScreen(document, keyDetail, true)
+        contentDiv.innerHTML = ''
+        contentDiv.appendChild(div)
+        return promise
+      })
 
   // Map of event handlers by semantic versioning
   const eventHandlers = {}
@@ -627,19 +624,18 @@ export default function loadVault(window, document, mainElement) {
   }
 
   // On Load: Update key List
-  updateKeyListDiv()
-    .then(hasKeys => {
-      // Create the welcome screen
-      const welcomeDiv = WelcomeScreen(document, hasKeys)
+  if (!window.opener) {
+    updateKeyListDiv()
+      .then(hasKeys => {
+        // Create the welcome screen
+        const welcomeDiv = WelcomeScreen(document, hasKeys)
 
-      if (!window.opener) {
         // Show welcome screen on startup
         contentDiv.appendChild(welcomeDiv)
 
         // Add Event Listener: User clicks "Add Key" button in sidebar
         document.getElementById('goto-add-key-btn').addEventListener('click', () => {
           showAddKeyScreen()
-            .then(() => updateKeyListDiv())
             .then(() => {
               contentDiv.innerHTML = ''
               contentDiv.appendChild(welcomeDiv)
@@ -653,75 +649,100 @@ export default function loadVault(window, document, mainElement) {
             })
         })
 
+        // Add Event Listener: User clicks any key in keyList of sidebar
+        keyListDiv.addEventListener('click', ({ target: { type, dataset, classList } }) => {
+          if (type === 'button' && dataset) {
+            const { network, address, entryId } = dataset
+            activateNetwork(network, address)
+              .then(() => {
+                keyListDiv
+                  .querySelectorAll('button')
+                  .forEach(li => li.classList.remove('btn-dark') && li.classList.add('btn-light'))
+                classList.remove('btn-light')
+                classList.add('btn-dark')
+                return getKeyDetail(network, entryId)
+              })
+              .then(keyDetail => {
+                const [div, promise] = KeyDetailScreen(document, keyDetail, true)
+                contentDiv.innerHTML = ''
+                contentDiv.appendChild(div)
+                return promise
+              })
+              .then(() => {
+                contentDiv.innerHTML = ''
+                contentDiv.appendChild(welcomeDiv)
+              })
+              .catch(error => {
+                window.alert(error.message || error)
+              })
+          }
+        })
+
         appendStylesheet('./css/main.default.css', document).then(() => {
           // Show the sidebar
           mainContent.classList.remove('offset-md-2')
           sidebarDiv.classList.remove('d-none')
           mainWrapper.classList.add('shadow-on')
         })
-      } else {
-        // Show some text while waiting for parent app
-        contentDiv.textContent = 'Communicating with the parent app...'
+      })
+      .catch(error => {
+        console.error('Internal', error) // eslint-disable-line no-console
+        window.alert(`Internal ${error.message || error}. Please try again.`)
+      })
+  } else {
+    // Show some text while waiting for parent app
+    contentDiv.textContent = 'Communicating with the parent app...'
 
-        // Tell parent window vault is ready
-        postRobot
-          .sendToParent('vaultHandshake', { version: '1.3.0' })
-          .then(
-            event => {
-              // Parent received the 'vaultHandshake' event.
-              const {
-                data: { version: desiredVersion, onReady },
-                source: parentWindow,
-                origin: originDomain,
-              } = event
+    // Tell parent window vault is ready
+    postRobot
+      .sendToParent('vaultHandshake', { version: '1.3.0' })
+      .then(
+        event => {
+          // Parent received the 'vaultHandshake' event.
+          const {
+            data: { version: desiredVersion, onReady },
+            source: parentWindow,
+            origin: originDomain,
+          } = event
 
-              try {
-                console.info('vaultHandshake origin:', originDomain) // eslint-disable-line no-console
-                const postRobotService = postRobot.listener({
-                  window: parentWindow,
-                  domain: originDomain,
-                })
+          try {
+            console.info('vaultHandshake origin:', originDomain) // eslint-disable-line no-console
+            const postRobotService = postRobot.listener({
+              window: parentWindow,
+              domain: originDomain,
+            })
 
-                const actualVersion = registerEvents(
-                  postRobotService,
-                  eventHandlers,
-                  desiredVersion
-                )
+            const actualVersion = registerEvents(postRobotService, eventHandlers, desiredVersion)
 
-                return onReady(null, { version: actualVersion })
-              } catch (err) {
-                return onReady(err).then(() => {
-                  throw err
-                })
-              }
-            },
-            error => {
-              // Parent did not receive the 'vaultHandshake' event.
-              console.error('vaultHandshake', error) // eslint-disable-line no-console
-              contentDiv.textContent = `Problem communicating with the parent app. ${error.message}`
-              throw error
-            }
-          )
-          .then(
-            ({ platform }) => {
-              // Parent responded to the 'onReady' call.
-              console.info('vaultReady') // eslint-disable-line no-console
-              return platform
-                ? appendStylesheet(`./css/main.${platform.toLowerCase()}.css`, document)
-                : null
-            },
-            error => {
-              // Parent did not receive the 'onReady' call.
-              console.error('vaultReady', error) // eslint-disable-line no-console
-              contentDiv.textContent = `Problem communicating with the parent app. ${error.message}`
-              throw error
-            }
-          )
-          .catch(() => setTimeout(() => window.close(), 30000))
-      }
-    })
-    .catch(error => {
-      console.error('Internal', error) // eslint-disable-line no-console
-      window.alert(`Internal ${error.message || error}. Please try again.`)
-    })
+            return onReady(null, { version: actualVersion })
+          } catch (err) {
+            return onReady(err).then(() => {
+              throw err
+            })
+          }
+        },
+        error => {
+          // Parent did not receive the 'vaultHandshake' event.
+          console.error('vaultHandshake', error) // eslint-disable-line no-console
+          contentDiv.textContent = `Problem communicating with the parent app. ${error.message}`
+          throw error
+        }
+      )
+      .then(
+        ({ platform }) => {
+          // Parent responded to the 'onReady' call.
+          console.info('vaultReady') // eslint-disable-line no-console
+          return platform
+            ? appendStylesheet(`./css/main.${platform.toLowerCase()}.css`, document)
+            : null
+        },
+        error => {
+          // Parent did not receive the 'onReady' call.
+          console.error('vaultReady', error) // eslint-disable-line no-console
+          contentDiv.textContent = `Problem communicating with the parent app. ${error.message}`
+          throw error
+        }
+      )
+      .catch(() => setTimeout(() => window.close(), 30000))
+  }
 }
