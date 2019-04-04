@@ -83,25 +83,27 @@ const freezeProps = function deepFreezeProps(obj) {
   Object.defineProperties(obj, updateProps)
 
   // Make values of properties frozen (exclude props with getter)
-  propNames.filter(key => !('get' in props[key])).forEach(name => {
-    try {
-      const value = obj[name]
-      if (!Object.isFrozen(value) && value !== window) {
-        try {
-          freezeProto(value)
-          Object.freeze(value)
-        } catch (e) {
-          // eslint-disable-next-line no-console
-          if (!(e instanceof TypeError)) console.warn('Cannot freeze value', e, name, value)
-        } finally {
-          deepFreezeProps(value)
+  propNames
+    .filter(key => !('get' in props[key]))
+    .forEach(name => {
+      try {
+        const value = obj[name]
+        if (!Object.isFrozen(value) && value !== window) {
+          try {
+            freezeProto(value)
+            Object.freeze(value)
+          } catch (e) {
+            // eslint-disable-next-line no-console
+            if (!(e instanceof TypeError)) console.warn('Cannot freeze value', e, name, value)
+          } finally {
+            deepFreezeProps(value)
+          }
         }
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.warn('forEach loop', err, name)
       }
-    } catch (err) {
-      // eslint-disable-next-line no-console
-      console.warn('forEach loop', err, name)
-    }
-  })
+    })
 }
 
 // Note: Cannot freeze window / global namespace here as,

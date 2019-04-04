@@ -102,3 +102,13 @@ header {
 .fs-24 {
   font-size: 1.5rem;
 }
+
+.btn-outline-grey {
+  border-color: $grey;
+  color: $grey;
+
+  &:hover {
+    background-color: $grey;
+    color: $white;
+  }
+}
