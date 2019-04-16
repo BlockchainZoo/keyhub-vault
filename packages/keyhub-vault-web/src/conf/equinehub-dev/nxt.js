@@ -5,7 +5,7 @@ module.exports = {
   isTestNet: false,
   adminPassword: '',
   lastKnownBlock: {
-    // See: https://nxt1.vault.sandbox.keyhub.app/test?requestType=getECBlock
+    // See: https://nxt1.vault.sandbox.keyhub.app/eqh?requestType=getECBlock
     id: '3493682855030002679',
     height: '515',
   },
