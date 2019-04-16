@@ -1083,8 +1083,8 @@ var NRS = (function (NRS, $, undefined) {
                 if (transaction.type !== 4 && transaction.subtype !== 0) {
                     return false;
                 }
-                transaction.period = String(converters.byteArrayToSignedShort(byteArray, pos));
-                pos += 2;
+                transaction.period = String(converters.byteArrayToSignedInt32(byteArray, pos));
+                pos += 4;
                 if (transaction.period !== data.period) {
                     return false;
                 }
