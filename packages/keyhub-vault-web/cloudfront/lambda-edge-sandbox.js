@@ -57,8 +57,8 @@ exports.addSecurityHeaders = function(event, context, callback) {
     {
       key: 'Public-Key-Pins',
       value:
-        // The first pin-sha256 is taken from https://www.ssllabs.com/ssltest/analyze.html?d=nxt1.vault.keyhub.app
-        'max-age=604800; includeSubDomains; pin-sha256="CNrIclLq0S/Ww/jjmEyJBCflNweTZQDRqlkl4llm6ng="; pin-sha256="++MBgDH5WGvL9Bcn5Be30cRcL0f5O+NyoXuWtQdX1aI="; pin-sha256="f0KW/FtqTjs108NpYj42SrGvOB2PpxIVM8nWxjPqJGE="; pin-sha256="NqvDJlas/GRcYbcWE8S/IceH9cq77kg0jVhZeAPXq8k="; pin-sha256="9+ze1cZgR9KO1kZrVDxA4HQ6voHRCSVNz4RdTCx4U8U="',
+        // The first pin-sha256 is taken from https://www.ssllabs.com/ssltest/analyze.html?d=nxt1.vault.sandbox.keyhub.app
+        'max-age=604800; includeSubDomains; pin-sha256="tN1FW82t07tgoqE8mB6RHTLg+vyD5u1OKQ1FxzQtv9Q="; pin-sha256="++MBgDH5WGvL9Bcn5Be30cRcL0f5O+NyoXuWtQdX1aI="; pin-sha256="f0KW/FtqTjs108NpYj42SrGvOB2PpxIVM8nWxjPqJGE="; pin-sha256="NqvDJlas/GRcYbcWE8S/IceH9cq77kg0jVhZeAPXq8k="; pin-sha256="9+ze1cZgR9KO1kZrVDxA4HQ6voHRCSVNz4RdTCx4U8U="',
     },
   ]
 
@@ -68,7 +68,15 @@ exports.addSecurityHeaders = function(event, context, callback) {
       {
         key: 'Content-Security-Policy',
         value:
-          "sandbox allow-same-origin allow-modals allow-scripts; default-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; manifest-src 'self'; style-src 'self'; img-src 'self'; media-src 'self'; font-src 'self'; frame-src 'none'; worker-src blob: data:; child-src blob: data:; script-src blob: 'self' 'sha384-rPMBYwDhb6zrv3/mO71SlMxpVbRnWUX4Brw4sLnlTGd3OcEFZjcRHS0L2yTUHq4Q'; connect-src 'self' https://nxt1.vault.keyhub.app; require-sri-for script style",
+          "sandbox allow-same-origin allow-modals allow-scripts; default-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; manifest-src 'self'; style-src 'self'; img-src 'self'; media-src 'self'; font-src 'self'; frame-src 'none'; worker-src blob: data:; child-src blob: data:; script-src blob: 'self' 'sha384-rPMBYwDhb6zrv3/mO71SlMxpVbRnWUX4Brw4sLnlTGd3OcEFZjcRHS0L2yTUHq4Q'; connect-src 'self' https://nxt1.vault.sandbox.keyhub.app; require-sri-for script style",
+      },
+    ]
+    // Disallow dangerous browser features
+    headers['feature-policy'] = [
+      {
+        key: 'Feature-Policy',
+        value:
+          "sync-xhr 'none'; geolocation 'none'; midi 'none'; microphone 'none'; camera 'none'; magnetometer 'none'; gyroscope 'none'; speaker 'none'; vibrate 'none'; fullscreen 'none'; payment 'none'",
       },
     ]
   }
