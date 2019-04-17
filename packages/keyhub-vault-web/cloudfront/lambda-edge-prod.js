@@ -58,7 +58,7 @@ exports.addSecurityHeaders = function(event, context, callback) {
       key: 'Public-Key-Pins',
       value:
         // The first pin-sha256 is taken from https://www.ssllabs.com/ssltest/analyze.html?d=nxt1.vault.keyhub.app
-        'max-age=604800; includeSubDomains; pin-sha256="D90HfRuK1tPja9kofHcfGKuv08mUtmjFRUZnv3Neqr0="; pin-sha256="++MBgDH5WGvL9Bcn5Be30cRcL0f5O+NyoXuWtQdX1aI="; pin-sha256="f0KW/FtqTjs108NpYj42SrGvOB2PpxIVM8nWxjPqJGE="; pin-sha256="NqvDJlas/GRcYbcWE8S/IceH9cq77kg0jVhZeAPXq8k="; pin-sha256="9+ze1cZgR9KO1kZrVDxA4HQ6voHRCSVNz4RdTCx4U8U="',
+        'max-age=604800; includeSubDomains; pin-sha256="hHp4guWxUCDv/sFz5ckLCcCI38zYANAbW497humor9M="; pin-sha256="++MBgDH5WGvL9Bcn5Be30cRcL0f5O+NyoXuWtQdX1aI="; pin-sha256="f0KW/FtqTjs108NpYj42SrGvOB2PpxIVM8nWxjPqJGE="; pin-sha256="NqvDJlas/GRcYbcWE8S/IceH9cq77kg0jVhZeAPXq8k="; pin-sha256="9+ze1cZgR9KO1kZrVDxA4HQ6voHRCSVNz4RdTCx4U8U="',
     },
   ]
 
