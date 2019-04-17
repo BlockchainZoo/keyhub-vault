@@ -623,6 +623,8 @@ export default function loadVault(window, document, mainElement) {
             return promise.then(() => res)
           },
           err => {
+            if (err.message === 'cancelled by user') throw err
+
             const [div, promise] = ErrorScreen(document, 'Error with Transaction', err.message)
             contentDiv.innerHTML = ''
             contentDiv.appendChild(div)
