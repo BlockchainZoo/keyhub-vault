@@ -171,11 +171,13 @@ const retrievePassphrase = (entryId, cryptoKey) =>
 
 // Helper function to convert transaction data to correct numerical format
 const fixTxNumberFormat = tx => {
-  const { assetId, decimals = 0, ...txData } = tx
+  const { assetId, ...txData } = tx
+
+  const decimals = txData.decimals || 0
 
   const hasRS = /RS$/
   // zeroes added to quantity is determined by no. of decimals
-  const hasQuantityQNT = /quantity$/i
+  const hasQuantityQNT = /(quantity|qty)$/i
   // price is normally multiplied by quantity
   // price is a number that applies per QNT
   const hasPriceNQT = /(price|fee|deposit)$/i

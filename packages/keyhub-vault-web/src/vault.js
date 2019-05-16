@@ -16,6 +16,7 @@ import {
   PhonenumConfirmScreen,
   TxDetailScreen,
   SuccessScreen,
+  ErrorScreen,
   KeyDetailScreen,
 } from './screen'
 
@@ -612,14 +613,26 @@ export default function loadVault(window, document, mainElement) {
             }).then(() => ({ hash: transactionFullHash }))
           // error => callback(error) // callback to the parent window with error
         )
-        .then(res => {
-          const message =
-            'Transaction Signed. Thank you for using our Open-source Vault. You will be returned to the parent app.'
-          const [div, promise] = SuccessScreen(document, 'Thank You', message, 1200)
-          contentDiv.innerHTML = ''
-          contentDiv.appendChild(div)
-          return promise.then(() => res)
-        })
+        .then(
+          res => {
+            const message =
+              'Transaction Signed. Thank you for using our Open-source Vault. You will be returned to the parent app.'
+            const [div, promise] = SuccessScreen(document, 'Thank You', message, 1200)
+            contentDiv.innerHTML = ''
+            contentDiv.appendChild(div)
+            return promise.then(() => res)
+          },
+          err => {
+            if (err.message === 'cancelled by user') throw err
+
+            const [div, promise] = ErrorScreen(document, 'Error with Transaction', err.message)
+            contentDiv.innerHTML = ''
+            contentDiv.appendChild(div)
+            return promise.then(() => {
+              throw err
+            })
+          }
+        )
     },
   }
 

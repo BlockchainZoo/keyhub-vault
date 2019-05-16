@@ -1499,44 +1499,37 @@ var NRS = (function (NRS, $, undefined) {
                 }
                 pos+=length;
 
-                // validating lotSize
-                if (String(converters.byteArrayToSignedInt32(byteArray, pos)) !== String(data.lotSize)) {
-                  console.log('invalid lotSize');
+                // validating lotSizeQNT
+                if (String(converters.byteArrayToSignedInt32(byteArray, pos)) !== String(data.lotSizeQNT)) {
+                  console.log('invalid lotSizeQNT');
                   return false;
                 }
                 pos+=4;
 
-                // validating requiredMonthDeposit
-                if (String(converters.byteArrayToSignedInt32(byteArray, pos)) !== String(data.requiredMonthDeposit)) {
-                  console.log('invalid requiredMonthDeposit');
+                // validating requiredDepositMonths
+                if (String(converters.byteArrayToSignedInt32(byteArray, pos)) !== String(data.requiredDepositMonths)) {
+                  console.log('invalid requiredDepositMonths');
                   return false;
                 }
                 pos+=4;
 
-                // validating trainingFee
-                if (String(converters.byteArrayToBigInteger(byteArray, pos)) !== String(data.trainingFee)) {
-                  console.log('invalid trainingFee');
+                // validating trainingFeeNQT
+                if (String(converters.byteArrayToBigInteger(byteArray, pos)) !== String(data.trainingFeeNQT)) {
+                  console.log('invalid trainingFeeNQT');
                   return false;
                 }
                 pos+=8;
 
-                // validating ihoQuantity
-                if (String(converters.byteArrayToBigInteger(byteArray, pos)) !== String(data.ihoQuantity)) {
-                  console.log('invalid ihoQuantity');
+                // validating ihoQuantityQNT
+                if (String(converters.byteArrayToBigInteger(byteArray, pos)) !== String(data.ihoQuantityQNT)) {
+                  console.log('invalid ihoQuantityQNT');
                   return false;
                 }
                 pos+=8;
 
-                // validating ihoSellable
-                if (String(converters.byteArrayToBigInteger(byteArray, pos)) !== String(data.ihoQuantity)) {
-                  console.log('invalid ihoSellable');
-                  return false;
-                }
-                pos+=8;
-
-                // validating ihoPrice
-                if (String(converters.byteArrayToBigInteger(byteArray, pos)) !== String(data.ihoPrice)) {
-                  console.log('invalid ihoPrice');
+                // validating ihoPriceNQT
+                if (String(converters.byteArrayToBigInteger(byteArray, pos)) !== String(data.ihoPriceNQT)) {
+                  console.log('invalid ihoPriceNQT');
                   return false;
                 }
                 pos+=8;
