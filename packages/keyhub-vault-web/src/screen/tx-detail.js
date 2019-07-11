@@ -16,29 +16,42 @@ const validatePin = (pinInput, pinAlert) => {
   return false
 }
 
-const splitNumber = accountNo => {
-  const str = accountNo.toString()
-  const result = [str[0]]
+// const splitNumber = accountNo => {
+//   const str = accountNo.toString()
+//   const result = [str[0]]
 
-  for (let x = 1; x < str.length; x += 1) {
-    if (x % 5 === 0) {
-      result.push('.', str[x])
-    } else {
-      result.push(str[x])
-    }
-  }
-  return result.join('')
+//   for (let x = 1; x < str.length; x += 1) {
+//     if (x % 5 === 0) {
+//       result.push('.', str[x])
+//     } else {
+//       result.push(str[x])
+//     }
+//   }
+//   return result.join('')
+// }
+
+const elOrderDetail = (title, value) => {
+  const drawHtml = `
+  <div class="row">
+    <div class="col-7 text-strong">
+      ${title}
+    </div>
+    <div class="col-5">
+      ${value}
+    </div>
+  </div>`
+  return drawHtml
 }
 
 const displayTransaction = (document, detailDiv, { type, data = {} }) => {
   const domFragment = document.createDocumentFragment()
-  let txData = ''
+  // let txData = ''
 
   const divTxTypeRow = document.createElement('div')
   divTxTypeRow.classList.add('row', 'my-2', 'border-bottom', 'py-3')
 
   const divTxTypeLabel = document.createElement('div')
-  divTxTypeLabel.classList.add('col-sm-4', 'text-capitalize', 'text-strong')
+  divTxTypeLabel.classList.add('col-7', 'text-capitalize', 'text-strong')
   divTxTypeLabel.appendChild(document.createTextNode('Type'))
 
   // const divTxIcon = document.createElement('div')
@@ -49,41 +62,52 @@ const displayTransaction = (document, detailDiv, { type, data = {} }) => {
   // divTxIcon.appendChild(divTxIconFa)
 
   const divTxType = document.createElement('div')
-  divTxType.classList.add('col-sm-8', 'text-grey')
+  divTxType.classList.add('col-5', 'text-grey')
 
   divTxType.appendChild(divTxIconFa)
   divTxType.appendChild(document.createTextNode(type))
 
   divTxTypeRow.appendChild(divTxTypeLabel)
   divTxTypeRow.appendChild(divTxType)
-  domFragment.appendChild(divTxTypeRow)
+  // domFragment.appendChild(divTxTypeRow)
 
-  Object.keys(data).forEach(key => {
-    const divRow = document.createElement('div')
-    divRow.classList.add('row', 'my-2', 'border-bottom', 'py-3')
+  // Object.keys(data).forEach(key => {
+  const divRow = document.createElement('div')
 
-    const divKey = document.createElement('div')
-    divKey.classList.add('col-sm-4', 'text-capitalize', 'text-strong')
+  divRow.innerHTML = elOrderDetail(safeHtml`Quantity:`, data.quantity)
+  divRow.innerHTML += elOrderDetail(safeHtml`Price per Share:`, `$${data.price}`)
+  divRow.innerHTML += elOrderDetail(safeHtml`Cost of shares:`, `$${data.price * data.quantity}`)
+  divRow.innerHTML += elOrderDetail(safeHtml`TradingFee(1%):`, `$${data.tradingFee / 100}`)
+  divRow.innerHTML += elOrderDetail(
+    safeHtml`Current mth training fee<i class="fas fa-question-circle cursor-fee-info"><div class="fee-info">Training fees for current month is indicative and actual training fees shall be pro-rated to actual order execution date.</div></i>:`,
+    `$${data.trainingFeeAmount}`
+  )
+  divRow.innerHTML += elOrderDetail(
+    safeHtml`Maintenance Deposit:`,
+    `$${data.maintenanceDepositAmount}`
+  )
+  divRow.innerHTML += safeHtml(`<div class="mt-2">&nbsp;</div>`)
+  divRow.innerHTML += elOrderDetail(safeHtml`Total:`, `$${data.totalPurchase}`)
+  // divRow.classList.add('row', 'my-1')
 
-    divKey.appendChild(document.createTextNode(key))
+  // const divKey = document.createElement('div')
+  // divKey.classList.add('col-7', 'text-capitalize', 'text-strong')
 
-    // const divColon = document.createElement('div')
-    // divColon.classList.add('col-sm-1', 'd-none', 'd-sm-flex')
-    // divColon.innerHTML = ':'
+  // divKey.appendChild(document.createTextNode(key))
 
-    const divVal = document.createElement('div')
-    divVal.classList.add('col-sm-8', 'text-grey')
+  // const divVal = document.createElement('div')
+  // divVal.classList.add('col-5', 'text-grey')
 
-    txData = key === 'recipient' ? splitNumber(data[key]) : data[key]
+  // txData = key === 'recipient' ? splitNumber(data[key]) : data[key]
 
-    divVal.appendChild(document.createTextNode(txData))
+  // divVal.appendChild(document.createTextNode(txData))
 
-    divRow.appendChild(divKey)
-    // divRow.appendChild(divColon)
-    divRow.appendChild(divVal)
+  // divRow.appendChild(divKey)
+  // // divRow.appendChild(divColon)
+  // divRow.appendChild(divVal)
 
-    domFragment.appendChild(divRow)
-  })
+  domFragment.appendChild(divRow)
+  // })
 
   detailDiv.appendChild(domFragment)
 }
@@ -92,35 +116,50 @@ export default function createElement(document, platform, accountNo, address, tx
   const div = document.createElement('div')
 
   div.innerHTML = safeHtml`
-  <div class="card-header text-center bg-secondary text-white">
-    <h4 class="mb-2"><i class="fas fa-lock"></i> ${platform} Transaction Detail</h4>
-    <p class="mb-0">Your Account No. ${splitNumber(accountNo)}</p>
-    <small>Account address: ${address}</small>
-  </div>
+  <div class="card-header text-center border-0 bg-white">
+    <h4 class="mb-4">Sell - Order Confirmation</h4>
+  </div><!-- .card-header -->
+
   <div class="card-body">
+
     <div class="row">
+
       <div class="col">
         <div id="transaction-detail"></div>
       </div>
-    </div>
+
+    </div><!-- .row -->
 
     <div class="${promptPin ? '' : 'd-none '}row justify-content-center mt-5">
+
       <div class="form-group">
         <label for="text-pin">Security Pin: </label><br>
         <input type="password" class="form-control" id="pin-input" />
-      </div>
+      </div><!-- .form-group -->
+
       <div id="pin-alert" class="d-none form-group"></div>
+
+    </div><!-- .row.justify-content-center -->
+
+    <div class="row">
+      <div class="col-12 mb-5 mt-4">
+        Please ensure the above order information is correct. By clicking <strong>CONFIRM</strong>, you agree to the Partnership Agreement.
+      </div>
     </div>
+
     <div class="row justify-content-center">
+
       <div class="col col-md-5 mb-3">
-        <button class="btn btn-primary px-4 btn-block" id="sign-tx" data-choice="ok"><i class="fas fa-sign-in-alt"></i> SIGN THIS</button>
+        <button class="btn btn-primary px-4 btn-block" id="sign-tx" data-choice="ok">Confirm</button>
       </div>
+
       <div class="col col-md-5">
-        <button class="btn btn-danger px-4 btn-block" id="cancel-sign-tx" data-choice="cancel">CANCEL</button>
+        <button class="btn btn-outline-grey px-4 btn-block" id="cancel-sign-tx" data-choice="cancel">Cancel</button>
       </div>
-    </div>
-    </div>
-  </div>`
+
+    </div><!-- .row.justify-content-center -->
+
+  </div><!-- .card-body -->`
 
   const pinInput = div.querySelector('#pin-input')
   const pinAlert = div.querySelector('#pin-alert')

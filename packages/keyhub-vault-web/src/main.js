@@ -35,7 +35,7 @@ const link = document.createElement('link')
 link.type = 'text/css'
 link.rel = 'stylesheet'
 link.href = './css/main.css'
-link.integrity = 'sha384-96Nr6Whb0MNk0zAXBdZnIbkGbZmunb8wy+DFPL1z+YB1OWndkCi8lhR0knxCELGU'
+link.integrity = 'sha384-ddkIUvvTGZrXCWpVfAs39qFOfgVQdvnmgTFuhTwppIw7sowAUmYfryZLY2wUgV1q'
 link.crossOrigin = 'anonymous'
 document.head.appendChild(link)
 
