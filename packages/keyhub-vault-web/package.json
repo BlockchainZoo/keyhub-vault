@@ -33,6 +33,6 @@
     "serverless-plugin-cloudfront-lambda-edge": "^2.1.0",
     "serverless-s3-sync": "^1.7.3",
     "serverless-stack-output": "^0.2.3",
-    "ssri": "^6.0.1"
+    "ssri": "^8.0.1"
   }
 }
